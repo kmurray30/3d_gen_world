@@ -177,6 +177,95 @@ def draw_ground():
     glEnd()
 
 
+def draw_3d_text(text, position, text_scale=2.0):
+    """
+    Draw billboarded text in 3D space that always faces the camera.
+    The text appears as a floating label at the given 3D position.
+    """
+    x, y, z = position
+    
+    # Create text surface with pygame
+    font_size = 32
+    font = pygame.font.SysFont('Arial', font_size, bold=True)
+    
+    # Render text with white color and transparent background
+    text_surface = font.render(text, True, (255, 255, 255))
+    text_width = text_surface.get_width()
+    text_height = text_surface.get_height()
+    
+    # Convert pygame surface to OpenGL texture
+    text_data = pygame.image.tostring(text_surface, "RGBA", True)
+    
+    # Generate texture
+    texture_id = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, texture_id)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, text_width, text_height, 
+                 0, GL_RGBA, GL_UNSIGNED_BYTE, text_data)
+    
+    # Enable texturing and blending for transparent background
+    glEnable(GL_TEXTURE_2D)
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    
+    # Get the current modelview matrix to extract camera orientation
+    modelview_matrix = glGetFloatv(GL_MODELVIEW_MATRIX)
+    
+    # Extract right and up vectors from the modelview matrix (for billboarding)
+    # These are the camera's local X and Y axes in world space
+    right_x = modelview_matrix[0][0]
+    right_y = modelview_matrix[1][0]
+    right_z = modelview_matrix[2][0]
+    
+    up_x = modelview_matrix[0][1]
+    up_y = modelview_matrix[1][1]
+    up_z = modelview_matrix[2][1]
+    
+    # Calculate quad size based on text dimensions and scale
+    aspect_ratio = text_width / text_height
+    quad_height = text_scale * 0.1  # Base size in world units
+    quad_width = quad_height * aspect_ratio
+    
+    # Calculate the four corners of the billboard quad
+    # Center the quad at the position
+    half_width = quad_width / 2
+    half_height = quad_height / 2
+    
+    # Bottom-left corner
+    bl_x = x - (right_x * half_width) - (up_x * half_height)
+    bl_y = y - (right_y * half_width) - (up_y * half_height)
+    bl_z = z - (right_z * half_width) - (up_z * half_height)
+    
+    # Bottom-right corner
+    br_x = x + (right_x * half_width) - (up_x * half_height)
+    br_y = y + (right_y * half_width) - (up_y * half_height)
+    br_z = z + (right_z * half_width) - (up_z * half_height)
+    
+    # Top-right corner
+    tr_x = x + (right_x * half_width) + (up_x * half_height)
+    tr_y = y + (right_y * half_width) + (up_y * half_height)
+    tr_z = z + (right_z * half_width) + (up_z * half_height)
+    
+    # Top-left corner
+    tl_x = x - (right_x * half_width) + (up_x * half_height)
+    tl_y = y - (right_y * half_width) + (up_y * half_height)
+    tl_z = z - (right_z * half_width) + (up_z * half_height)
+    
+    # Draw textured quad
+    glColor4f(1.0, 1.0, 1.0, 1.0)  # White color, full alpha
+    glBegin(GL_QUADS)
+    glTexCoord2f(0, 0); glVertex3f(bl_x, bl_y, bl_z)  # Bottom-left
+    glTexCoord2f(1, 0); glVertex3f(br_x, br_y, br_z)  # Bottom-right
+    glTexCoord2f(1, 1); glVertex3f(tr_x, tr_y, tr_z)  # Top-right
+    glTexCoord2f(0, 1); glVertex3f(tl_x, tl_y, tl_z)  # Top-left
+    glEnd()
+    
+    # Clean up
+    glDisable(GL_TEXTURE_2D)
+    glDeleteTextures([texture_id])
+
+
 def setup_3d():
     """Set up 3D projection and camera."""
     glMatrixMode(GL_PROJECTION)
@@ -223,12 +312,13 @@ def draw_frame():
     setup_3d()
     draw_ground()
     
-    # Draw world objects
+    # Draw world objects as floating 3D text
     if world_state:
         for obj in world_state.get_all_objects():
             pos = list(obj.position)
             pos[1] += obj.properties.height_offset
-            draw_cube(pos, obj.scale, obj.color)
+            # Replace cube rendering with 3D text
+            draw_3d_text(obj.description, pos, text_scale=2.0)
     
     # UI overlay (text)
     glDisable(GL_DEPTH_TEST)
