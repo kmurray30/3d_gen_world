@@ -17,6 +17,7 @@ load_dotenv()
 
 from world import WorldState, WorldObjectData, ObjectProperties
 from llm_controller import LLMController, LLMResponse
+from animation_system import AnimationManager
 
 # Window setup
 WINDOW_WIDTH = 1280
@@ -34,6 +35,7 @@ mouse_sensitivity = 0.15
 # Game state
 world_state = None
 llm_controller = None
+animation_manager = None
 text_input_active = False
 text_input_buffer = ""
 status_message = ""
@@ -312,13 +314,15 @@ def draw_frame():
     setup_3d()
     draw_ground()
     
-    # Draw world objects as floating 3D text
-    if world_state:
+    # Draw world objects as floating 3D text with animation
+    if world_state and animation_manager:
         for obj in world_state.get_all_objects():
-            pos = list(obj.position)
-            pos[1] += obj.properties.height_offset
-            # Replace cube rendering with 3D text
-            draw_3d_text(obj.description, pos, text_scale=2.0)
+            # Get animated position if animating, else use world state position
+            base_pos = list(obj.position)
+            render_pos = animation_manager.get_render_position(obj.object_id, base_pos)
+            render_pos[1] += obj.properties.height_offset
+            # Draw text at interpolated position
+            draw_3d_text(obj.description, render_pos, text_scale=2.0)
     
     # UI overlay (text)
     glDisable(GL_DEPTH_TEST)
@@ -336,6 +340,31 @@ def draw_frame():
     glVertex2f(WINDOW_WIDTH, WINDOW_HEIGHT)
     glVertex2f(0, WINDOW_HEIGHT)
     glEnd()
+    
+    # Render text input UI using pygame font
+    if text_input_active:
+        prompt_text = f"> {text_input_buffer}_"
+    else:
+        prompt_text = "Press / or Enter to type a command | WASD to move | Mouse to look"
+    
+    # Render prompt text
+    font = pygame.font.SysFont('Courier', 14)
+    text_surface = font.render(prompt_text, True, (200, 200, 200))
+    text_data = pygame.image.tostring(text_surface, "RGBA", True)
+    
+    glRasterPos2f(10, WINDOW_HEIGHT - 45)
+    glDrawPixels(text_surface.get_width(), text_surface.get_height(),
+                 GL_RGBA, GL_UNSIGNED_BYTE, text_data)
+    
+    # Render status message if present
+    if status_message:
+        status_color = (255, 100, 100) if status_is_error else (150, 255, 150)
+        status_surface = font.render(status_message, True, status_color)
+        status_data = pygame.image.tostring(status_surface, "RGBA", True)
+        
+        glRasterPos2f(10, WINDOW_HEIGHT - 25)
+        glDrawPixels(status_surface.get_width(), status_surface.get_height(),
+                     GL_RGBA, GL_UNSIGNED_BYTE, status_data)
     
     # Crosshair
     cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
@@ -374,7 +403,7 @@ def submit_command(command_text):
 
 def on_llm_response(response):
     """Handle LLM response."""
-    global status_message, status_is_error
+    global status_message, status_is_error, animation_manager
     
     if not response.success:
         status_message = response.error_message or "Unknown error"
@@ -386,7 +415,29 @@ def on_llm_response(response):
         status_is_error = False
         return
     
+    # Track old positions before applying modifications
+    old_positions = {}
+    for mod in response.modifications:
+        obj_id = mod.get("id")
+        obj = world_state.get_object(obj_id)
+        if obj and "position" in mod.get("changes", {}):
+            old_positions[obj_id] = list(obj.position)
+    
+    # Apply modifications to world state
     modified_ids = world_state.apply_modifications(response.modifications)
+    
+    # Start animations for position changes
+    if animation_manager:
+        for obj_id in modified_ids:
+            if obj_id in old_positions:
+                obj = world_state.get_object(obj_id)
+                if obj:
+                    animation_manager.start_animation(
+                        obj_id,
+                        old_positions[obj_id],
+                        list(obj.position),
+                        duration=1.0
+                    )
     
     if modified_ids:
         status_message = f"Modified: {', '.join(modified_ids)}"
@@ -397,7 +448,7 @@ def on_llm_response(response):
 
 
 def main():
-    global world_state, llm_controller, text_input_active, text_input_buffer
+    global world_state, llm_controller, animation_manager, text_input_active, text_input_buffer
     global player_pos, player_yaw, player_pitch, clock, status_message, status_is_error
     
     # Initialize pygame
@@ -416,6 +467,9 @@ def main():
     
     # Initialize world
     world_state = create_initial_scene()
+    
+    # Initialize animation manager
+    animation_manager = AnimationManager()
     
     # Initialize LLM
     try:
@@ -438,6 +492,10 @@ def main():
     while running:
         dt = clock.tick(60) / 1000.0
         
+        # Update animations
+        if animation_manager:
+            animation_manager.update(dt)
+        
         # Event handling
         for event in pygame.event.get():
             if event.type == QUIT:
@@ -459,13 +517,21 @@ def main():
                     pygame.event.set_grab(False)
                     pygame.mouse.set_visible(True)
                 
-                elif event.key == K_RETURN and text_input_active:
-                    if text_input_buffer.strip():
-                        submit_command(text_input_buffer.strip())
-                    text_input_active = False
-                    text_input_buffer = ""
-                    pygame.event.set_grab(True)
-                    pygame.mouse.set_visible(False)
+                elif event.key == K_RETURN:
+                    if text_input_active:
+                        # Submit command if text input is active
+                        if text_input_buffer.strip():
+                            submit_command(text_input_buffer.strip())
+                        text_input_active = False
+                        text_input_buffer = ""
+                        pygame.event.set_grab(True)
+                        pygame.mouse.set_visible(False)
+                    else:
+                        # Open text input if not active
+                        text_input_active = True
+                        text_input_buffer = ""
+                        pygame.event.set_grab(False)
+                        pygame.mouse.set_visible(True)
                 
                 elif event.key == K_BACKSPACE and text_input_active:
                     text_input_buffer = text_input_buffer[:-1]
