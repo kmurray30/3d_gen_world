@@ -51,6 +51,8 @@ class WorldObjectData:
     color: List[float] = field(default_factory=lambda: [0.5, 0.5, 0.5, 1.0])  # RGBA
     initial_position: Optional[List[float]] = None  # For multi-step animations
     movement_duration: float = 1.0  # Duration for movement animations in seconds
+    time_to_live: Optional[float] = None  # TTL in seconds, None = permanent
+    created_at: float = 0.0  # Timestamp when object was created
     
     def to_dict(self) -> Dict[str, Any]:
         result = {
@@ -67,6 +69,10 @@ class WorldObjectData:
             result["initial_position"] = self.initial_position
         if self.movement_duration != 1.0:
             result["movement_duration"] = self.movement_duration
+        if self.time_to_live is not None:
+            result["time_to_live"] = self.time_to_live
+        if self.created_at != 0.0:
+            result["created_at"] = self.created_at
         return result
     
     @classmethod
@@ -82,7 +88,9 @@ class WorldObjectData:
             properties=ObjectProperties.from_dict(properties_data),
             color=data.get("color", [0.5, 0.5, 0.5, 1.0]),
             initial_position=data.get("initial_position"),
-            movement_duration=data.get("movement_duration", 1.0)
+            movement_duration=data.get("movement_duration", 1.0),
+            time_to_live=data.get("time_to_live"),
+            created_at=data.get("created_at", 0.0)
         )
 
 

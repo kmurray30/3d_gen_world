@@ -43,15 +43,21 @@ Rules:
 
 DESCRIPTION RULES:
 - Descriptions should describe WHAT the object IS, not what it's DOING
-- Focus on physical attributes: size, color, material, appearance
-- GOOD: "A tall man in a grey coat", "A small brown bird", "A red car"
-- BAD: "A man walking", "A bird flying down", "A car driving"
+- Keep descriptions MINIMAL and CONCISE - 1-3 words max
+- Focus on key identifiers: type, maybe one adjective
+- GOOD: "clown", "sad clown", "wooden table", "red car", "old man"
+- BAD: "A tall man in a grey coat", "A small brown bird with feathers", "A shiny red sports car"
+- NO articles (a/an/the), NO unnecessary adjectives, NO long phrases
 - The action/movement is conveyed through initial_position and position, NOT the description
 
 SPATIAL REASONING FOR CREATIONS:
 - Objects have approximate size based on scale: scale [1,1,1] occupies roughly 1 unit radius
 - AVOID placing objects at the exact same coordinates as existing objects - check positions and keep reasonable distance
-- For ground-level objects, Y coordinate should be approximately scale_y/2 (half their height)
+- For ground-level objects, Y coordinate MUST be scale_y/2 (half their vertical scale)
+  * Example: object with scale [1, 2, 1] should have Y = 1.0 (not 0!)
+  * This ensures the bottom edge touches ground, not the center
+  * BAD: scale [1, 0.8, 1] with Y = 0 (object is half-buried!)
+  * GOOD: scale [1, 0.8, 1] with Y = 0.4 (bottom edge touches ground)
 - When a command implies MOVEMENT (walks, enters, approaches, flies to, drives to, etc.):
   * Use "initial_position" for where the object starts (spawn point)
   * Use "position" for where the object ends up (destination)
@@ -60,6 +66,11 @@ SPATIAL REASONING FOR CREATIONS:
   * Set "movement_duration" (in seconds) based on distance and action type
   * Rough guide: walking = 1-2 units/second, running = 3-4 units/second, flying = 2-5 units/second
 - When a command has NO movement implication (spawn, create, add), only use "position" (no initial_position)
+- For TEMPORARY/EPHEMERAL objects (smoke, sparks, fire effects, magic, etc.), add "time_to_live" field
+  * Measured in seconds from creation
+  * Object will fade out and be automatically removed when time expires
+  * Use for effects that should disappear: smoke (5-10s), sparks (2-3s), magic effects (3-8s), flames (variable)
+  * Permanent objects (people, buildings, rocks) should NOT have time_to_live
 
 Response format:
 {
@@ -82,10 +93,11 @@ Response format:
                 "initial_position": [x, y, z],
                 "position": [x, y, z],
                 "movement_duration": 3.0,
+                "time_to_live": 8.0,
                 "rotation": [0, 0, 0],
                 "scale": [1, 1, 1],
                 "shape": "cube",
-                "description": "A tall man in a grey coat",
+                "description": "tall man",
                 "properties": {},
                 "color": [0.5, 0.5, 0.5, 1.0]
             }
@@ -93,16 +105,32 @@ Response format:
     ]
 }
 
+CRITICAL: Always include "time_to_live" field for temporary objects like smoke, sparks, flames, etc.
+Omit "time_to_live" only for permanent objects like people, buildings, vehicles, furniture.
+
 EXAMPLES:
 Good: "man walks to house" where house is at [8, 2, 10]
-  → id: "man_1", description: "A tall man in a grey coat"
-  → initial_position: [3, 0.5, 7], position: [7, 0.5, 11], movement_duration: 3.0
-  (Description is WHAT he is, movement is via positions)
+  → id: "man_1", description: "tall man" (NOT "A tall man in a grey coat")
+  → scale: [1, 1.8, 1], position Y: 0.9 (scale_y/2 = 1.8/2 = 0.9)
+  → initial_position: [3, 0.9, 7], position: [7, 0.9, 11], movement_duration: 3.0
+  → NO time_to_live (permanent object)
 
 Good: "bird flies down from the sky" 
-  → id: "bird_1", description: "A small brown bird"
-  → initial_position: [2, 20, 3], position: [2, 2, 3], movement_duration: 4.0
-  (Description is WHAT it is, not that it's flying)
+  → id: "bird_1", description: "small bird" (NOT "A small brown bird")
+  → scale: [0.3, 0.3, 0.3], final Y: 0.15 (scale_y/2 = 0.3/2 = 0.15)
+  → initial_position: [2, 20, 3], position: [2, 0.15, 3], movement_duration: 4.0
+  → NO time_to_live (permanent object)
+
+Good: "house catches fire" where house is at [8, 2, 10]
+  → Modify house: add "on_fire": true to properties
+  → Create "smoke_1": description "smoke cloud" (NOT "A dark cloud of smoke")
+  → position: [8, 6, 10] (above house), time_to_live: 8.0
+  → CRITICAL: Must include time_to_live for smoke!
+
+Good: "spawn a rock"
+  → id: "rock_2", description: "grey rock" (NOT "A grey rocky stone")
+  → scale: [1, 0.8, 1], position: [5, 0.4, 4] (Y = 0.8/2 = 0.4)
+  → NO time_to_live (permanent object)
 
 Bad: "man enters house" where house is at [8, 2, 10]
   → position: [8, 2, 10] (NO initial_position)
@@ -110,12 +138,15 @@ Bad: "man enters house" where house is at [8, 2, 10]
 
 Bad: "bird flies down"
   → description: "A bird flying down"
-  (Should be "A small brown bird" - no action verbs in description!)
+  (Should be "bird" or "small bird" - no action verbs, no articles!)
 
-Good: "spawn a rock"
-  → id: "rock_2", description: "A grey rocky stone"
-  → position: [5, 0.3, 4] (no initial_position, no movement_duration)
-  (Simple instantaneous spawn, no movement implied)
+Bad: "spawn a rock" with scale [1, 0.8, 1]
+  → position: [5, 0, 4]
+  (WRONG Y! Should be 0.4, not 0 - object will be half-buried!)
+
+Bad: "smoke appears"
+  → description: "smoke", NO time_to_live field
+  (MUST include time_to_live for smoke! It's temporary!)
 
 Only include fields that actually change in modifications. For creations, include all required fields.
 If only modifying, you can omit the "creations" array. If only creating, you can omit the "modifications" array.

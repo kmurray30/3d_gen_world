@@ -12,6 +12,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import math
 import json
+import time
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -179,7 +180,7 @@ def draw_ground():
     glEnd()
 
 
-def draw_3d_text(text, position, text_scale=2.0, rotation=(0, 0, 0), scale_multiplier=1.0):
+def draw_3d_text(text, position, text_scale=2.0, rotation=(0, 0, 0), scale_multiplier=1.0, alpha=1.0):
     """
     Draw billboarded text in 3D space that always faces the camera.
     The text appears as a floating label at the given 3D position.
@@ -190,6 +191,7 @@ def draw_3d_text(text, position, text_scale=2.0, rotation=(0, 0, 0), scale_multi
         text_scale: Base scale for text size
         rotation: (x, y, z) rotation in degrees (z-rotation applied to billboard)
         scale_multiplier: Additional scale factor from object's scale
+        alpha: Transparency (0.0 = fully transparent, 1.0 = fully opaque)
     """
     x, y, z = position
     
@@ -278,8 +280,8 @@ def draw_3d_text(text, position, text_scale=2.0, rotation=(0, 0, 0), scale_multi
     tl_y = y - (right_y * half_width) + (up_y * half_height)
     tl_z = z - (right_z * half_width) + (up_z * half_height)
     
-    # Draw textured quad
-    glColor4f(1.0, 1.0, 1.0, 1.0)  # White color, full alpha
+    # Draw textured quad with alpha
+    glColor4f(1.0, 1.0, 1.0, alpha)  # White color with variable alpha
     glBegin(GL_QUADS)
     glTexCoord2f(0, 0); glVertex3f(bl_x, bl_y, bl_z)  # Bottom-left
     glTexCoord2f(1, 0); glVertex3f(br_x, br_y, br_z)  # Bottom-right
@@ -340,7 +342,23 @@ def draw_frame():
     
     # Draw world objects as floating 3D text with animation
     if world_state and animation_manager:
+        current_time = time.time()
+        
         for obj in world_state.get_all_objects():
+            # Calculate alpha based on TTL (fade out in last second)
+            alpha = 1.0
+            if obj.time_to_live is not None:
+                age = current_time - obj.created_at
+                remaining = obj.time_to_live - age
+                fade_duration = 1.0  # Fade out over last 1 second
+                
+                if remaining < fade_duration:
+                    alpha = max(0.0, remaining / fade_duration)
+                
+                # Debug: Print fade info for objects with TTL
+                if remaining < fade_duration + 1.0:  # Log when close to fading
+                    print(f"DEBUG: {obj.object_id} - age={age:.1f}s, ttl={obj.time_to_live}s, remaining={remaining:.1f}s, alpha={alpha:.2f}")
+            
             # Get animated position if animating, else use world state position
             base_pos = list(obj.position)
             render_pos = animation_manager.get_render_position(obj.object_id, base_pos)
@@ -355,9 +373,9 @@ def draw_frame():
             render_scale = animation_manager.get_render_scale(obj.object_id, base_scale)
             scale_avg = sum(render_scale) / len(render_scale)  # Average of x, y, z
             
-            # Draw text at interpolated position with rotation and scale
+            # Draw text at interpolated position with rotation, scale, and alpha
             draw_3d_text(obj.description, render_pos, text_scale=2.0, 
-                        rotation=render_rot, scale_multiplier=scale_avg)
+                        rotation=render_rot, scale_multiplier=scale_avg, alpha=alpha)
     
     # UI overlay (text)
     glDisable(GL_DEPTH_TEST)
@@ -449,11 +467,16 @@ def on_llm_response(response):
     created_ids = []
     if response.creations:
         created_ids = world_state.apply_creations(response.creations)
+        current_time = time.time()
+        
         # Start spawn/movement animations for new objects
         if animation_manager:
             for obj_id in created_ids:
                 obj = world_state.get_object(obj_id)
                 if obj:
+                    # Set creation timestamp for TTL tracking
+                    obj.created_at = current_time
+                    
                     # Check if object has multi-step movement
                     if obj.initial_position:
                         # Animate from initial_position to position (movement animation)
@@ -581,10 +604,26 @@ def main():
     
     while running:
         dt = clock.tick(60) / 1000.0
+        current_time = time.time()
         
         # Update animations
         if animation_manager:
             animation_manager.update(dt)
+        
+        # Check for expired objects (TTL cleanup)
+        if world_state:
+            expired_objects = []
+            for obj in world_state.get_all_objects():
+                if obj.time_to_live is not None:
+                    age = current_time - obj.created_at
+                    if age >= obj.time_to_live:
+                        expired_objects.append(obj.object_id)
+            
+            # Remove expired objects
+            for obj_id in expired_objects:
+                world_state.remove_object(obj_id)
+                if animation_manager and hasattr(animation_manager, 'clear_animation'):
+                    animation_manager.clear_animation(obj_id)
         
         # Event handling
         for event in pygame.event.get():

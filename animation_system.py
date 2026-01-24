@@ -107,6 +107,11 @@ class AnimationManager:
         """Check if an object is currently animating."""
         return object_id in self.animations
     
+    def clear_animation(self, object_id):
+        """Clear animation for a specific object."""
+        if object_id in self.animations:
+            del self.animations[object_id]
+    
     def clear(self):
         """Clear all active animations."""
         self.animations.clear()
