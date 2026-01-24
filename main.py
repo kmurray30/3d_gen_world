@@ -445,10 +445,40 @@ def on_llm_response(response):
         status_is_error = True
         return
     
-    if not response.modifications:
-        status_message = "No changes made"
-        status_is_error = False
-        return
+    # Handle creations first
+    created_ids = []
+    if response.creations:
+        created_ids = world_state.apply_creations(response.creations)
+        # Start spawn/movement animations for new objects
+        if animation_manager:
+            for obj_id in created_ids:
+                obj = world_state.get_object(obj_id)
+                if obj:
+                    # Check if object has multi-step movement
+                    if obj.initial_position:
+                        # Animate from initial_position to position (movement animation)
+                        animation_manager.start_animation(
+                            obj_id,
+                            start_pos=list(obj.initial_position),
+                            end_pos=list(obj.position),
+                            start_rot=list(obj.rotation),
+                            end_rot=list(obj.rotation),
+                            start_scale=list(obj.scale),
+                            end_scale=list(obj.scale),
+                            duration=obj.movement_duration
+                        )
+                    else:
+                        # Simple spawn animation (scale up quickly)
+                        animation_manager.start_animation(
+                            obj_id,
+                            start_pos=list(obj.position),
+                            end_pos=list(obj.position),
+                            start_rot=list(obj.rotation),
+                            end_rot=list(obj.rotation),
+                            start_scale=[0.01, 0.01, 0.01],
+                            end_scale=list(obj.scale),
+                            duration=0.5  # Quick spawn
+                        )
     
     # Track old positions, rotations, and scales before applying modifications
     old_positions = {}
@@ -492,11 +522,18 @@ def on_llm_response(response):
                         duration=1.0
                     )
     
+    # Update status message
+    messages = []
+    if created_ids:
+        messages.append(f"Created: {', '.join(created_ids)}")
     if modified_ids:
-        status_message = f"Modified: {', '.join(modified_ids)}"
+        messages.append(f"Modified: {', '.join(modified_ids)}")
+    
+    if messages:
+        status_message = " | ".join(messages)
         status_is_error = False
     else:
-        status_message = "No valid objects modified"
+        status_message = "No changes made"
         status_is_error = False
 
 

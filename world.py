@@ -42,16 +42,18 @@ class ObjectProperties:
 class WorldObjectData:
     """Data representation of a world object (separate from rendering)."""
     object_id: str
-    position: List[float]  # [x, y, z]
+    position: List[float]  # [x, y, z] - final/current position
     rotation: List[float]  # [x, y, z] in degrees
     scale: List[float]     # [x, y, z]
     shape: str             # cube, cylinder, cone, sphere, plane
     description: str
     properties: ObjectProperties = field(default_factory=ObjectProperties)
     color: List[float] = field(default_factory=lambda: [0.5, 0.5, 0.5, 1.0])  # RGBA
+    initial_position: Optional[List[float]] = None  # For multi-step animations
+    movement_duration: float = 1.0  # Duration for movement animations in seconds
     
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        result = {
             "id": self.object_id,
             "position": self.position,
             "rotation": self.rotation,
@@ -61,6 +63,11 @@ class WorldObjectData:
             "properties": self.properties.to_dict(),
             "color": self.color
         }
+        if self.initial_position is not None:
+            result["initial_position"] = self.initial_position
+        if self.movement_duration != 1.0:
+            result["movement_duration"] = self.movement_duration
+        return result
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WorldObjectData":
@@ -73,7 +80,9 @@ class WorldObjectData:
             shape=data.get("shape", "cube"),
             description=data.get("description", "An object"),
             properties=ObjectProperties.from_dict(properties_data),
-            color=data.get("color", [0.5, 0.5, 0.5, 1.0])
+            color=data.get("color", [0.5, 0.5, 0.5, 1.0]),
+            initial_position=data.get("initial_position"),
+            movement_duration=data.get("movement_duration", 1.0)
         )
 
 
@@ -179,3 +188,38 @@ class WorldState:
             if object_id and self.update_object(object_id, changes):
                 modified_ids.append(object_id)
         return modified_ids
+    
+    def apply_creations(self, creations: List[Dict[str, Any]]) -> List[str]:
+        """
+        Create new objects from LLM response.
+        Returns list of object IDs that were successfully created.
+        """
+        created_ids = []
+        for creation in creations:
+            object_id = creation.get("id")
+            object_data = creation.get("object", {})
+            
+            if not object_id or object_id in self._objects:
+                continue  # Skip if no ID or ID already exists
+            
+            try:
+                # Extract initial_position and movement_duration if present
+                initial_pos = object_data.get("initial_position")
+                movement_duration = object_data.get("movement_duration", 1.0)
+                
+                new_obj = WorldObjectData.from_dict({
+                    "id": object_id,
+                    **object_data
+                })
+                
+                # Store initial position and duration for animation
+                if initial_pos:
+                    new_obj.initial_position = initial_pos
+                    new_obj.movement_duration = movement_duration
+                
+                self.add_object(new_obj)
+                created_ids.append(object_id)
+            except Exception:
+                continue
+        
+        return created_ids
