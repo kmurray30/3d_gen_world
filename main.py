@@ -179,10 +179,17 @@ def draw_ground():
     glEnd()
 
 
-def draw_3d_text(text, position, text_scale=2.0):
+def draw_3d_text(text, position, text_scale=2.0, rotation=(0, 0, 0), scale_multiplier=1.0):
     """
     Draw billboarded text in 3D space that always faces the camera.
     The text appears as a floating label at the given 3D position.
+    
+    Args:
+        text: The text to display
+        position: (x, y, z) position in 3D space
+        text_scale: Base scale for text size
+        rotation: (x, y, z) rotation in degrees (z-rotation applied to billboard)
+        scale_multiplier: Additional scale factor from object's scale
     """
     x, y, z = position
     
@@ -224,9 +231,26 @@ def draw_3d_text(text, position, text_scale=2.0):
     up_y = modelview_matrix[1][1]
     up_z = modelview_matrix[2][1]
     
-    # Calculate quad size based on text dimensions and scale
+    # Apply Z-rotation to the billboard (rotate around the forward axis)
+    z_rot_rad = math.radians(rotation[2])
+    cos_rot = math.cos(z_rot_rad)
+    sin_rot = math.sin(z_rot_rad)
+    
+    # Rotate the right and up vectors
+    new_right_x = right_x * cos_rot - up_x * sin_rot
+    new_right_y = right_y * cos_rot - up_y * sin_rot
+    new_right_z = right_z * cos_rot - up_z * sin_rot
+    
+    new_up_x = right_x * sin_rot + up_x * cos_rot
+    new_up_y = right_y * sin_rot + up_y * cos_rot
+    new_up_z = right_z * sin_rot + up_z * cos_rot
+    
+    right_x, right_y, right_z = new_right_x, new_right_y, new_right_z
+    up_x, up_y, up_z = new_up_x, new_up_y, new_up_z
+    
+    # Calculate quad size based on text dimensions, scale, and scale multiplier
     aspect_ratio = text_width / text_height
-    quad_height = text_scale * 0.1  # Base size in world units
+    quad_height = text_scale * 0.1 * scale_multiplier  # Apply scale multiplier
     quad_width = quad_height * aspect_ratio
     
     # Calculate the four corners of the billboard quad
@@ -321,8 +345,19 @@ def draw_frame():
             base_pos = list(obj.position)
             render_pos = animation_manager.get_render_position(obj.object_id, base_pos)
             render_pos[1] += obj.properties.height_offset
-            # Draw text at interpolated position
-            draw_3d_text(obj.description, render_pos, text_scale=2.0)
+            
+            # Get animated rotation
+            base_rot = list(obj.rotation)
+            render_rot = animation_manager.get_render_rotation(obj.object_id, base_rot)
+            
+            # Get animated scale and use average for text size multiplier
+            base_scale = list(obj.scale)
+            render_scale = animation_manager.get_render_scale(obj.object_id, base_scale)
+            scale_avg = sum(render_scale) / len(render_scale)  # Average of x, y, z
+            
+            # Draw text at interpolated position with rotation and scale
+            draw_3d_text(obj.description, render_pos, text_scale=2.0, 
+                        rotation=render_rot, scale_multiplier=scale_avg)
     
     # UI overlay (text)
     glDisable(GL_DEPTH_TEST)
@@ -415,27 +450,45 @@ def on_llm_response(response):
         status_is_error = False
         return
     
-    # Track old positions before applying modifications
+    # Track old positions, rotations, and scales before applying modifications
     old_positions = {}
+    old_rotations = {}
+    old_scales = {}
+    
     for mod in response.modifications:
         obj_id = mod.get("id")
         obj = world_state.get_object(obj_id)
-        if obj and "position" in mod.get("changes", {}):
-            old_positions[obj_id] = list(obj.position)
+        if obj:
+            changes = mod.get("changes", {})
+            if "position" in changes:
+                old_positions[obj_id] = list(obj.position)
+            if "rotation" in changes:
+                old_rotations[obj_id] = list(obj.rotation)
+            if "scale" in changes:
+                old_scales[obj_id] = list(obj.scale)
     
     # Apply modifications to world state
     modified_ids = world_state.apply_modifications(response.modifications)
     
-    # Start animations for position changes
+    # Start animations for property changes
     if animation_manager:
         for obj_id in modified_ids:
-            if obj_id in old_positions:
-                obj = world_state.get_object(obj_id)
-                if obj:
+            obj = world_state.get_object(obj_id)
+            if obj:
+                # Check what changed and start appropriate animations
+                has_pos = obj_id in old_positions
+                has_rot = obj_id in old_rotations
+                has_scale = obj_id in old_scales
+                
+                if has_pos or has_rot or has_scale:
                     animation_manager.start_animation(
                         obj_id,
-                        old_positions[obj_id],
-                        list(obj.position),
+                        start_pos=old_positions.get(obj_id, list(obj.position)),
+                        end_pos=list(obj.position),
+                        start_rot=old_rotations.get(obj_id, list(obj.rotation)),
+                        end_rot=list(obj.rotation),
+                        start_scale=old_scales.get(obj_id, list(obj.scale)),
+                        end_scale=list(obj.scale),
                         duration=1.0
                     )
     
