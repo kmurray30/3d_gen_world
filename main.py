@@ -31,7 +31,15 @@ player_pitch = 0.0
 
 # Movement
 move_speed = 5.0
+sprint_multiplier = 2.0
 mouse_sensitivity = 0.15
+
+# Jump physics
+player_vertical_velocity = 0.0
+jump_strength = 8.0
+gravity = 20.0
+is_on_ground = True
+ground_height = 1.7  # Player eye height when standing on ground
 
 # Game state
 world_state = None
@@ -398,7 +406,7 @@ def draw_frame():
     if text_input_active:
         prompt_text = f"> {text_input_buffer}_"
     else:
-        prompt_text = "Press / or Enter to type a command | WASD to move | Mouse to look"
+        prompt_text = "Press / or Enter to type a command | WASD to move | Control to sprint | Space to jump | Mouse to look"
     
     # Render prompt text
     font = pygame.font.SysFont('Courier', 14)
@@ -563,6 +571,7 @@ def on_llm_response(response):
 def main():
     global world_state, llm_controller, animation_manager, text_input_active, text_input_buffer
     global player_pos, player_yaw, player_pitch, clock, status_message, status_is_error
+    global player_vertical_velocity, is_on_ground
     
     # Initialize pygame
     pygame.init()
@@ -594,6 +603,8 @@ def main():
     
     print("Starting game...")
     print("  WASD - Move")
+    print("  Control - Sprint")
+    print("  Space - Jump")
     print("  Mouse - Look around")
     print("  / - Open command input")
     print("  Enter - Submit command")
@@ -639,6 +650,12 @@ def main():
                         pygame.mouse.set_visible(False)
                     else:
                         running = False
+                
+                elif event.key == K_SPACE and not text_input_active:
+                    # Jump if on ground
+                    if is_on_ground:
+                        player_vertical_velocity = jump_strength
+                        is_on_ground = False
                 
                 elif event.key == K_SLASH and not text_input_active:
                     text_input_active = True
@@ -702,12 +719,34 @@ def main():
                 move_x += right_x
                 move_z += right_z
             
+            # Check if sprinting (Control key on Mac)
+            current_speed = move_speed
+            if K_LCTRL in keys_pressed or K_RCTRL in keys_pressed:
+                current_speed *= sprint_multiplier
+            
+            # Normalize diagonal movement
             length = math.sqrt(move_x**2 + move_z**2)
             if length > 0:
                 move_x /= length
                 move_z /= length
-                player_pos[0] += move_x * move_speed * dt
-                player_pos[2] += move_z * move_speed * dt
+                player_pos[0] += move_x * current_speed * dt
+                player_pos[2] += move_z * current_speed * dt
+        
+        # Apply jump physics and gravity
+        if not is_on_ground:
+            # Apply gravity
+            player_vertical_velocity -= gravity * dt
+        
+        # Update vertical position
+        player_pos[1] += player_vertical_velocity * dt
+        
+        # Ground collision check
+        if player_pos[1] <= ground_height:
+            player_pos[1] = ground_height
+            player_vertical_velocity = 0.0
+            is_on_ground = True
+        else:
+            is_on_ground = False
         
         # Render
         draw_frame()
