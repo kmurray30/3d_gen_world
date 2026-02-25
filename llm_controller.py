@@ -44,9 +44,10 @@ Rules:
 DESCRIPTION RULES:
 - Descriptions should describe WHAT the object IS, not what it's DOING
 - Keep descriptions MINIMAL and CONCISE - 1-3 words max
+- Prefer simple, single-word descriptions when possible (e.g., "tree" over "tall tree", "rock" over "large rock") so they match the word map more reliably
 - Focus on key identifiers: type, maybe one adjective
-- GOOD: "clown", "sad clown", "wooden table", "red car", "old man"
-- BAD: "A tall man in a grey coat", "A small brown bird with feathers", "A shiny red sports car"
+- GOOD: "clown", "tree", "rock", "house", "wooden table", "red car"
+- BAD: "A tall man in a grey coat", "tall tree", "large rock", "A small brown bird with feathers"
 - NO articles (a/an/the), NO unnecessary adjectives, NO long phrases
 - The action/movement is conveyed through initial_position and position, NOT the description
 

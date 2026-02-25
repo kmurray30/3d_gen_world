@@ -13,12 +13,186 @@ from OpenGL.GLU import *
 import math
 import json
 import time
+from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
 from world import WorldState, WorldObjectData, ObjectProperties
 from llm_controller import LLMController, LLMResponse
 from animation_system import AnimationManager
+
+# Word/image lookup: tag_map and word_map loaded lazily
+_tag_map: dict | None = None
+_word_map: dict | None = None
+_texture_cache: dict[str, int] = {}
+_images_base_path: Path | None = None
+
+
+def _load_word_maps() -> None:
+    """Load tag_map and word_map JSON files once at first use."""
+    global _tag_map, _word_map, _images_base_path
+    if _tag_map is not None:
+        return
+    script_dir = Path(__file__).resolve().parent
+    words_dir = script_dir / "words_and_images"
+    with open(words_dir / "tag_map.json", encoding="utf-8") as file:
+        _tag_map = json.load(file)
+    with open(words_dir / "word_map.json", encoding="utf-8") as file:
+        _word_map = json.load(file)
+    _images_base_path = words_dir / "processed_images" / "local_klein"
+
+
+def resolve_word(description: str) -> str | None:
+    """
+    Resolve a description (e.g. "tall tree", "tree") to a canonical word via tag_map.
+    Prioritizes is_primary; falls back to first word in words list.
+    Returns None if no match.
+    """
+    _load_word_maps()
+    # Normalize: lowercase, strip leading articles
+    normalized = description.strip().lower()
+    for prefix in ("a ", "an ", "the "):
+        if normalized.startswith(prefix):
+            normalized = normalized[len(prefix) :].strip()
+            break
+    if not normalized:
+        return None
+
+    def try_lookup(key: str) -> str | None:
+        entry = _tag_map.get(key)
+        if entry is None:
+            return None
+        if entry.get("is_primary", False):
+            return key
+        words_list = entry.get("words", [])
+        return words_list[0] if words_list else key
+
+    result = try_lookup(normalized)
+    if result is not None:
+        return result
+    # Fallback: try last token (e.g. "tall tree" -> "tree")
+    tokens = normalized.split()
+    if len(tokens) > 1:
+        return try_lookup(tokens[-1])
+    return None
+
+
+def get_word_entry(word: str) -> dict | None:
+    """
+    Look up word in word_map. Returns entry dict or None.
+    Handles both height_cm and height_cm (typo) in JSON.
+    """
+    _load_word_maps()
+    entry = _word_map.get(word)
+    if entry is None:
+        return None
+    return entry
+
+
+def load_image_texture(filename: str) -> tuple[int, int, int] | None:
+    """
+    Load PNG image and upload to OpenGL. Returns (texture_id, width, height) or None if missing.
+    Results are cached by filename.
+    """
+    global _texture_cache, _images_base_path
+    _load_word_maps()
+    if filename in _texture_cache:
+        return _texture_cache[filename]
+    if _images_base_path is None:
+        return None
+    filepath = _images_base_path / filename
+    if not filepath.is_file():
+        return None
+    try:
+        surface = pygame.image.load(str(filepath))
+        surface = surface.convert_alpha()
+        width = surface.get_width()
+        height = surface.get_height()
+        texture_data = pygame.image.tostring(surface, "RGBA", True)
+        texture_id = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, texture_id)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture_data)
+        _texture_cache[filename] = (texture_id, width, height)
+        return (texture_id, width, height)
+    except Exception:
+        return None
+
+
+def draw_3d_image(
+    texture_id: int,
+    texture_width: int,
+    texture_height: int,
+    position: list[float],
+    height_world_units: float,
+    rotation: tuple[float, float, float] = (0, 0, 0),
+    alpha: float = 1.0,
+) -> None:
+    """
+    Draw billboarded image in 3D space. Same billboard logic as draw_3d_text.
+    height_world_units is the quad height in meters (from height_cm / 100).
+    Preserves aspect ratio from texture dimensions.
+    """
+    x, y, z = position
+    glEnable(GL_TEXTURE_2D)
+    glEnable(GL_BLEND)
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    glBindTexture(GL_TEXTURE_2D, texture_id)
+
+    modelview_matrix = glGetFloatv(GL_MODELVIEW_MATRIX)
+    right_x = modelview_matrix[0][0]
+    right_y = modelview_matrix[1][0]
+    right_z = modelview_matrix[2][0]
+    up_x = modelview_matrix[0][1]
+    up_y = modelview_matrix[1][1]
+    up_z = modelview_matrix[2][1]
+
+    z_rot_rad = math.radians(rotation[2])
+    cos_rot = math.cos(z_rot_rad)
+    sin_rot = math.sin(z_rot_rad)
+    new_right_x = right_x * cos_rot - up_x * sin_rot
+    new_right_y = right_y * cos_rot - up_y * sin_rot
+    new_right_z = right_z * cos_rot - up_z * sin_rot
+    new_up_x = right_x * sin_rot + up_x * cos_rot
+    new_up_y = right_y * sin_rot + up_y * cos_rot
+    new_up_z = right_z * sin_rot + up_z * cos_rot
+    right_x, right_y, right_z = new_right_x, new_right_y, new_right_z
+    up_x, up_y, up_z = new_up_x, new_up_y, new_up_z
+
+    aspect_ratio = texture_width / texture_height if texture_height > 0 else 1.0
+    quad_height = height_world_units
+    quad_width = quad_height * aspect_ratio
+    half_width = quad_width / 2
+    half_height = quad_height / 2
+
+    bl_x = x - (right_x * half_width) - (up_x * half_height)
+    bl_y = y - (right_y * half_width) - (up_y * half_height)
+    bl_z = z - (right_z * half_width) - (up_z * half_height)
+    br_x = x + (right_x * half_width) - (up_x * half_height)
+    br_y = y + (right_y * half_width) - (up_y * half_height)
+    br_z = z + (right_z * half_width) - (up_z * half_height)
+    tr_x = x + (right_x * half_width) + (up_x * half_height)
+    tr_y = y + (right_y * half_width) + (up_y * half_height)
+    tr_z = z + (right_z * half_width) + (up_z * half_height)
+    tl_x = x - (right_x * half_width) + (up_x * half_height)
+    tl_y = y - (right_y * half_width) + (up_y * half_height)
+    tl_z = z - (right_z * half_width) + (up_z * half_height)
+
+    glColor4f(1.0, 1.0, 1.0, alpha)
+    glBegin(GL_QUADS)
+    glTexCoord2f(0, 0)
+    glVertex3f(bl_x, bl_y, bl_z)
+    glTexCoord2f(1, 0)
+    glVertex3f(br_x, br_y, br_z)
+    glTexCoord2f(1, 1)
+    glVertex3f(tr_x, tr_y, tr_z)
+    glTexCoord2f(0, 1)
+    glVertex3f(tl_x, tl_y, tl_z)
+    glEnd()
+
+    glDisable(GL_TEXTURE_2D)
+
 
 # Window setup
 WINDOW_WIDTH = 1280
@@ -74,7 +248,7 @@ def create_initial_scene() -> WorldState:
         rotation=[0, 0, 0],
         scale=[2, 0.2, 1],
         shape="cube",
-        description="A wooden table",
+        description="table",
         color=[0.47, 0.35, 0.24, 1.0]
     ))
     
@@ -85,7 +259,7 @@ def create_initial_scene() -> WorldState:
         rotation=[0, 30, 0],
         scale=[0.8, 0.6, 0.9],
         shape="cube",
-        description="A large rock",
+        description="rock",
         color=[0.4, 0.4, 0.43, 1.0]
     ))
     
@@ -96,7 +270,7 @@ def create_initial_scene() -> WorldState:
         rotation=[0, 0, 0],
         scale=[1, 4, 1],
         shape="cube",
-        description="A tall tree",
+        description="tree",
         color=[0.3, 0.5, 0.3, 1.0]
     ))
     
@@ -107,7 +281,7 @@ def create_initial_scene() -> WorldState:
         rotation=[0, 0, 0],
         scale=[0.2, 1, 4],
         shape="cube",
-        description="A wooden fence",
+        description="fence",
         color=[0.5, 0.4, 0.3, 1.0]
     ))
     
@@ -376,14 +550,36 @@ def draw_frame():
             base_rot = list(obj.rotation)
             render_rot = animation_manager.get_render_rotation(obj.object_id, base_rot)
             
-            # Get animated scale and use average for text size multiplier
+            # Get animated scale for fallback text size
             base_scale = list(obj.scale)
             render_scale = animation_manager.get_render_scale(obj.object_id, base_scale)
-            scale_avg = sum(render_scale) / len(render_scale)  # Average of x, y, z
-            
-            # Draw text at interpolated position with rotation, scale, and alpha
-            draw_3d_text(obj.description, render_pos, text_scale=2.0, 
-                        rotation=render_rot, scale_multiplier=scale_avg, alpha=alpha)
+            scale_avg = sum(render_scale) / len(render_scale)
+
+            # Resolve description -> word -> WordEntry; draw image or fall back to text
+            resolved_word = resolve_word(obj.description)
+            word_entry = get_word_entry(resolved_word) if resolved_word else None
+
+            if word_entry:
+                filename = word_entry.get("file")
+                height_cm = word_entry.get("height_cm") or word_entry.get("height_cm") or 100
+                texture_result = load_image_texture(filename) if filename else None
+                if texture_result is not None:
+                    texture_id, tex_width, tex_height = texture_result
+                    height_world = max(0.5, height_cm / 100.0)
+                    draw_3d_image(
+                        texture_id, tex_width, tex_height,
+                        render_pos, height_world, render_rot, alpha
+                    )
+                else:
+                    draw_3d_text(
+                        obj.description, render_pos, text_scale=2.0,
+                        rotation=render_rot, scale_multiplier=scale_avg, alpha=alpha
+                    )
+            else:
+                draw_3d_text(
+                    obj.description, render_pos, text_scale=2.0,
+                    rotation=render_rot, scale_multiplier=scale_avg, alpha=alpha
+                )
     
     # UI overlay (text)
     glDisable(GL_DEPTH_TEST)
