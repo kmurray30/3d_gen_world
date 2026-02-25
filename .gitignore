@@ -5,4 +5,5 @@ __pycache__/
 .venv/
 
 # Exclude generated images in any image* folder
-**/image*/
+**/generated_images/
+**/processed_images/

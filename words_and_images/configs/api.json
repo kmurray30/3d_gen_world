@@ -1,0 +1,9 @@
+{
+  "model": "fal-ai/flux-2",
+  "image_width": 512,
+  "image_height": 512,
+  "concurrency_limit": 2,
+  "max_retries": 6,
+  "abort_failure_threshold": 6,
+  "output_dir": "words_and_images/generated_images/flux2_api"
+}
