@@ -138,6 +138,10 @@ def draw_3d_image(
     glEnable(GL_TEXTURE_2D)
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    # Discard transparent fragments so they don't write to depth buffer.
+    # Without this, transparent background pixels occlude objects behind them.
+    glEnable(GL_ALPHA_TEST)
+    glAlphaFunc(GL_GREATER, 0.02)
     glBindTexture(GL_TEXTURE_2D, texture_id)
 
     modelview_matrix = glGetFloatv(GL_MODELVIEW_MATRIX)
@@ -191,6 +195,7 @@ def draw_3d_image(
     glVertex3f(tl_x, tl_y, tl_z)
     glEnd()
 
+    glDisable(GL_ALPHA_TEST)
     glDisable(GL_TEXTURE_2D)
 
 
@@ -401,6 +406,8 @@ def draw_3d_text(text, position, text_scale=2.0, rotation=(0, 0, 0), scale_multi
     glEnable(GL_TEXTURE_2D)
     glEnable(GL_BLEND)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+    glEnable(GL_ALPHA_TEST)
+    glAlphaFunc(GL_GREATER, 0.02)
     
     # Get the current modelview matrix to extract camera orientation
     modelview_matrix = glGetFloatv(GL_MODELVIEW_MATRIX)
@@ -472,6 +479,7 @@ def draw_3d_text(text, position, text_scale=2.0, rotation=(0, 0, 0), scale_multi
     glEnd()
     
     # Clean up
+    glDisable(GL_ALPHA_TEST)
     glDisable(GL_TEXTURE_2D)
     glDeleteTextures([texture_id])
 
