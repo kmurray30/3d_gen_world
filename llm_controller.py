@@ -7,6 +7,7 @@ and generate world modifications.
 import os
 import json
 import threading
+import traceback
 from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass
 from openai import OpenAI
@@ -258,6 +259,7 @@ Return the JSON modifications:"""
             return parsed_response
             
         except Exception as api_exception:
+            traceback.print_exc()
             return LLMResponse(
                 success=False,
                 modifications=[],
@@ -311,6 +313,7 @@ Return the JSON modifications:"""
             )
             
         except json.JSONDecodeError as json_error:
+            traceback.print_exc()
             return LLMResponse(
                 success=False,
                 modifications=[],

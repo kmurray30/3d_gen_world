@@ -4,6 +4,7 @@ Handles object registry, state serialization, and world queries.
 """
 
 import json
+import traceback
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field, asdict
 
@@ -228,6 +229,7 @@ class WorldState:
                 self.add_object(new_obj)
                 created_ids.append(object_id)
             except Exception:
+                traceback.print_exc()
                 continue
         
         return created_ids

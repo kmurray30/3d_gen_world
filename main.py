@@ -536,10 +536,6 @@ def draw_frame():
                 
                 if remaining < fade_duration:
                     alpha = max(0.0, remaining / fade_duration)
-                
-                # Debug: Print fade info for objects with TTL
-                if remaining < fade_duration + 1.0:  # Log when close to fading
-                    print(f"DEBUG: {obj.object_id} - age={age:.1f}s, ttl={obj.time_to_live}s, remaining={remaining:.1f}s, alpha={alpha:.2f}")
             
             # Get animated position if animating, else use world state position
             base_pos = list(obj.position)
