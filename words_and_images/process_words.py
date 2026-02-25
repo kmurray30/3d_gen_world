@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Process words from words_filtered.csv via Grok to produce words_processed.json.
-Each word gets: word, file, type, height (cm), tags.
+Each word gets: word, file, type, height_cm, tags (matches WordEntry in core.word_entry).
 Batches of 10 words per Grok call, 10 concurrent calls.
 
 Example:
@@ -122,7 +122,7 @@ def _process_batch(
             "word": word.lower(),
             "file": f"{word_to_filename(word)}.png",
             "type": word_type,
-            "height (cm)": None,
+            "height_cm": None,
             "tags": [],
             "error": str(last_error) if last_error else "Unknown error",
         }
