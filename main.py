@@ -230,6 +230,11 @@ status_message = ""
 status_is_error = False
 clock = None
 
+# Debug: set True (or press F) to force smaller overlapping objects to always pass depth test.
+# They will draw on top of everything—use to verify the depth fix. glPolygonOffset fails
+# with perspective (non-linear depth); glDepthRange(0, 0.001) forces smaller objects in front.
+DEBUG_DEPTH_FORCE_SMALLER_VISIBLE = False
+
 
 def create_initial_scene() -> WorldState:
     """Create the initial outdoor scene with basic objects."""
@@ -533,7 +538,11 @@ def draw_frame():
     # Draw world objects as floating 3D text with animation
     if world_state and animation_manager:
         current_time = time.time()
-        
+
+        # Collect all objects with render data
+        floor_overlap_threshold = 1.0  # Objects within this distance on x,z are "overlapping"
+        draw_items = []
+
         for obj in world_state.get_all_objects():
             # Calculate alpha based on TTL (fade out in last second)
             alpha = 1.0
@@ -541,49 +550,110 @@ def draw_frame():
                 age = current_time - obj.created_at
                 remaining = obj.time_to_live - age
                 fade_duration = 1.0  # Fade out over last 1 second
-                
+
                 if remaining < fade_duration:
                     alpha = max(0.0, remaining / fade_duration)
-            
+
             # Get animated position if animating, else use world state position
             base_pos = list(obj.position)
             render_pos = animation_manager.get_render_position(obj.object_id, base_pos)
             render_pos[1] += obj.properties.height_offset
-            
-            # Get animated rotation
+
+            # Get animated rotation and scale
             base_rot = list(obj.rotation)
             render_rot = animation_manager.get_render_rotation(obj.object_id, base_rot)
-            
-            # Get animated scale for fallback text size
             base_scale = list(obj.scale)
             render_scale = animation_manager.get_render_scale(obj.object_id, base_scale)
             scale_avg = sum(render_scale) / len(render_scale)
 
-            # Resolve description -> word -> WordEntry; draw image or fall back to text
+            # Resolve word entry for size and image
             resolved_word = resolve_word(obj.description)
             word_entry = get_word_entry(resolved_word) if resolved_word else None
-
+            height_world = scale_avg  # Fallback for text
+            texture_result = None
             if word_entry:
                 filename = word_entry.get("file")
                 height_cm = word_entry.get("height_cm") or word_entry.get("height_cm") or 100
+                height_world = max(0.5, height_cm / 100.0)
                 texture_result = load_image_texture(filename) if filename else None
-                if texture_result is not None:
-                    texture_id, tex_width, tex_height = texture_result
-                    height_world = max(0.5, height_cm / 100.0)
-                    draw_3d_image(
-                        texture_id, tex_width, tex_height,
-                        render_pos, height_world, render_rot, alpha
-                    )
+
+            draw_items.append({
+                "obj": obj,
+                "render_pos": render_pos,
+                "render_rot": render_rot,
+                "scale_avg": scale_avg,
+                "height_world": height_world,
+                "alpha": alpha,
+                "word_entry": word_entry,
+                "texture_result": texture_result,
+            })
+
+        # Group overlapping objects by floor proximity (same x,z within threshold)
+        # Smaller objects get depth bias via glPolygonOffset so they stay visible at any view angle
+        def floor_distance(pos_a, pos_b):
+            return math.sqrt((pos_a[0] - pos_b[0]) ** 2 + (pos_a[2] - pos_b[2]) ** 2)
+
+        needs_depth_bias = set()
+        for item in draw_items:
+            pos = item["render_pos"]
+            overlapping = [
+                other for other in draw_items
+                if other is not item and floor_distance(pos, other["render_pos"]) < floor_overlap_threshold
+            ]
+            if not overlapping:
+                continue
+            all_in_group = [item] + overlapping
+            all_in_group.sort(key=lambda x: x["height_world"], reverse=True)
+            rank = next(i for i, x in enumerate(all_in_group) if x is item)
+            # Smaller objects (rank > 0) need depth bias to appear in front
+            if rank > 0:
+                needs_depth_bias.add(id(item))
+
+        # Draw larger objects first so smaller ones render on top when overlapping
+        draw_items_sorted = sorted(draw_items, key=lambda x: -x["height_world"])
+
+        # Depth fix for pitch > 0: when looking down, objects at lower Y are closer to camera
+        # and occlude higher objects (e.g. tree base occludes cat on tree). glPolygonOffset
+        # fails here because perspective depth is non-linear—far objects get compressed.
+        # glDepthRange forces smaller objects to write depth in [0, 0.001], so they always
+        # pass the depth test against larger objects (depth ~0.1–1.0).
+        use_depth_range_fix = player_pitch > 0
+
+        for item in draw_items_sorted:
+            obj = item["obj"]
+            render_pos = item["render_pos"]
+            render_rot = item["render_rot"]
+            scale_avg = item["scale_avg"]
+            alpha = item["alpha"]
+            word_entry = item["word_entry"]
+            texture_result = item["texture_result"]
+
+            needs_fix = id(item) in needs_depth_bias and use_depth_range_fix
+
+            if needs_fix:
+                if DEBUG_DEPTH_FORCE_SMALLER_VISIBLE:
+                    glDepthFunc(GL_ALWAYS)  # Bypass depth test entirely—debug only
                 else:
-                    draw_3d_text(
-                        obj.description, render_pos, text_scale=2.0,
-                        rotation=render_rot, scale_multiplier=scale_avg, alpha=alpha
-                    )
+                    glDepthRange(0.0, 0.001)  # Force depth to near range so smaller appears in front
+
+            if texture_result is not None:
+                texture_id, tex_width, tex_height = texture_result
+                height_world = item["height_world"]
+                draw_3d_image(
+                    texture_id, tex_width, tex_height,
+                    render_pos, height_world, render_rot, alpha
+                )
             else:
                 draw_3d_text(
                     obj.description, render_pos, text_scale=2.0,
                     rotation=render_rot, scale_multiplier=scale_avg, alpha=alpha
                 )
+
+            if needs_fix:
+                if DEBUG_DEPTH_FORCE_SMALLER_VISIBLE:
+                    glDepthFunc(GL_LESS)  # Restore default
+                else:
+                    glDepthRange(0.0, 1.0)  # Restore default
     
     # UI overlay (text)
     glDisable(GL_DEPTH_TEST)
@@ -626,6 +696,16 @@ def draw_frame():
         glRasterPos2f(10, WINDOW_HEIGHT - 25)
         glDrawPixels(status_surface.get_width(), status_surface.get_height(),
                      GL_RGBA, GL_UNSIGNED_BYTE, status_data)
+
+    # Debug: view angle (pitch = up/down, yaw = left/right). Press F to toggle depth-force.
+    view_debug_text = f"Pitch: {player_pitch:.1f}  Yaw: {player_yaw:.1f}"
+    if DEBUG_DEPTH_FORCE_SMALLER_VISIBLE:
+        view_debug_text += "  [F: depth-force ON]"
+    view_surface = font.render(view_debug_text, True, (180, 180, 180))
+    view_data = pygame.image.tostring(view_surface, "RGBA", True)
+    glRasterPos2f(WINDOW_WIDTH - view_surface.get_width() - 10, 10)
+    glDrawPixels(view_surface.get_width(), view_surface.get_height(),
+                 GL_RGBA, GL_UNSIGNED_BYTE, view_data)
     
     # Crosshair
     cx, cy = WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2
@@ -771,7 +851,7 @@ def on_llm_response(response):
 def main():
     global world_state, llm_controller, animation_manager, text_input_active, text_input_buffer
     global player_pos, player_yaw, player_pitch, clock, status_message, status_is_error
-    global player_vertical_velocity, is_on_ground
+    global player_vertical_velocity, is_on_ground, DEBUG_DEPTH_FORCE_SMALLER_VISIBLE
     
     # Initialize pygame
     pygame.init()
@@ -881,6 +961,9 @@ def main():
                 
                 elif event.key == K_BACKSPACE and text_input_active:
                     text_input_buffer = text_input_buffer[:-1]
+
+                elif event.key == K_f and not text_input_active:
+                    DEBUG_DEPTH_FORCE_SMALLER_VISIBLE = not DEBUG_DEPTH_FORCE_SMALLER_VISIBLE
                 
                 elif text_input_active and event.unicode and event.unicode.isprintable():
                     text_input_buffer += event.unicode

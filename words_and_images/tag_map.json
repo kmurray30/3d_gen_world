@@ -5793,6 +5793,10 @@
     "is_primary": true,
     "words": []
   },
+  "burglar": {
+    "is_primary": false,
+    "words": ["cat burglar"]
+  },
   "neko ears": {
     "is_primary": false,
     "words": [
@@ -21359,6 +21363,10 @@
     "words": [
       "nutcracker (kitchen)"
     ]
+  },
+  "nutcracker": {
+    "is_primary": false,
+    "words": ["nutcracker (kitchen)"]
   },
   "nutcracker (kitchen)": {
     "is_primary": true,
