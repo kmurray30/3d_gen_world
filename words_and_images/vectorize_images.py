@@ -23,9 +23,28 @@ Examples:
 """
 
 import argparse
+import time
 from pathlib import Path
 
 from PIL import Image, ImageDraw
+
+
+def _format_duration(seconds: float) -> str:
+    """Format seconds as Xd Xh Xm Xs, omitting zero-valued units."""
+    total_secs = int(seconds)
+    days = total_secs // 86400
+    hours = (total_secs % 86400) // 3600
+    minutes = (total_secs % 3600) // 60
+    secs = total_secs % 60
+    parts: list[str] = []
+    if days > 0:
+        parts.append(f"{days}d")
+    if hours > 0:
+        parts.append(f"{hours}h")
+    if minutes > 0:
+        parts.append(f"{minutes}m")
+    parts.append(f"{secs}s")
+    return " ".join(parts)
 
 # Supported image extensions for batch processing
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
@@ -165,7 +184,10 @@ def main() -> None:
     if args.count is not None:
         image_files = image_files[: args.count]
 
-    for image_path in image_files:
+    total = len(image_files)
+    start_time = time.time()
+
+    for index, image_path in enumerate(image_files):
         image = Image.open(image_path)
         result = remove_white_background(
             image,
@@ -177,9 +199,21 @@ def main() -> None:
             result = result.crop(bbox)
         out_file = output_path / image_path.name
         result.save(out_file)
-        print(f"Saved {out_file}")
 
-    print(f"Done. Processed {len(image_files)} images -> {output_path}")
+        completed = index + 1
+        elapsed = time.time() - start_time
+        rate = completed / elapsed if elapsed > 0 else 0
+        eta_secs = (total - completed) / rate if rate > 0 else 0
+        print(
+            f"\r{completed}/{total} processed | "
+            f"Elapsed: {_format_duration(elapsed)} | "
+            f"ETA: {_format_duration(eta_secs)}   ",
+            end="",
+            flush=True,
+        )
+
+    print()
+    print(f"Done. Processed {total} images -> {output_path}")
 
 
 if __name__ == "__main__":
