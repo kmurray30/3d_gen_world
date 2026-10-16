@@ -73,6 +73,11 @@ export class Scheduler {
     return false;
   }
 
+  /** Whether some task currently owns this channel of an entity. */
+  isClaimed(entity: string, channel: Channel): boolean {
+    return this.channels.has(`${entity}:${channel}`);
+  }
+
   /** Called by a task when it starts. Preempts whatever held the channel. */
   claim(task: Task, script: Script): void {
     if (!task.entity || !task.channel) return;

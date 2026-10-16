@@ -6,6 +6,8 @@ import { resolvePlace } from './place';
 import { Scheduler, type Script } from './scheduler';
 import { FallTask, makeTasks } from './tasks';
 import { WorldModel } from './world';
+import { Rules } from './rules';
+import { resolvePlayerCollisions, type Bump } from './collide';
 
 export type EngineEvent =
   | { type: 'spawn'; id: string }
@@ -28,6 +30,7 @@ export type EngineEvent =
 export class Engine {
   readonly world: WorldModel;
   readonly scheduler: Scheduler;
+  readonly rules: Rules;
   rng: () => number;
   time = 0;
   private listeners: Array<(e: EngineEvent) => void> = [];
@@ -38,6 +41,14 @@ export class Engine {
     this.world = new WorldModel(world);
     this.rng = makeRng(seed);
     this.scheduler = new Scheduler((action, script) => makeTasks(action, script, this));
+    this.rules = new Rules(this);
+  }
+
+  /** Move the player out of big solid things and let the rules react to whatever was touched. */
+  collidePlayer(): Bump[] {
+    const bumps = resolvePlayerCollisions(this.world, this.world.player.pos);
+    if (bumps.length) this.rules.bumps(bumps);
+    return bumps;
   }
 
   on(fn: (e: EngineEvent) => void): () => void {

@@ -113,3 +113,10 @@ body { background: linear-gradient(#6db3ff 0%, #9fd0ff 55%, #d9efff 100%); }
 .passform button { font: inherit; font-weight: 800; padding: 10px; border: 3px solid var(--ink); border-radius: 10px; background: var(--accent); cursor: pointer; }
 .passerr { color: #b00020; font-size: 13px; min-height: 1em; }
 #hud > .lock-overlay { pointer-events: none; }
+.bubble {
+  position: absolute; left: 0; top: 0; max-width: 240px; padding: 6px 12px; font-weight: 700; font-size: 15px; line-height: 1.25;
+  background: var(--paper); border: 3px solid var(--ink); border-radius: 16px; pointer-events: none; white-space: pre-wrap;
+  box-shadow: 2px 3px 0 rgba(43,43,43,.25); animation: bubble-in .18s ease-out;
+}
+.bubble::after { content: ''; position: absolute; left: 50%; bottom: -12px; width: 12px; height: 12px; background: var(--paper); border-right: 3px solid var(--ink); border-bottom: 3px solid var(--ink); transform: translateX(-50%) rotate(45deg); }
+@keyframes bubble-in { from { opacity: 0; transform: translate(-50%, -100%) scale(.8); } }

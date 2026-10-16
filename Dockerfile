@@ -18,4 +18,4 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/assets ./assets
 COPY --from=build /app/package.json ./package.json
 EXPOSE 8080
-CMD ["node", "dist/server/index.js"]
+CMD ["node", "--disable-warning=ExperimentalWarning", "dist/server/index.js"]

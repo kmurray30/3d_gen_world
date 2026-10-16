@@ -23,7 +23,7 @@ export async function openWorld(): Promise<{ world: World; created: boolean }> {
   const r = await fetch('/api/worlds', { method: 'POST' });
   if (!r.ok) throw new Error(`could not create a world (${r.status})`);
   const { slug, world } = (await r.json()) as { slug: string; world: World };
-  history.replaceState(null, '', `/w/${slug}`);
+  history.replaceState(null, '', `/w/${slug}${location.search}`);
   return { world, created: true };
 }
 

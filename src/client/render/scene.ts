@@ -5,6 +5,8 @@ import { worldPos } from '../../shared/engine/transform';
 import type { WorldModel } from '../../shared/engine/world';
 import { SpriteView } from './sprites';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
+import { ParticleSystem, shapeOfEntity } from './effects';
+import { BubbleLayer } from './labels';
 
 export const SKY_TOP = '#6db3ff';
 export const SKY_HORIZON = '#d9efff';
@@ -15,6 +17,9 @@ export class SceneView {
   readonly camera: THREE.PerspectiveCamera;
   readonly textures: TextureStore;
   readonly views = new Map<string, SpriteView>();
+  readonly effects: ParticleSystem;
+  readonly bubbles: BubbleLayer;
+  private clock = 0;
   private readonly shadowTex = makeShadowTexture();
   private readonly raycaster = new THREE.Raycaster();
   private readonly coarse = matchMedia('(pointer: coarse)').matches;
@@ -22,6 +27,7 @@ export class SceneView {
   constructor(
     public readonly canvas: HTMLCanvasElement,
     spriteVersion = 'dev',
+    hudRoot?: HTMLElement,
   ) {
     this.renderer = new THREE.WebGLRenderer({
       canvas,
@@ -45,6 +51,8 @@ export class SceneView {
     );
     ground.name = 'ground';
     this.scene.add(ground);
+    this.effects = new ParticleSystem(this.scene);
+    this.bubbles = new BubbleLayer(hudRoot ?? document.body);
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -61,7 +69,8 @@ export class SceneView {
   }
 
   /** Create, update and remove sprite views so the scene mirrors the world's entity list. */
-  sync(model: WorldModel): void {
+  sync(model: WorldModel, dt = 0): void {
+    this.clock += dt;
     const byId = model.entities;
     const seen = new Set<string>();
     const cam = model.player;
@@ -74,9 +83,16 @@ export class SceneView {
         this.scene.add(view.root);
       }
       const pos = model.renderPos(e);
-      const sq = model.transient.get(e.id)?.sq ?? 1;
+      let sq = model.transient.get(e.id)?.sq ?? 1;
+      const living = e.kind === 'animal' || e.kind === 'human' || e.kind === 'humanoid';
+      const phase = hashPhase(e.id);
+      if (living) sq *= 1 + 0.015 * Math.sin(this.clock * 2.2 + phase);
+      if (living && pos[1] > 0.3 && !e.parent) pos[1] += 0.08 * Math.sin(this.clock * 1.8 + phase);
       view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, cam), sq);
     }
+    this.effects.syncPersistent(model);
+    this.effects.update(dt, (id) => shapeOfEntity(model, id), this.camera);
+    this.bubbles.update(this.camera, model, this.canvas.clientWidth || window.innerWidth, this.canvas.clientHeight || window.innerHeight);
     for (const [id, view] of this.views) {
       if (!seen.has(id)) {
         this.scene.remove(view.root);
@@ -113,8 +129,11 @@ export class SceneView {
   }
 
   render(player: PlayerState): void {
-    this.camera.position.set(player.pos[0], player.pos[1] + PLAYER_EYE_HEIGHT, player.pos[2]);
-    this.camera.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
+    const k = this.effects.shake;
+    const sx = k ? (Math.random() - 0.5) * k * 0.14 : 0;
+    const sy = k ? (Math.random() - 0.5) * k * 0.1 : 0;
+    this.camera.position.set(player.pos[0] + sx, player.pos[1] + PLAYER_EYE_HEIGHT + sy, player.pos[2]);
+    this.camera.rotation.set(player.pitch, player.yaw, k ? (Math.random() - 0.5) * k * 0.02 : 0, 'YXZ');
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -131,4 +150,10 @@ export class SceneView {
     }
     return null;
   }
+}
+
+function hashPhase(id: string): number {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
+  return (h & 0xffff) / 0xffff * 6.28;
 }

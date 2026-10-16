@@ -50,7 +50,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     onConflict: () => hud.toast('This world changed somewhere else, so it was reloaded.', 'info', 5000),
     onError: (msg) => hud.toast(msg, 'error'),
   });
-  const scene = new SceneView(canvas, config.spriteVersion);
+  const scene = new SceneView(canvas, config.spriteVersion, hudRoot);
   const player = new PlayerController(engine.world.player);
   if (created) hud.toast('New world. Share the link to come back to it from anywhere.', 'info', 5000);
 
@@ -110,8 +110,13 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     }
   };
   engine.on((ev) => {
-    if (ev.type === 'say') hud.toast(ev.id ? `${engine.world.get(ev.id)?.label ?? ev.id}: ${ev.text}` : ev.text, 'say', ev.dur * 1000);
-    if (ev.type === 'warn') hud.toast(ev.msg, 'error');
+    if (ev.type === 'say') {
+      if (ev.id && engine.world.has(ev.id)) scene.bubbles.say(ev.id, ev.text, ev.dur);
+      else hud.toast(ev.text, 'say', ev.dur * 1000);
+    } else if (ev.type === 'warn') hud.toast(ev.msg, 'error');
+    else if (ev.type === 'effect') scene.effects.start(ev.key, ev.name, { entityId: ev.id, pos: ev.pos, dur: ev.dur, loop: ev.loop });
+    else if (ev.type === 'effectStop') scene.effects.stop(ev.key);
+    else if (ev.type === 'remove') scene.effects.stopEntity(ev.id);
   });
   if (new URLSearchParams(location.search).get('dev') === '1') {
     new DevConsole(hudRoot, (steps: Step[]) =>
@@ -159,6 +164,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     const move = touch ? touch.moveAxis() : desktop.moveAxis();
     const look = touch ? touch.consumeLook() : desktop.consumeLook();
     player.update(dt, move, look, touch ? 0.005 : 0.0022, desktop.sprint, desktop.consumeJump());
+    engine.collidePlayer();
     if (!coarse) {
       const id = desktop.locked ? scene.pick(0, 0) : null;
       const e = id ? engine.world.get(id) : undefined;
@@ -167,7 +173,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     }
     engine.update(dt);
     store.tick();
-    scene.sync(engine.world);
+    scene.sync(engine.world, dt);
     scene.render(engine.world.player);
   };
   requestAnimationFrame(loop);
