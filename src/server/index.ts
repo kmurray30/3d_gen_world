@@ -1,31 +1,30 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import { logger } from 'hono/logger';
+import { createApp } from './app';
 import { env } from './env';
-import { mountStatic } from './static';
-import type { HealthResponse } from '../shared/types';
+import { MockProvider, OpenAICompatProvider, type LlmProvider } from './llm/provider';
+import { Vocab } from './vocab';
 
-const app = new Hono();
-if (!env.isProd) app.use(logger());
+const vocab = Vocab.load(path.join(env.assetsDir, 'manifest.json'));
 
-function countSprites(): number {
-  const dir = path.join(env.assetsDir, 'sprites', '512');
-  if (!fs.existsSync(dir)) return 0;
-  return fs.readdirSync(dir).filter((f) => f.endsWith('.webp')).length;
+let provider: LlmProvider;
+if (env.mockLlm || !env.xaiApiKey) {
+  provider = new MockProvider();
+  console.log(env.mockLlm ? '[llm] MOCK_LLM=1: playing canned scripts' : '[llm] no XAI_API_KEY: playing canned scripts');
+} else {
+  provider = new OpenAICompatProvider(env.llmModel, env.xaiApiKey, env.llmBaseUrl);
+  console.log(`[llm] ${env.llmModel} via ${env.llmBaseUrl}`);
 }
 
-app.get('/api/health', (c) => {
-  const body: HealthResponse = { ok: true, sprites: countSprites(), version: process.env.npm_package_version ?? '0.1.0' };
-  return c.json(body);
+const app = createApp({
+  vocab,
+  provider,
+  version: process.env.npm_package_version ?? '0.1.0',
+  passcode: env.passcode,
+  log: !env.isProd,
+  onCommand: (info) => console.log(`[cmd] ${info.slug} "${info.command}" -> ${info.steps} steps in ${info.ms}ms${info.errors.length ? ` (${info.errors.length} skipped)` : ''}`),
 });
 
-// Unknown API routes answer JSON instead of falling through to the SPA.
-app.all('/api/*', (c) => c.json({ error: 'not found' }, 404));
-
-mountStatic(app);
-
 serve({ fetch: app.fetch, port: env.port, hostname: '0.0.0.0' }, (info) => {
-  console.log(`[server] listening on http://0.0.0.0:${info.port} (${env.nodeEnv})`);
+  console.log(`[server] listening on http://0.0.0.0:${info.port} (${env.nodeEnv}); ${vocab.counts.withSprite}/${vocab.counts.words} words have sprites`);
 });

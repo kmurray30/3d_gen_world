@@ -139,3 +139,35 @@ export type StreamEvent =
   | { t: 'error'; msg: string }
   | { t: 'ping' }
   | { t: 'done'; steps: number; reason?: string };
+
+/* ----- client -> server command request ----- */
+
+export const CompactEntitySchema = z.object({
+  id: z.string().max(64),
+  word: z.string().max(60),
+  kind: z.enum(['object', 'human', 'humanoid', 'animal', 'other']).catch('object'),
+  /** metres, rounded */
+  pos: z.tuple([z.number(), z.number(), z.number()]),
+  h: z.number(),
+  parent: z.string().max(64).optional(),
+  state: z.record(z.string().max(32), z.union([z.boolean(), z.number(), z.string().max(40)])).optional(),
+  effects: z.array(z.string().max(32)).max(8).optional(),
+});
+export const CompactWorldSchema = z.object({
+  player: z.object({ pos: z.tuple([z.number(), z.number(), z.number()]), yaw: z.number() }),
+  target: z.string().max(64).optional(),
+  entities: z.array(CompactEntitySchema).max(200),
+});
+export type CompactEntity = z.infer<typeof CompactEntitySchema>;
+export type CompactWorld = z.infer<typeof CompactWorldSchema>;
+
+export const CommandRequestSchema = z.object({
+  command: z.string().trim().min(1).max(200),
+  context: CompactWorldSchema,
+});
+export type CommandRequest = z.infer<typeof CommandRequestSchema>;
+
+export const ScriptRequestSchema = z.object({
+  steps: z.array(z.unknown()).max(MAX_STEPS),
+  context: CompactWorldSchema,
+});

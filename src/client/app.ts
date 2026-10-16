@@ -2,6 +2,8 @@ import type { World } from '../shared/types';
 import { Engine } from '../shared/engine/index';
 import { resolveStepsLocally } from '../shared/engine/resolve-local';
 import { DevConsole } from './ui/dev-console';
+import { compactWorld, fetchConfig, streamNdjson } from './net/api';
+import type { Step } from '../shared/schema';
 import { starterWorld } from '../shared/engine/presets';
 import { defaultSprite } from '../shared/engine/sizing';
 import { SceneView } from './render/scene';
@@ -16,21 +18,58 @@ declare global {
   }
 }
 
-export function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement): void {
+export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement): Promise<void> {
   const coarse = isTouchFirst();
+  const config = await fetchConfig().catch(() => ({ spriteVersion: 'dev', llm: 'offline', needsPasscode: false }));
+  const slug = 'local';
+  let targetId: string | undefined;
+  let busy = false;
   const world = starterWorld('local', (_word, kind) => defaultSprite(kind));
   const engine = new Engine(world, Date.now() & 0xffff);
-  const scene = new SceneView(canvas);
+  const scene = new SceneView(canvas, config.spriteVersion);
   const player = new PlayerController(engine.world.player);
+  const runStream = async (url: string, body: unknown, label: string) => {
+    if (busy) {
+      hud.toast('Still working on the last one...', 'info', 1500);
+      return;
+    }
+    busy = true;
+    hud.setBusy(true);
+    hud.setStatus(label);
+    const script = engine.open();
+    let count = 0;
+    try {
+      await streamNdjson(url, body, (ev) => {
+        if (ev.t === 'step') {
+          engine.append(script, ev.step);
+          count++;
+          hud.setStatus(`${label} (${count})`);
+        } else if (ev.t === 'error') {
+          console.warn('[command]', ev.msg);
+        } else if (ev.t === 'done') {
+          if (ev.steps === 0) hud.toast(ev.reason === 'no json' ? 'The model did not answer with actions. Try again.' : 'Nothing happened. Try rephrasing.', 'error');
+        }
+      });
+    } catch (e) {
+      hud.toast(`Could not run that: ${(e as Error).message}`, 'error');
+    } finally {
+      engine.seal(script);
+      busy = false;
+      hud.setBusy(false);
+      hud.setStatus('');
+    }
+  };
   const hud = new Hud(hudRoot, {
-    onCommand: (text) => hud.toast(`"${text}" (commands arrive in the next milestone)`),
+    onCommand: (text) => void runStream(`/api/worlds/${slug}/command`, { command: text, context: compactWorld(engine.world, targetId) }, 'thinking...'),
   });
   engine.on((ev) => {
     if (ev.type === 'say') hud.toast(ev.id ? `${engine.world.get(ev.id)?.label ?? ev.id}: ${ev.text}` : ev.text, 'say', ev.dur * 1000);
     if (ev.type === 'warn') hud.toast(ev.msg, 'error');
   });
   if (new URLSearchParams(location.search).get('dev') === '1') {
-    new DevConsole(hudRoot, (steps) => engine.run(resolveStepsLocally(steps)));
+    new DevConsole(hudRoot, (steps: Step[]) =>
+      void runStream(`/api/worlds/${slug}/script`, { steps, context: compactWorld(engine.world, targetId) }, 'script...').catch(() => engine.run(resolveStepsLocally(steps))),
+    );
   }
 
   const desktop = new DesktopInput(canvas);
@@ -53,6 +92,7 @@ export function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement): void 
     touch.onTap = (x, y) => {
       const id = scene.pick((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
       const e = id ? engine.world.get(id) : undefined;
+      targetId = e?.id;
       hud.setTarget(e ? e.label : null);
     };
   }
@@ -75,6 +115,7 @@ export function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement): void 
     if (!coarse) {
       const id = desktop.locked ? scene.pick(0, 0) : null;
       const e = id ? engine.world.get(id) : undefined;
+      targetId = e?.id;
       hud.setTarget(e ? e.label : null);
     }
     engine.update(dt);
