@@ -5,9 +5,6 @@ this folder exists to produce those two things.
 
 ## One-time: convert the existing sprites
 
-Easiest: run `./make_sprites.sh` from the repo root (it does everything below), then the git line it prints.
-
-By hand:
 
 ```
 pip install -r words_and_images/requirements.txt        # Pillow is enough for steps 2-3
@@ -20,7 +17,7 @@ Expect roughly 50 KB per 512px sprite and a third of that at 256px. The 1.4 GB o
 
 ## Gap words
 
-`words_priority.csv` is the 14 most useful of these; `./make_gap_sprites.sh` draws them. `words_gap.csv` lists common words the Scribblenauts list lacks (ball, plant, star, river, child, queen...).
+`words_priority.csv` is the 14 most useful of these; `python3 words_and_images/make_gap_sprites.py` draws them (and runs the steps below for you). `words_gap.csv` lists common words the Scribblenauts list lacks (ball, plant, star, river, child, queen...).
 They are already part of the vocabulary (the manifest merges the CSV) and show as cards until drawn:
 
 ```
