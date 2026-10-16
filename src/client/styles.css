@@ -40,3 +40,61 @@ html, body {
   pointer-events: none;
 }
 #hud > * { pointer-events: auto; }
+
+/* ---- paper UI ---- */
+body { background: linear-gradient(#6db3ff 0%, #9fd0ff 55%, #d9efff 100%); }
+.card, .cmd, .topbar .brand, .menu, .target-label, .toast, .status {
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 3px 4px 0 rgba(43, 43, 43, 0.25);
+}
+.topbar {
+  position: absolute; top: max(10px, env(safe-area-inset-top)); left: 12px; right: 12px;
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar .brand { padding: 6px 12px; font-weight: 800; letter-spacing: 0.3px; }
+.status { padding: 6px 10px; font-size: 13px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status:empty { visibility: hidden; }
+.menu-btn {
+  margin-left: auto; width: 42px; height: 42px; border-radius: 50%; border: 3px solid var(--ink);
+  background: var(--paper); font-size: 22px; line-height: 1; cursor: pointer; box-shadow: 3px 4px 0 rgba(43,43,43,.25);
+}
+.menu { position: absolute; right: 0; top: 50px; display: flex; flex-direction: column; padding: 6px; min-width: 200px; z-index: 5; }
+.menu button { background: none; border: 0; text-align: left; padding: 10px 12px; font: inherit; font-weight: 600; border-radius: 8px; cursor: pointer; }
+.menu button:hover { background: #fff1d6; }
+.cmdbar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 8px 12px max(10px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+}
+.hint { font-size: 12px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); text-align: center; }
+.cmd { display: flex; width: min(720px, 100%); padding: 6px; gap: 6px; }
+.cmd input {
+  flex: 1; min-width: 0; border: 0; background: transparent; font: inherit; font-size: 16px; padding: 8px 10px; outline: none; color: var(--ink);
+}
+.cmd button {
+  border: 3px solid var(--ink); background: var(--accent); color: var(--ink); font: inherit; font-weight: 800;
+  border-radius: 10px; padding: 8px 16px; cursor: pointer; min-width: 64px;
+}
+.cmd button:disabled { opacity: .6; cursor: progress; }
+.target-label {
+  position: absolute; left: 50%; top: 56%; transform: translate(-50%, 0); padding: 4px 10px; font-weight: 700; font-size: 14px;
+}
+.toasts { position: absolute; left: 50%; top: 72px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; width: min(92vw, 520px); }
+.toast { padding: 8px 14px; font-size: 14px; opacity: 0; transform: translateY(-6px); transition: all .25s ease; max-width: 100%; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.error { background: #ffd9d9; }
+.toast.say { background: #fff8d6; font-style: italic; }
+.lock-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(43,43,43,.15); cursor: pointer; pointer-events: none; }
+.lock-overlay .card { padding: 14px 22px; font-weight: 800; font-size: 18px; text-align: center; }
+.lock-overlay .card small { font-weight: 500; font-size: 13px; }
+.joy {
+  position: absolute; width: 120px; height: 120px; border-radius: 50%; border: 3px solid rgba(255,255,255,.85);
+  background: rgba(255,255,255,.18); pointer-events: none;
+}
+.joy-knob {
+  position: absolute; left: 32px; top: 32px; width: 56px; height: 56px; border-radius: 50%;
+  background: var(--paper); border: 3px solid var(--ink); box-shadow: 2px 3px 0 rgba(43,43,43,.3);
+}
+[hidden] { display: none !important; }
