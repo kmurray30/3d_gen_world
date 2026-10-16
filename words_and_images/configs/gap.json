@@ -1,0 +1,10 @@
+{
+  "model": "black-forest-labs/FLUX.2-klein-9B",
+  "height": 512,
+  "width": 512,
+  "guidance_scale": 4,
+  "num_inference_steps": 4,
+  "device": "mps",
+  "dtype": "bfloat16",
+  "output_dir": "words_and_images/generated_images/flux2_local"
+}
