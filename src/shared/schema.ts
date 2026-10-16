@@ -24,12 +24,23 @@ const dur = num(0, 20).optional();
 const id = z.string().trim().min(1).max(64);
 const text = z.string().trim().min(1).max(120);
 
-export const PlaceSchema = z.object({
+const PlaceObject = z.object({
   rel: z.enum(REL).catch('near'),
   of: z.string().trim().min(1).max(64).catch('player'),
   dist: z.enum(DIST).optional().catch(undefined),
   height: z.enum(HEIGHT).catch('ground'),
 });
+/** A place; a bare string is read as a relation name ("front") or as a target id ("house_1" -> near house_1). */
+export const PlaceSchema = z.preprocess((v) => {
+  if (typeof v === 'string') {
+    const t = v.trim();
+    if ((REL as readonly string[]).includes(t)) return { rel: t };
+    if (t === 'player' || t === 'me') return { rel: 'near', of: 'player' };
+    return { rel: 'near', of: t };
+  }
+  if (v && typeof v === 'object' && 'of' in v && (v as { of: unknown }).of === 'me') return { ...(v as object), of: 'player' };
+  return v;
+}, PlaceObject);
 export type Place = z.infer<typeof PlaceSchema>;
 export const DEFAULT_PLACE: Place = { rel: 'near', of: 'player', height: 'ground' };
 

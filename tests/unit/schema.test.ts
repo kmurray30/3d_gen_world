@@ -17,6 +17,15 @@ describe('StepSchema', () => {
     if (r.success && r.data.op === 'move') expect(r.data.to).toEqual({ rel: 'near', of: 'house_1', height: 'ground' });
   });
 
+  it('reads bare-string places as relations or targets', () => {
+    const a = StepSchema.safeParse({ op: 'move', id: 'dog', to: 'house_1' });
+    expect(a.success && a.data.op === 'move' && a.data.to).toEqual({ rel: 'near', of: 'house_1', height: 'ground' });
+    const b = StepSchema.safeParse({ op: 'spawn', ref: 'cat', word: 'cat', at: 'front' });
+    expect(b.success && b.data.op === 'spawn' && b.data.at).toEqual({ rel: 'front', of: 'player', height: 'ground' });
+    const c = StepSchema.safeParse({ op: 'move', id: 'dog', to: { rel: 'near', of: 'me' } });
+    expect(c.success && c.data.op === 'move' && c.data.to.of).toBe('player');
+  });
+
   it('rejects unknown ops and nested par', () => {
     expect(StepSchema.safeParse({ op: 'teleport', id: 'x' }).success).toBe(false);
     expect(StepSchema.safeParse({ op: 'par', do: [{ op: 'par', do: [] }] }).success).toBe(false);
