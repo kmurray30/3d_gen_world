@@ -26,6 +26,8 @@ export interface Entity {
   flip: boolean;
   /** Entity id or 'player' the sprite keeps facing (mirror only); overrides `flip` while set. */
   facing?: string;
+  /** Ground-plane direction the entity last moved in; mirrors the sprite to face that way when `facing` is unset. */
+  faceDir?: [number, number];
   /** Multiplier on the natural height. */
   scale: number;
   /** Natural height in metres (already clamped). */

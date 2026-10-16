@@ -1,4 +1,7 @@
 import type { World } from '../shared/types';
+import { Engine } from '../shared/engine/index';
+import { resolveStepsLocally } from '../shared/engine/resolve-local';
+import { DevConsole } from './ui/dev-console';
 import { starterWorld } from '../shared/engine/presets';
 import { defaultSprite } from '../shared/engine/sizing';
 import { SceneView } from './render/scene';
@@ -9,18 +12,26 @@ import { Hud } from './ui/hud';
 
 declare global {
   interface Window {
-    __game?: { world: World; scene: SceneView; player: PlayerController };
+    __game?: { world: World; engine: Engine; scene: SceneView; player: PlayerController };
   }
 }
 
 export function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement): void {
   const coarse = isTouchFirst();
   const world = starterWorld('local', (_word, kind) => defaultSprite(kind));
+  const engine = new Engine(world, Date.now() & 0xffff);
   const scene = new SceneView(canvas);
-  const player = new PlayerController(world.player);
+  const player = new PlayerController(engine.world.player);
   const hud = new Hud(hudRoot, {
     onCommand: (text) => hud.toast(`"${text}" (commands arrive in the next milestone)`),
   });
+  engine.on((ev) => {
+    if (ev.type === 'say') hud.toast(ev.id ? `${engine.world.get(ev.id)?.label ?? ev.id}: ${ev.text}` : ev.text, 'say', ev.dur * 1000);
+    if (ev.type === 'warn') hud.toast(ev.msg, 'error');
+  });
+  if (new URLSearchParams(location.search).get('dev') === '1') {
+    new DevConsole(hudRoot, (steps) => engine.run(resolveStepsLocally(steps)));
+  }
 
   const desktop = new DesktopInput(canvas);
   const touch = coarse ? new TouchInput(canvas, hudRoot) : null;
@@ -41,7 +52,7 @@ export function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement): void 
   if (touch) {
     touch.onTap = (x, y) => {
       const id = scene.pick((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
-      const e = world.entities.find((en) => en.id === id);
+      const e = id ? engine.world.get(id) : undefined;
       hud.setTarget(e ? e.label : null);
     };
   }
@@ -63,14 +74,15 @@ export function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement): void 
     player.update(dt, move, look, touch ? 0.005 : 0.0022, desktop.sprint, desktop.consumeJump());
     if (!coarse) {
       const id = desktop.locked ? scene.pick(0, 0) : null;
-      const e = id ? world.entities.find((en) => en.id === id) : undefined;
+      const e = id ? engine.world.get(id) : undefined;
       hud.setTarget(e ? e.label : null);
     }
-    scene.sync(world);
-    scene.render(world.player);
+    engine.update(dt);
+    scene.sync(engine.world);
+    scene.render(engine.world.player);
   };
   requestAnimationFrame(loop);
-  window.__game = { world, scene, player };
+  window.__game = { world, engine, scene, player };
 }
 
 /** Phones and tablets: coarse pointer, or touch points without hover. Touch laptops keep desktop controls. */

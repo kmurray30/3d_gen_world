@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Entity, PlayerState, World } from '../../shared/types';
 import { PLAYER_EYE_HEIGHT } from '../../shared/types';
 import { worldPos } from '../../shared/engine/transform';
+import type { WorldModel } from '../../shared/engine/world';
 import { SpriteView } from './sprites';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
 
@@ -60,12 +61,11 @@ export class SceneView {
   }
 
   /** Create, update and remove sprite views so the scene mirrors the world's entity list. */
-  sync(world: World): void {
-    const byId = new Map(world.entities.map((e) => [e.id, e]));
-    const lookup = (id: string) => byId.get(id);
+  sync(model: WorldModel): void {
+    const byId = model.entities;
     const seen = new Set<string>();
-    const cam = world.player;
-    for (const e of world.entities) {
+    const cam = model.player;
+    for (const e of byId.values()) {
       seen.add(e.id);
       let view = this.views.get(e.id);
       if (!view) {
@@ -73,8 +73,9 @@ export class SceneView {
         this.views.set(e.id, view);
         this.scene.add(view.root);
       }
-      const pos = worldPos(e, lookup);
-      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, cam));
+      const pos = model.renderPos(e);
+      const sq = model.transient.get(e.id)?.sq ?? 1;
+      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, cam), sq);
     }
     for (const [id, view] of this.views) {
       if (!seen.has(id)) {
@@ -87,7 +88,14 @@ export class SceneView {
 
   /** Mirror so the sprite "looks" toward its facing target in camera space. Sprites are assumed to face left by default. */
   private resolveFlip(e: Entity, pos: [number, number, number], byId: Map<string, Entity>, cam: PlayerState): boolean {
-    if (!e.facing) return e.flip;
+    if (!e.facing) {
+      if (e.faceDir) {
+        const rx0 = Math.cos(cam.yaw);
+        const rz0 = -Math.sin(cam.yaw);
+        return e.faceDir[0] * rx0 + e.faceDir[1] * rz0 > 0;
+      }
+      return e.flip;
+    }
     let tx: number;
     let tz: number;
     if (e.facing === 'player') {

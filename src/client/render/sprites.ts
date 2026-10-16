@@ -45,15 +45,17 @@ export class SpriteView {
     this.root.add(this.pivot, this.shadow);
   }
 
-  update(e: Entity, pos: Vec3, camYaw: number, camPitch: number, textures: TextureStore, flip: boolean): void {
+  update(e: Entity, pos: Vec3, camYaw: number, camPitch: number, textures: TextureStore, flip: boolean, sq = 1): void {
     this.root.position.set(pos[0], pos[1], pos[2]);
     this.root.visible = !e.hidden;
     const h = renderHeight(e);
     const w = renderWidth(e);
     this.pivot.rotation.set(-camPitch * PITCH_FOLLOW, camYaw, 0, 'YXZ');
-    this.body.position.y = h / 2;
+    const hs = h * sq;
+    const ws = w * (1 + (1 - sq) * 0.6);
+    this.body.position.y = hs / 2;
     const mirror = flip && this.hasRealTexture;
-    this.body.scale.set(mirror ? -w : w, h, 1);
+    this.body.scale.set(mirror ? -ws : ws, hs, 1);
     this.body.rotation.z = (e.tilt * Math.PI) / 180;
     const mat = this.body.material;
     mat.opacity = e.alpha ?? 1;
