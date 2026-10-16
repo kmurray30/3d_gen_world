@@ -1,0 +1,12 @@
+node_modules
+dist
+data
+.git
+.env
+.venv
+**/__pycache__
+words_and_images/generated_images
+words_and_images/processed_images
+tests
+playwright-report
+test-results

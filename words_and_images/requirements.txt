@@ -1,13 +1,13 @@
-pygame
+# Asset pipeline only (image generation, background removal, word processing, WebP optimization)
 python-dotenv
 torch
 transformers
 diffusers>=0.36.0
 openai
-PyOpenGL
 requests
 beautifulsoup4
 fal-client
 aiohttp>=3.9
 yarl>=1.9
 tqdm
+Pillow>=10

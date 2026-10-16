@@ -1,9 +1,17 @@
 .env
 .DS_Store
 __pycache__/
-.DS_Store
 .venv/
+node_modules/
+dist/
+data/
+*.db
+*.db-wal
+*.db-shm
+playwright-report/
+test-results/
+.vite/
 
-# Exclude generated images in any image* folder
+# Generated/raw images from the pipeline stay out of git; only assets/sprites/*.webp is committed
 **/generated_images/
 **/processed_images/
