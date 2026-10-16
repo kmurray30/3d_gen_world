@@ -6,6 +6,7 @@ Supports local (Flux2Klein) or API (fal.ai) backends via config files.
 Usage:
     python words_and_images/generate_images.py --config local_klein
     python words_and_images/generate_images.py --config api
+    python words_and_images/generate_images.py --config local_klein --words words_gap.csv
 
 Requires FAL_KEY in .env for API configs.
 Images saved to words_and_images/generated_images/<config_name>/. Failed words to failed_words.csv.
@@ -29,6 +30,12 @@ def main() -> None:
         help="Config name (e.g. local_klein, local_klein_base, api). Loads from configs/<name>.json. Default: local_klein",
     )
     parser.add_argument(
+        "--words",
+        default=None,
+        metavar="CSV",
+        help="Word list CSV with word,type columns (default: words_filtered.csv). Use words_gap.csv for the missing words.",
+    )
+    parser.add_argument(
         "--count",
         type=int,
         default=None,
@@ -42,7 +49,9 @@ def main() -> None:
     with open(config_path, encoding="utf-8") as file:
         config = json.load(file)
 
-    csv_path = script_dir / "words_filtered.csv"
+    csv_path = Path(args.words) if args.words else script_dir / "words_filtered.csv"
+    if not csv_path.is_absolute() and not csv_path.exists():
+        csv_path = script_dir / csv_path
     # Output folder is derived from config name, not from config file
     output_dir = script_dir / "generated_images" / args.config
     failed_path = script_dir / "failed_words.csv"

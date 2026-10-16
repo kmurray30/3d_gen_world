@@ -20,9 +20,11 @@ const vocab = new Vocab({
     man: word('human', 1.75),
     bicycle: word('object', 1),
     motorcycle: word('object', 1.1),
+    'kid (animal)': word('animal', 0.6),
+    boy: word('human', 1.3),
   },
   aliases: { plant: ['factory'], hound: ['dog'], bike: ['bicycle', 'motorcycle'] },
-  overrides: { plant: 'potted plant', person: 'man' },
+  overrides: { plant: 'potted plant', person: 'man', kid: 'boy' },
 });
 
 describe('Vocab.resolveWord', () => {
@@ -39,6 +41,8 @@ describe('Vocab.resolveWord', () => {
   it('prefers overrides to synonym traps, then aliases', () => {
     expect(vocab.resolveWord('plant')).toBe('potted plant');
     expect(vocab.resolveWord('person')).toBe('man');
+    expect(vocab.resolveWord('kid')).toBe('boy'); // override beats the goat variant
+    expect(vocab.resolveWord('kids')).toBe('boy');
     expect(vocab.resolveWord('hound')).toBe('dog');
     expect(vocab.resolveWord('bike')).toBe('bicycle');
     expect(vocab.resolveWord('hose')).toBe('hose');

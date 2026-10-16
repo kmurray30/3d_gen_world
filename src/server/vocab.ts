@@ -72,16 +72,13 @@ export class Vocab {
   resolveWord(input: string, kindHint?: Kind): string | null {
     const w = Vocab.normalize(input);
     if (!w) return null;
-    const direct = this.exact(w, kindHint);
+    const direct = this.lookup(w, kindHint);
     if (direct) return direct;
-    const forms = singularForms(w);
-    for (const f of forms) {
-      const hit = this.exact(f, kindHint);
+    for (const f of singularForms(w)) {
+      const hit = this.lookup(f, kindHint);
       if (hit) return hit;
     }
-    const ov = this.overrides[w] ?? forms.map((f) => this.overrides[f]).find(Boolean);
-    if (ov && this.words[ov]) return ov;
-    const al = this.aliases[w] ?? forms.map((f) => this.aliases[f]).find(Boolean);
+    const al = this.aliases[w] ?? singularForms(w).map((f) => this.aliases[f]).find(Boolean);
     if (al?.length) {
       if (al.length === 1) return al[0];
       const byKind = kindHint ? al.find((x) => this.words[x]?.t === kindHint) : undefined;
@@ -91,7 +88,7 @@ export class Vocab {
     const tokens = w.split(' ');
     if (tokens.length > 1) {
       const last = tokens[tokens.length - 1];
-      const tail = this.exact(last, kindHint) ?? singularForms(last).map((f) => this.exact(f, kindHint)).find(Boolean);
+      const tail = this.lookup(last, kindHint) ?? singularForms(last).map((f) => this.lookup(f, kindHint)).find(Boolean);
       if (tail) return tail;
     }
     if (w.length >= 4) {
@@ -108,6 +105,14 @@ export class Vocab {
       if (best) return best;
     }
     return null;
+  }
+
+  /** exact primary, then manual override, then "word (variant)" entries chosen by kind. */
+  private lookup(w: string, kindHint?: Kind): string | null {
+    if (this.words[w]) return w;
+    const ov = this.overrides[w];
+    if (ov && this.words[ov]) return ov;
+    return this.exact(w, kindHint);
   }
 
   private exact(w: string, kindHint?: Kind): string | null {

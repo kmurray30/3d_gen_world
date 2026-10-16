@@ -1,0 +1,37 @@
+word,type,height_cm
+plant,object,60
+ball,object,25
+star,other,40
+rain cloud,other,300
+river,other,30
+lake,other,30
+water,other,30
+spark,other,15
+flame,other,40
+lightning bolt,other,400
+child,human,120
+queen,human,170
+castle,object,2000
+box,object,50
+shoe,object,12
+ufo,object,300
+treasure,object,60
+bush,object,120
+stump,object,50
+path,other,10
+pine tree,object,1200
+farm,object,800
+garden,other,100
+school,object,1000
+fire pit,object,50
+fishing rod,object,180
+drum,object,60
+letter,object,25
+fruit,object,10
+monkey,animal,60
+mouse,animal,8
+monster,humanoid,250
+troll,humanoid,250
+police officer,human,175
+portal,other,250
+hole,other,10

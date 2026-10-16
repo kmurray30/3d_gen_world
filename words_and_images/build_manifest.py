@@ -27,7 +27,7 @@ SPRITES_512 = ASSETS / "sprites" / "512"
 
 HEIGHT_MIN_M = 0.1
 HEIGHT_MAX_M = 12.0
-HUGE_FROM_M = 8.0
+HUGE_FROM_M = 12.0
 DEFAULT_HEIGHT_M = {"object": 0.5, "human": 1.7, "humanoid": 1.7, "animal": 0.6, "other": 1.0}
 # Default sprite aspect (w/h) when the file is missing.
 DEFAULT_ASPECT = {"object": 1.0, "human": 0.5, "humanoid": 0.55, "animal": 1.2, "other": 1.0}
@@ -83,6 +83,16 @@ def main() -> None:
         word_map = json.load(fh)
     with open(HERE / "tag_map.json", encoding="utf-8") as fh:
         tag_map = json.load(fh)
+    # Extra words that the Scribblenauts list lacks (words_gap.csv: word,type,height_cm). They join the vocabulary
+    # immediately and show a placeholder card until their sprite is generated.
+    gap_path = HERE / "words_gap.csv"
+    if gap_path.is_file():
+        import csv
+        with open(gap_path, newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                word = (row.get("word") or "").strip().lower()
+                if word and word not in word_map:
+                    word_map[word] = {"word": word, "file": f"{word_to_filename(word)}.png", "type": (row.get("type") or "object").strip(), "height_cm": float(row.get("height_cm") or 0), "tags": []}
     overrides_raw = {}
     if (HERE / "overrides.json").is_file():
         with open(HERE / "overrides.json", encoding="utf-8") as fh:
