@@ -12,7 +12,7 @@ export interface CommandDeps {
   vocab: Vocab;
   provider: LlmProvider;
   timeoutMs?: number;
-  onCommand?: (info: { slug: string; command: string; steps: number; ms: number; model: string; errors: string[] }) => void;
+  onCommand?: (info: { slug: string; command: string; steps: number; ms: number; model: string; errors: string[]; raw: string }) => void;
 }
 
 const PING_MS = 15000;
@@ -46,10 +46,12 @@ export function commandRoutes(deps: CommandDeps): Hono {
       let steps = 0;
       const errors: string[] = [];
       let reason: string | undefined;
+      let raw = '';
       try {
         await write({ t: 'meta', commandId: `${started.toString(36)}`, model: deps.provider.name });
         const req = { system: systemPrompt, user: buildUserPrompt(command, context), command, context, signal: controller.signal };
         outer: for await (const chunk of deps.provider.stream(req)) {
+          raw += chunk;
           for (const text of parser.push(chunk)) {
             let raw: unknown;
             try {
@@ -84,7 +86,7 @@ export function commandRoutes(deps: CommandDeps): Hono {
         clearTimeout(timer);
       }
       await write({ t: 'done', steps, reason }).catch(() => undefined);
-      deps.onCommand?.({ slug, command, steps, ms: Date.now() - started, model: deps.provider.name, errors });
+      deps.onCommand?.({ slug, command, steps, ms: Date.now() - started, model: deps.provider.name, errors, raw });
     });
   });
 

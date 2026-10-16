@@ -22,7 +22,10 @@ const app = createApp({
   version: process.env.npm_package_version ?? '0.1.0',
   passcode: env.passcode,
   log: !env.isProd,
-  onCommand: (info) => console.log(`[cmd] ${info.slug} "${info.command}" -> ${info.steps} steps in ${info.ms}ms${info.errors.length ? ` (${info.errors.length} skipped)` : ''}`),
+  onCommand: (info) => {
+    console.log(`[cmd] ${info.slug} "${info.command}" -> ${info.steps} steps in ${info.ms}ms${info.errors.length ? ` (${info.errors.length} skipped: ${info.errors.join('; ').slice(0, 200)})` : ''}`);
+    if (process.env.LLM_DEBUG === '1') console.log(`[raw] ${info.raw.slice(0, 3000)}`);
+  },
 });
 
 serve({ fetch: app.fetch, port: env.port, hostname: '0.0.0.0' }, (info) => {
