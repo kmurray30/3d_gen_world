@@ -3,6 +3,7 @@ import { Engine } from '../shared/engine/index';
 import { resolveStepsLocally } from '../shared/engine/resolve-local';
 import { DevConsole } from './ui/dev-console';
 import { compactWorld, fetchConfig, streamNdjson } from './net/api';
+import { WorldStore, openWorld } from './app/state';
 import type { Step } from '../shared/schema';
 import { starterWorld } from '../shared/engine/presets';
 import { defaultSprite } from '../shared/engine/sizing';
@@ -14,20 +15,69 @@ import { Hud } from './ui/hud';
 
 declare global {
   interface Window {
-    __game?: { world: World; engine: Engine; scene: SceneView; player: PlayerController };
+    __game?: { world: World; engine: Engine; scene: SceneView; player: PlayerController; store: WorldStore };
   }
 }
 
 export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement): Promise<void> {
   const coarse = isTouchFirst();
-  const config = await fetchConfig().catch(() => ({ spriteVersion: 'dev', llm: 'offline', needsPasscode: false }));
-  const slug = 'local';
+  const hud = new Hud(hudRoot, {
+    onCommand: (text) => void onCommand(text),
+    onUndo: () => void onUndo(),
+    onReset: () => void onReset(),
+    onShare: () => void onShare(),
+  });
+  const config = await fetchConfig().catch(() => ({ spriteVersion: 'dev', llm: 'offline', needsPasscode: false, authed: true }));
+  if (config.needsPasscode && !config.authed) {
+    await hud.askPasscode(async (code) => {
+      const r = await fetch('/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ passcode: code }) });
+      return r.ok;
+    });
+  }
+  let world: World;
+  let created = false;
+  try {
+    ({ world, created } = await openWorld());
+  } catch (e) {
+    hud.toast(`${(e as Error).message}. Playing offline.`, 'error', 6000);
+    world = starterWorld('local', (_word, kind) => defaultSprite(kind));
+  }
+  const slug = world.slug;
   let targetId: string | undefined;
   let busy = false;
-  const world = starterWorld('local', (_word, kind) => defaultSprite(kind));
   const engine = new Engine(world, Date.now() & 0xffff);
+  const store = new WorldStore(engine, world, {
+    onConflict: () => hud.toast('This world changed somewhere else, so it was reloaded.', 'info', 5000),
+    onError: (msg) => hud.toast(msg, 'error'),
+  });
   const scene = new SceneView(canvas, config.spriteVersion);
   const player = new PlayerController(engine.world.player);
+  if (created) hud.toast('New world. Share the link to come back to it from anywhere.', 'info', 5000);
+
+  const onCommand = (text: string) => {
+    store.pushUndo();
+    return runStream(`/api/worlds/${slug}/command`, { command: text, context: compactWorld(engine.world, targetId) }, 'thinking...');
+  };
+  const onUndo = async () => {
+    if (busy) {
+      hud.toast('Wait for the current command to finish.', 'info', 1500);
+      return;
+    }
+    hud.toast((await store.undo()) ? 'Undid the last command.' : 'Nothing to undo.', 'info', 1500);
+  };
+  const onReset = async () => {
+    if (busy) return;
+    await store.reset();
+    hud.toast('Back to the starter meadow.', 'info', 2000);
+  };
+  const onShare = async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      hud.toast('Link copied. Open it anywhere to continue this world.', 'info', 3000);
+    } catch {
+      hud.toast(location.href, 'info', 6000);
+    }
+  };
   const runStream = async (url: string, body: unknown, label: string) => {
     if (busy) {
       hud.toast('Still working on the last one...', 'info', 1500);
@@ -59,9 +109,6 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       hud.setStatus('');
     }
   };
-  const hud = new Hud(hudRoot, {
-    onCommand: (text) => void runStream(`/api/worlds/${slug}/command`, { command: text, context: compactWorld(engine.world, targetId) }, 'thinking...'),
-  });
   engine.on((ev) => {
     if (ev.type === 'say') hud.toast(ev.id ? `${engine.world.get(ev.id)?.label ?? ev.id}: ${ev.text}` : ev.text, 'say', ev.dur * 1000);
     if (ev.type === 'warn') hud.toast(ev.msg, 'error');
@@ -119,11 +166,12 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       hud.setTarget(e ? e.label : null);
     }
     engine.update(dt);
+    store.tick();
     scene.sync(engine.world);
     scene.render(engine.world.player);
   };
   requestAnimationFrame(loop);
-  window.__game = { world, engine, scene, player };
+  window.__game = { world, engine, scene, player, store };
 }
 
 /** Phones and tablets: coarse pointer, or touch points without hover. Touch laptops keep desktop controls. */

@@ -3,10 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { createApp } from '../../src/server/app';
 import { MockProvider } from '../../src/server/llm/provider';
 import { Vocab } from '../../src/server/vocab';
+import { Db } from '../../src/server/db';
 import type { StreamEvent } from '../../src/shared/schema';
 
 const vocab = Vocab.load(path.resolve('assets/manifest.json'));
-const app = createApp({ vocab, provider: new MockProvider(0), version: 'test', passcode: '' });
+const app = createApp({ vocab, provider: new MockProvider(0), db: new Db(':memory:'), version: 'test', auth: { passcode: '', secret: 's', secure: false }, dailyCap: 100 });
 const context = {
   player: { pos: [0, 0, 0] as [number, number, number], yaw: 0 },
   entities: [

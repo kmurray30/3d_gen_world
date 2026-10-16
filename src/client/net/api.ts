@@ -6,6 +6,7 @@ export interface ClientConfig {
   spriteVersion: string;
   llm: string;
   needsPasscode: boolean;
+  authed: boolean;
 }
 
 export async function fetchConfig(): Promise<ClientConfig> {

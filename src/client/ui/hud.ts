@@ -119,6 +119,35 @@ export class Hud {
     this.target.hidden = false;
   }
 
+  /** Modal passcode prompt; resolves once `verify` accepts a code. */
+  askPasscode(verify: (code: string) => Promise<boolean>): Promise<void> {
+    return new Promise((resolve) => {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `<form class="card passform"><h2>Paper World</h2><p>This world is private. Enter the passcode to play.</p>
+        <input type="password" name="passcode" autocomplete="current-password" placeholder="passcode" />
+        <button type="submit">Enter</button><div class="passerr"></div></form>`;
+      this.root.appendChild(modal);
+      const form = modal.querySelector('form')!;
+      const input = modal.querySelector('input')!;
+      const err = modal.querySelector('.passerr')!;
+      input.addEventListener('keydown', (e) => e.stopPropagation());
+      setTimeout(() => input.focus(), 50);
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        err.textContent = '';
+        const ok = await verify(input.value).catch(() => false);
+        if (ok) {
+          modal.remove();
+          resolve();
+        } else {
+          err.textContent = 'That is not it. Try again.';
+          input.select();
+        }
+      });
+    });
+  }
+
   toast(text: string, kind: 'info' | 'error' | 'say' = 'info', ms = 3500): void {
     const el = document.createElement('div');
     el.className = `toast ${kind}`;

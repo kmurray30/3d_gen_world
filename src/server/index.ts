@@ -1,11 +1,13 @@
 import path from 'node:path';
 import { serve } from '@hono/node-server';
 import { createApp } from './app';
+import { Db } from './db';
 import { env } from './env';
 import { MockProvider, OpenAICompatProvider, type LlmProvider } from './llm/provider';
 import { Vocab } from './vocab';
 
 const vocab = Vocab.load(path.join(env.assetsDir, 'manifest.json'));
+const db = new Db(env.dbPath);
 
 let provider: LlmProvider;
 if (env.mockLlm || !env.xaiApiKey) {
@@ -15,19 +17,18 @@ if (env.mockLlm || !env.xaiApiKey) {
   provider = new OpenAICompatProvider(env.llmModel, env.xaiApiKey, env.llmBaseUrl);
   console.log(`[llm] ${env.llmModel} via ${env.llmBaseUrl}`);
 }
+if (!env.passcode) console.log('[auth] APP_PASSCODE not set: the app is open to anyone who can reach it');
 
 const app = createApp({
   vocab,
   provider,
+  db,
   version: process.env.npm_package_version ?? '0.1.0',
-  passcode: env.passcode,
-  log: !env.isProd,
-  onCommand: (info) => {
-    console.log(`[cmd] ${info.slug} "${info.command}" -> ${info.steps} steps in ${info.ms}ms${info.errors.length ? ` (${info.errors.length} skipped: ${info.errors.join('; ').slice(0, 200)})` : ''}`);
-    if (process.env.LLM_DEBUG === '1') console.log(`[raw] ${info.raw.slice(0, 3000)}`);
-  },
+  auth: { passcode: env.passcode, secret: env.cookieSecret, secure: env.isProd },
+  dailyCap: env.dailyCommandCap,
+  log: !env.isProd || process.env.LOG_REQUESTS === '1',
 });
 
 serve({ fetch: app.fetch, port: env.port, hostname: '0.0.0.0' }, (info) => {
-  console.log(`[server] listening on http://0.0.0.0:${info.port} (${env.nodeEnv}); ${vocab.counts.withSprite}/${vocab.counts.words} words have sprites`);
+  console.log(`[server] listening on http://0.0.0.0:${info.port} (${env.nodeEnv}); db ${env.dbPath}; ${vocab.counts.withSprite}/${vocab.counts.words} words have sprites`);
 });
