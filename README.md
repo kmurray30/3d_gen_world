@@ -10,8 +10,10 @@ Open the hosted URL, enter the passcode once per device, and you get a fresh wor
 That link is the save file: open it on any device to continue, or share it. Type what should
 happen in the box ("water the flower", "a dragon flies in and breathes fire at the house", "make
 it huge" while looking at something). Desktop: click to look, WASD to walk, Shift to run, `/` to
-type. Phone: left thumb walks, right thumb looks, tap a thing to name it. The menu has Undo,
-Reset and Copy link. `?dev=1` opens a console that runs hand-written scripts.
+type. Phone: left thumb walks, right thumb looks, tap a thing to name it. The menu has Worlds (tap
+the title too), Undo, Reset and Copy link. Worlds lists every world you have opened on this device,
+starts a new one, and opens any world from its link or name; the bare site address reopens the
+world you used last. `?dev=1` opens a console that runs hand-written scripts.
 
 ## Run locally
 

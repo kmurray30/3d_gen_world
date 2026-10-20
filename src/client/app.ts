@@ -12,6 +12,8 @@ import { DesktopInput } from './input/desktop';
 import { TouchInput } from './input/touch';
 import { PlayerController } from './app/player';
 import { Hud } from './ui/hud';
+import { WorldsPanel } from './ui/worlds-panel';
+import { createWorld, goToWorld, recordVisit, takeFreshFlag } from './app/worlds';
 
 declare global {
   interface Window {
@@ -26,7 +28,9 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     onUndo: () => void onUndo(),
     onReset: () => void onReset(),
     onShare: () => void onShare(),
+    onWorlds: () => worldsPanel?.open(),
   });
+  let worldsPanel: WorldsPanel | undefined;
   const config = await fetchConfig().catch(() => ({ spriteVersion: 'dev', llm: 'offline', needsPasscode: false, authed: true }));
   if (config.needsPasscode && !config.authed) {
     await hud.askPasscode(async (code) => {
@@ -47,12 +51,28 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   let busy = false;
   const engine = new Engine(world, Date.now() & 0xffff);
   const store = new WorldStore(engine, world, {
+    onSaved: () => recordVisit(slug, engine.world.size),
     onConflict: () => hud.toast('This world changed somewhere else, so it was reloaded.', 'info', 5000),
     onError: (msg) => hud.toast(msg, 'error'),
   });
   const scene = new SceneView(canvas, config.spriteVersion, hudRoot);
   const player = new PlayerController(engine.world.player);
-  if (created) hud.toast('New world. Share the link to come back to it from anywhere.', 'info', 5000);
+  recordVisit(slug, engine.world.size);
+  if (created || takeFreshFlag(slug)) hud.toast('New world. The menu has Worlds to switch, and Copy link to share this one.', 'info', 5000);
+  const leave = async (): Promise<void> => {
+    if (busy) throw new Error('Wait for the current command to finish first.');
+    await store.save(true).catch(() => undefined);
+  };
+  worldsPanel = new WorldsPanel(hudRoot, slug, {
+    onNew: async () => {
+      await leave();
+      goToWorld(await createWorld(), true);
+    },
+    onOpen: async (target) => {
+      await leave();
+      goToWorld(target);
+    },
+  });
 
   const onCommand = (text: string) => {
     store.pushUndo();

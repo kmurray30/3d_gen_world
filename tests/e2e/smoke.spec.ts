@@ -66,9 +66,46 @@ test('movement: keyboard on desktop, joystick on touch', async ({ page, isMobile
     await touch('touchEnd', 80, 370);
   } else {
     await page.keyboard.down('KeyW');
-    await page.waitForTimeout(600);
+    // frames can be slow under software rendering, so wait for the movement instead of a fixed time
+    await page
+      .waitForFunction((b) => { const p = (window as any).__game.engine.world.player.pos; return Math.hypot(p[0] - b[0], p[2] - b[2]) > 0.6; }, before, { timeout: 8000 })
+      .catch(() => undefined);
     await page.keyboard.up('KeyW');
   }
   const after = await page.evaluate(() => [...(window as any).__game.engine.world.player.pos]);
   expect(Math.hypot(after[0] - before[0], after[2] - before[2])).toBeGreaterThan(0.5);
+});
+
+test('worlds panel: create a new world, switch back, reopen the last one from the bare link', async ({ page }) => {
+  await enter(page);
+  const first = new URL(page.url()).pathname;
+  const firstSlug = first.replace('/w/', '');
+
+  await page.click('.brand');
+  await expect(page.locator('.world-row.current')).toHaveCount(1);
+  await page.click('.new-world');
+  await page.waitForURL((u) => u.pathname.startsWith('/w/') && u.pathname !== first);
+  await page.waitForFunction(() => !!(window as any).__game);
+  const second = new URL(page.url()).pathname;
+  expect(second).not.toBe(first);
+
+  // both worlds are listed, the new one is current
+  await page.click('.brand');
+  await expect(page.locator('.world-row')).toHaveCount(2);
+  await expect(page.locator('.world-row.current .world-meta')).toContainText('you are here');
+
+  // switch back by clicking the other row
+  await page.locator('.world-row:not(.current) .world-open').click();
+  await page.waitForURL((u) => u.pathname === first);
+
+  // opening a link that does not exist is refused with a message
+  await page.click('.brand');
+  await page.fill('.open-form input', 'https://example.app/w/nope-nowhere-0000');
+  await page.press('.open-form input', 'Enter');
+  await expect(page.locator('.worlds-msg')).toContainText('No world with that link');
+
+  // the bare link reopens the world used last on this device
+  await page.goto('/');
+  await page.waitForURL((u) => u.pathname === first);
+  expect(firstSlug.length).toBeGreaterThan(3);
 });

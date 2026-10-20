@@ -1,5 +1,6 @@
 import type { World } from '../../shared/types';
 import type { Engine } from '../../shared/engine/index';
+import { forgetWorld, lastWorld } from './worlds';
 
 const UNDO_MAX = 20;
 const UNDO_SESSION_MAX = 8;
@@ -12,18 +13,30 @@ export interface StoreEvents {
   onError?: (msg: string) => void;
 }
 
-/** Which world to open: the slug from /w/<slug>, or a new one. */
+/**
+ * Which world to open: the slug from /w/<slug>; with no slug, the world this device used last; otherwise a new one.
+ * `?new=1` forces a new world.
+ */
 export async function openWorld(): Promise<{ world: World; created: boolean }> {
   const m = /^\/w\/([a-z0-9][a-z0-9-]{2,63})$/i.exec(location.pathname);
-  if (m) {
-    const r = await fetch(`/api/worlds/${m[1].toLowerCase()}`);
-    if (r.ok) return { world: ((await r.json()) as { world: World }).world, created: false };
+  const forceNew = new URLSearchParams(location.search).get('new') === '1';
+  const candidate = m ? m[1].toLowerCase() : forceNew ? null : lastWorld();
+  if (candidate) {
+    const r = await fetch(`/api/worlds/${candidate}`);
+    if (r.ok) {
+      if (!m) history.replaceState(null, '', `/w/${candidate}${location.search}`);
+      return { world: ((await r.json()) as { world: World }).world, created: false };
+    }
     if (r.status !== 404) throw new Error(`could not load the world (${r.status})`);
+    if (m) forgetWorld(candidate);
   }
+  const params = new URLSearchParams(location.search);
+  params.delete('new');
+  const search = params.toString() ? `?${params.toString()}` : '';
   const r = await fetch('/api/worlds', { method: 'POST' });
   if (!r.ok) throw new Error(`could not create a world (${r.status})`);
   const { slug, world } = (await r.json()) as { slug: string; world: World };
-  history.replaceState(null, '', `/w/${slug}${location.search}`);
+  history.replaceState(null, '', `/w/${slug}${search}`);
   return { world, created: true };
 }
 

@@ -3,6 +3,7 @@ export interface HudHandlers {
   onUndo?: () => void;
   onReset?: () => void;
   onShare?: () => void;
+  onWorlds?: () => void;
 }
 
 /** DOM overlay: command bar, hint, top bar with menu, target label, toasts, desktop pointer-lock overlay. */
@@ -22,10 +23,11 @@ export class Hud {
     this.root = root;
     root.innerHTML = `
       <div class="topbar">
-        <div class="brand">Paper World</div>
+        <div class="brand" title="Worlds">Paper World</div>
         <div class="status" aria-live="polite"></div>
         <button class="menu-btn" type="button" aria-label="Menu">&#8943;</button>
         <div class="menu" hidden>
+          <button type="button" data-act="worlds">Worlds...</button>
           <button type="button" data-act="undo">Undo last command</button>
           <button type="button" data-act="reset">Reset world</button>
           <button type="button" data-act="share">Copy share link</button>
@@ -64,6 +66,9 @@ export class Hud {
       if (e.key === 'Escape') this.input.blur();
       e.stopPropagation();
     });
+    const brand = root.querySelector('.brand') as HTMLElement;
+    brand.setAttribute('role', 'button');
+    brand.addEventListener('click', () => handlers.onWorlds?.());
     root.querySelector('.menu-btn')!.addEventListener('click', () => {
       this.menu.hidden = !this.menu.hidden;
     });
@@ -73,6 +78,7 @@ export class Hud {
       if (act === 'undo') handlers.onUndo?.();
       if (act === 'reset') handlers.onReset?.();
       if (act === 'share') handlers.onShare?.();
+      if (act === 'worlds') handlers.onWorlds?.();
     });
     document.addEventListener('pointerdown', (e) => {
       if (!this.menu.hidden && !(e.target as HTMLElement).closest('.topbar')) this.menu.hidden = true;
