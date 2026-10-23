@@ -13,7 +13,9 @@ export class TouchInput {
   private dy = 0;
   private readonly base: HTMLDivElement;
   private readonly knob: HTMLDivElement;
-  readonly radius = 56;
+  /** Knob travel. Up to `walkRadius` the speed scales with the drag; beyond it you run, up to the outer radius. */
+  readonly radius = 104;
+  readonly walkRadius = 52;
   onTap?: (x: number, y: number) => void;
 
   constructor(
@@ -45,8 +47,8 @@ export class TouchInput {
       this.joyOrigin = { x: e.clientX, y: e.clientY };
       this.axis = [0, 0];
       this.base.style.display = 'block';
-      this.base.style.left = `${e.clientX - 60}px`;
-      this.base.style.top = `${e.clientY - 60}px`;
+      this.base.style.left = `${e.clientX - 110}px`;
+      this.base.style.top = `${e.clientY - 110}px`;
       this.knob.style.transform = 'translate(0px, 0px)';
     } else if (this.lookId === null) {
       this.lookId = e.pointerId;
@@ -66,9 +68,11 @@ export class TouchInput {
       }
       this.knob.style.transform = `translate(${vx}px, ${vy}px)`;
       const dead = 6;
-      const mag = Math.max(0, len - dead) / (this.radius - dead);
-      const n = len > 0 ? Math.min(1, mag) / len : 0;
+      // 0..1 over the inner zone (walk), 1..2 over the outer zone (run)
+      const mag = len <= this.walkRadius ? Math.max(0, len - dead) / (this.walkRadius - dead) : 1 + (len - this.walkRadius) / (this.radius - this.walkRadius);
+      const n = len > 0 ? Math.min(2, mag) / len : 0;
       this.axis = [vx * n, -vy * n];
+      this.base.classList.toggle('running', mag > 1.15);
     } else if (e.pointerId === this.lookId) {
       this.dx += e.clientX - this.last.x;
       this.dy += e.clientY - this.last.y;

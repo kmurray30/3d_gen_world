@@ -202,7 +202,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     };
     hud.input.addEventListener('blur', () => hud.showLockOverlay(!desktop.locked));
   } else {
-    hud.setHint('Left thumb: walk. Right thumb: look. Tap a thing to name it.');
+    hud.setHint('Left thumb: walk, push further to run. Right thumb: look. Tap a thing to name it.');
   }
 
   if (touch) {

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Entity, PlayerState, SpriteRef, Vec3 } from '../../shared/types';
 import { worldPos } from '../../shared/engine/transform';
 import type { WorldModel } from '../../shared/engine/world';
-import { SpriteView } from './sprites';
+import { SpriteView, isCrossWord } from './sprites';
 import { StructureView } from './structures';
 import { MaterialTiles } from './materials';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
@@ -164,7 +164,7 @@ export class SceneView {
       const phase = hashPhase(e.id);
       if (living) sq *= 1 + 0.015 * Math.sin(this.clock * 2.2 + phase);
       if (living && pos[1] > 0.3 && !e.parent) pos[1] += 0.08 * Math.sin(this.clock * 1.8 + phase);
-      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, camState), sq);
+      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, camState), sq, isCrossWord(e.word) && !e.parent);
     }
     this.effects.syncPersistent(model);
     this.effects.update(dt, (id) => shapeOfEntity(model, id), this.camera);
@@ -257,7 +257,7 @@ export class SceneView {
   pick(ndcX: number, ndcY: number): string | null {
     this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
     const bodies: THREE.Object3D[] = [];
-    for (const v of this.views.values()) if (v.root.visible) bodies.push(v.body);
+    for (const v of this.views.values()) if (v.root.visible) bodies.push(...v.pickables);
     for (const s of this.structures.values()) if (s.root.visible) bodies.push(...s.pickables);
     const hits = this.raycaster.intersectObjects(bodies, false);
     for (const hit of hits) {

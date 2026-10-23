@@ -103,11 +103,13 @@ body { background: linear-gradient(#6db3ff 0%, #9fd0ff 55%, #d9efff 100%); }
 .lock-overlay .card { padding: 14px 22px; font-weight: 800; font-size: 18px; text-align: center; }
 .lock-overlay .card small { font-weight: 500; font-size: 13px; }
 .joy {
-  position: absolute; width: 120px; height: 120px; border-radius: 50%; border: 3px solid rgba(255,255,255,.85);
-  background: rgba(255,255,255,.18); pointer-events: none;
+  position: absolute; width: 220px; height: 220px; border-radius: 50%; border: 3px dashed rgba(255,255,255,.55);
+  background: rgba(255,255,255,.08); pointer-events: none; transition: border-color .15s;
 }
+.joy::before { content: ''; position: absolute; inset: 50px; border-radius: 50%; border: 3px solid rgba(255,255,255,.85); background: rgba(255,255,255,.14); }
+.joy.running { border-color: var(--accent); }
 .joy-knob {
-  position: absolute; left: 32px; top: 32px; width: 56px; height: 56px; border-radius: 50%;
+  position: absolute; left: 82px; top: 82px; width: 56px; height: 56px; border-radius: 50%;
   background: var(--paper); border: 3px solid var(--ink); box-shadow: 2px 3px 0 rgba(43,43,43,.3);
 }
 [hidden] { display: none !important; }
