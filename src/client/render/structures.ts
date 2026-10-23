@@ -12,6 +12,7 @@ import { DEG } from '../../shared/engine/math';
 import { buildStructureMesh, type MeshGroup } from '../../shared/structure/geometry';
 import type { Structure } from '../../shared/structure/types';
 import { MaterialTiles } from './materials';
+import { applyCrayon } from './crayon';
 import type { TextureStore } from './textures';
 
 const INK = '#2b2b2b';
@@ -109,6 +110,7 @@ export class StructureView {
     } else {
       mat.map = this.assets.tiles.get(g.mat);
       mat.color.set(g.color);
+      applyCrayon(mat, () => this.root.scale.x);
     }
     const mesh = new THREE.Mesh(geo, mat);
     mesh.userData.entityId = this.id;
@@ -122,6 +124,7 @@ export class StructureView {
     this.root.rotation.set(0, (e.yaw ?? 0) * DEG, 0);
     const sc = Math.max(0.001, e.scale);
     this.root.scale.set(sc, sc, sc);
+    for (const p of this.pieces) (p.mat.userData.crayonUpdate as (() => void) | undefined)?.();
     this.root.visible = !e.hidden;
     const base = e.alpha ?? 1;
     let anyFaded = false;

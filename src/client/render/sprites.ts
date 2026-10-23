@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Entity, Vec3 } from '../../shared/types';
 import { footprintRadius, renderHeight, renderWidth } from '../../shared/engine/sizing';
 import type { TextureStore } from './textures';
+import { DEFAULT_TREE_COLORS, OrigamiPlant, sampleTreeColors, type TreeColors } from './origami';
 
 const PLANE = new THREE.PlaneGeometry(1, 1);
 const SHADOW = new THREE.CircleGeometry(0.5, 28).rotateX(-Math.PI / 2);
@@ -12,18 +13,15 @@ const PITCH_FOLLOW = 0.35;
 const DEG = Math.PI / 180;
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
-/** Words drawn as crossed paper planes (origami) instead of a camera-facing cutout: scenery between structure and decor. */
-const CROSS_WORDS = /(^|\s)(tree|trees|bush|shrub|hedge|cactus|sapling|stump|boulder|haystack|snowman|scarecrow|topiary|bonsai|fern|reeds?|tumbleweed|rosebush|mushroom|toadstool)$|^(palm|pine|oak|willow|maple|apple|cherry|christmas|birch|fir|spruce|cedar|redwood|bamboo|elm) tree$/;
-const CROSS_ANGLES = [0, Math.PI / 4, Math.PI / 2, (3 * Math.PI) / 4];
-/** Extra, smaller crossed copies of the upper part of the sprite: leaf bunches like paper clouds. */
-const CANOPY_BUNCHES: Array<{ dx: number; dy: number; dz: number; s: number; yaw: number }> = [
-  { dx: -0.34, dy: 0.62, dz: 0.1, s: 0.5, yaw: 0.5 },
-  { dx: 0.36, dy: 0.66, dz: -0.08, s: 0.46, yaw: 1.1 },
-  { dx: 0.02, dy: 0.8, dz: 0.3, s: 0.42, yaw: 1.8 },
-];
+/** Words drawn as origami paper pieces (trunk cross + leaf clouds) instead of a camera-facing cutout. */
+const TREE_WORDS = /(^|\s)(tree|trees|sapling|topiary|bonsai)$|^(oak|willow|maple|apple|cherry|birch|elm|peach|pear|plum|orange|lemon|olive|magnolia|family|money) tree$/;
+const BUSH_WORDS = /(^|\s)(bush|shrub|hedge|rosebush)$/;
 
-export function isCrossWord(word: string): boolean {
-  return CROSS_WORDS.test(word.toLowerCase());
+export function origamiKind(word: string): 'tree' | 'bush' | null {
+  const w = word.toLowerCase();
+  if (TREE_WORDS.test(w)) return 'tree';
+  if (BUSH_WORDS.test(w)) return 'bush';
+  return null;
 }
 
 /**
@@ -36,12 +34,9 @@ export class SpriteView {
   readonly pivot = new THREE.Group();
   readonly body: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   readonly shadow: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
-  /** Origami mode: the sprite is drawn as crossed planes that do not turn with the camera. */
-  private cross: THREE.Group | null = null;
-  private crossBodies: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[] = [];
-  private crossBunches: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[] = [];
-  private canopyMat: THREE.MeshBasicMaterial | null = null;
-  private crossYaw = 0;
+  /** Origami mode: drawn paper pieces that do not turn with the camera. */
+  private origami: OrigamiPlant | null = null;
+  private origamiColors: TreeColors = DEFAULT_TREE_COLORS;
   private spriteKey = '';
   private wantedFile: string | null = null;
   private hasRealTexture = false;
@@ -68,7 +63,7 @@ export class SpriteView {
     this.root.add(this.pivot, this.shadow);
   }
 
-  update(e: Entity, pos: Vec3, camYaw: number, camPitch: number, textures: TextureStore, flip: boolean, sq = 1, origami = false): void {
+  update(e: Entity, pos: Vec3, camYaw: number, camPitch: number, textures: TextureStore, flip: boolean, sq = 1, origami: 'tree' | 'bush' | null = null): void {
     this.root.position.set(pos[0], pos[1], pos[2]);
     this.root.visible = !e.hidden;
     const h = renderHeight(e);
@@ -77,24 +72,12 @@ export class SpriteView {
     const ws = w * (1 + (1 - sq) * 0.6);
     const mat = this.body.material;
     mat.opacity = e.alpha ?? 1;
-    if (origami && this.hasRealTexture) {
-      this.setCross(true, e);
-      this.cross!.rotation.y = this.crossYaw;
-      this.cross!.scale.set(1, 1, 1);
-      for (const b of this.crossBodies) {
-        b.scale.set(ws, hs, 1);
-        b.position.y = hs / 2;
-        b.rotation.z = (e.tilt * Math.PI) / 180;
-        b.material.opacity = mat.opacity;
-      }
-      this.crossBunches.forEach((b, i) => {
-        const c = CANOPY_BUNCHES[i];
-        b.scale.set(ws * c.s, hs * c.s * 0.55, 1);
-        b.position.set(c.dx * ws, c.dy * hs, c.dz * ws);
-        b.material.opacity = mat.opacity;
-      });
+    if (origami) {
+      this.setOrigami(origami, e);
+      this.origami!.setColors(this.origamiColors);
+      this.origami!.layout(ws, hs, 1, mat.opacity);
     } else {
-      this.setCross(false, e);
+      this.setOrigami(null, e);
       // Turn toward the camera around the vertical axis. When the camera looks down, lean back toward it about the
       // sprite's centre: a little at shallow angles (paper stays upright), fully at steep angles so a cutout seen
       // from above faces the camera instead of foreshortening into a squashed sliver. Looking up never leans.
@@ -133,7 +116,7 @@ export class SpriteView {
             this.hasRealTexture = true;
             mat.map = tex;
             mat.needsUpdate = true;
-            this.applyCrossMaps();
+            this.origamiColors = sampleTreeColors(tex);
           })
           .catch(() => {
             /* keep placeholder */
@@ -142,65 +125,26 @@ export class SpriteView {
     }
   }
 
-  /** Build or tear down the crossed-planes version. The planes share the body material; bunches crop the canopy. */
-  private setCross(on: boolean, e: Entity): void {
-    if (on && !this.cross) {
-      this.cross = new THREE.Group();
-      this.crossYaw = (hashYaw(e.id) % 1) * Math.PI;
-      for (const a of CROSS_ANGLES) {
-        const m = new THREE.Mesh(PLANE, this.body.material);
-        m.rotation.y = a;
-        m.userData.entityId = this.id;
-        this.cross.add(m);
-        this.crossBodies.push(m);
-      }
-      if (isTreeWord(e.word)) {
-        this.canopyMat = this.body.material.clone();
-        for (const c of CANOPY_BUNCHES) {
-          const geo = PLANE.clone();
-          // crop to the upper 55% of the texture: the leaves
-          const uv = geo.attributes.uv as THREE.BufferAttribute;
-          for (let i = 0; i < uv.count; i++) uv.setY(i, 0.45 + uv.getY(i) * 0.55);
-          const m = new THREE.Mesh(geo, this.canopyMat);
-          m.rotation.y = c.yaw;
-          m.userData.entityId = this.id;
-          const m2 = new THREE.Mesh(geo, this.canopyMat);
-          m2.rotation.y = c.yaw + Math.PI / 2;
-          m2.userData.entityId = this.id;
-          m.add(m2);
-          this.cross.add(m);
-          this.crossBunches.push(m);
-        }
-      }
-      this.applyCrossMaps();
-      this.root.add(this.cross);
+  private setOrigami(kind: 'tree' | 'bush' | null, e: Entity): void {
+    if (kind && !this.origami) {
+      this.origami = new OrigamiPlant(this.id, kind, (hashYaw(e.id) % 1) * Math.PI);
+      this.root.add(this.origami.group);
       this.pivot.visible = false;
-    } else if (!on && this.cross) {
-      this.root.remove(this.cross);
-      for (const b of this.crossBunches) b.geometry.dispose();
-      this.canopyMat?.dispose();
-      this.canopyMat = null;
-      this.cross = null;
-      this.crossBodies = [];
-      this.crossBunches = [];
+    } else if (!kind && this.origami) {
+      this.root.remove(this.origami.group);
+      this.origami.dispose();
+      this.origami = null;
       this.pivot.visible = true;
-    }
-  }
-
-  private applyCrossMaps(): void {
-    if (this.canopyMat) {
-      this.canopyMat.map = this.body.material.map;
-      this.canopyMat.needsUpdate = true;
     }
   }
 
   /** Meshes that count for picking. */
   get pickables(): THREE.Object3D[] {
-    return this.cross ? [...this.crossBodies] : [this.body];
+    return this.origami ? this.origami.pickables : [this.body];
   }
 
   dispose(): void {
-    this.setCross(false, { id: this.id, word: '' } as Entity);
+    this.setOrigami(null, { id: this.id, word: '' } as Entity);
     this.body.material.dispose();
     this.shadow.material.dispose();
   }
@@ -211,9 +155,6 @@ function groundUnder(_pos: Vec3): number {
   return 0;
 }
 
-function isTreeWord(word: string): boolean {
-  return /tree|bush|shrub|hedge|sapling|topiary|bonsai/.test(word.toLowerCase());
-}
 
 function hashYaw(id: string): number {
   let h = 0;

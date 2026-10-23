@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import type { Entity, PlayerState, SpriteRef, Vec3 } from '../../shared/types';
 import { worldPos } from '../../shared/engine/transform';
 import type { WorldModel } from '../../shared/engine/world';
-import { SpriteView, isCrossWord } from './sprites';
+import { SpriteView, origamiKind } from './sprites';
+import { applyCrayon, crayonTexture, CRAYON_METRES } from './crayon';
 import { StructureView } from './structures';
 import { MaterialTiles } from './materials';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
@@ -61,10 +62,15 @@ export class SceneView {
     const budget = this.coarse ? 40 * 1024 * 1024 : 96 * 1024 * 1024;
     this.textures = new TextureStore(budget, `/sprites/${spriteVersion}/${size}`);
 
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ map: makeGroundTexture() }),
-    );
+    const groundMat = new THREE.MeshBasicMaterial({ map: makeGroundTexture() });
+    applyCrayon(groundMat, () => 1, 0.45);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), groundMat);
+    // the ground plane's UVs span 0..1; the crayon shader expects metres, so hand it metre UVs
+    const guv = ground.geometry.attributes.uv as THREE.BufferAttribute;
+    for (let i = 0; i < guv.count; i++) guv.setXY(i, guv.getX(i) * 400, guv.getY(i) * 400);
+    (groundMat.map as THREE.Texture).repeat.set(1 / 6, 1 / 6);
+    void crayonTexture;
+    void CRAYON_METRES;
     ground.name = 'ground';
     this.scene.add(ground);
     this.effects = new ParticleSystem(this.scene);
@@ -164,7 +170,7 @@ export class SceneView {
       const phase = hashPhase(e.id);
       if (living) sq *= 1 + 0.015 * Math.sin(this.clock * 2.2 + phase);
       if (living && pos[1] > 0.3 && !e.parent) pos[1] += 0.08 * Math.sin(this.clock * 1.8 + phase);
-      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, camState), sq, isCrossWord(e.word) && !e.parent);
+      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, camState), sq, e.parent ? null : origamiKind(e.word));
     }
     this.effects.syncPersistent(model);
     this.effects.update(dt, (id) => shapeOfEntity(model, id), this.camera);
