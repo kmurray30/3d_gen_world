@@ -9,6 +9,8 @@ import { buildSystemPrompt, buildUserPrompt } from '../src/server/llm/prompt';
 import { StepStreamParser } from '../src/server/llm/stream-parser';
 import { CommandValidator } from '../src/server/llm/validate';
 import { Vocab } from '../src/server/vocab';
+import { StructureResolver } from '../src/server/structures';
+import { HeuristicClassifier } from '../src/server/llm/classify';
 import type { CompactWorld, ResolvedStep } from '../src/shared/schema';
 
 const COMMANDS = [
@@ -31,6 +33,9 @@ const COMMANDS = [
   'plant a seed and it grows into a tree',
   'the tree says hello',
   'a hoverboard appears',
+  'a little blue cottage with a red door appears',
+  'build a wizard tower with a crooked pointy hat',
+  'a fire station appears across the street',
   'asdkjh qwe',
 ];
 
@@ -54,6 +59,7 @@ async function main() {
   const key = process.env.XAI_API_KEY;
   if (!key) throw new Error('XAI_API_KEY missing');
   const vocab = Vocab.load(path.resolve('assets/manifest.json'));
+  const structures = new StructureResolver(vocab, new HeuristicClassifier());
   const provider = new OpenAICompatProvider(process.env.LLM_MODEL ?? 'grok-4-1-fast-non-reasoning', key, process.env.LLM_BASE_URL ?? 'https://api.x.ai/v1');
   const system = buildSystemPrompt(vocab);
   console.log(`system prompt: ${system.length} chars (~${Math.round(system.length / 3.3)} tokens)\n`);
@@ -64,7 +70,7 @@ async function main() {
     const t0 = Date.now();
     let tFirst = 0;
     const parser = new StepStreamParser();
-    const validator = new CommandValidator(vocab, context);
+    const validator = new CommandValidator(vocab, context, structures);
     const steps: ResolvedStep[] = [];
     const errors: string[] = [];
     let raw = '';
@@ -74,7 +80,7 @@ async function main() {
         for (const text of parser.push(chunk)) {
           if (!tFirst) tFirst = Date.now() - t0;
           try {
-            const v = validator.handle(JSON.parse(text));
+            const v = await validator.handle(JSON.parse(text));
             errors.push(...v.errors);
             if (v.step) steps.push(v.step);
           } catch {

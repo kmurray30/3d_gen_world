@@ -1,6 +1,7 @@
 import type { Action, CompactWorld, Place, ResolvedAction, ResolvedStep, Step } from '../../shared/schema';
 import { StepSchema } from '../../shared/schema';
 import type { Kind } from '../../shared/types';
+import type { StructureResolver } from '../structures';
 import type { Vocab } from '../vocab';
 
 export interface Validated {
@@ -11,6 +12,7 @@ export interface Validated {
 /**
  * Turns raw model steps into engine-ready steps: schema validation, ref -> unique id allocation, rewriting of
  * references, dropping actions that point at unknown entities, and word resolution against the vocabulary.
+ * Spawns of building words (and of novel words the classifier calls buildings) become structure builds.
  */
 export class CommandValidator {
   private readonly refs = new Map<string, string>();
@@ -20,6 +22,8 @@ export class CommandValidator {
   constructor(
     private readonly vocab: Vocab,
     context: CompactWorld,
+    private readonly structures?: StructureResolver,
+    private readonly command?: string,
   ) {
     for (const e of context.entities) {
       this.known.add(e.id);
@@ -27,7 +31,7 @@ export class CommandValidator {
     }
   }
 
-  handle(raw: unknown): Validated {
+  async handle(raw: unknown): Promise<Validated> {
     const parsed = StepSchema.safeParse(raw);
     if (!parsed.success) {
       const op = (raw as { op?: unknown })?.op;
@@ -36,11 +40,15 @@ export class CommandValidator {
     const step: Step = parsed.data;
     const errors: string[] = [];
     if (step.op === 'par') {
-      const actions = step.do.map((a) => this.action(a, errors)).filter((a): a is ResolvedAction => !!a);
+      const actions: ResolvedAction[] = [];
+      for (const a of step.do) {
+        const r = await this.action(a, errors);
+        if (r) actions.push(r);
+      }
       if (!actions.length) return { errors };
       return { step: actions.length === 1 ? actions[0] : { op: 'par', do: actions }, errors };
     }
-    const action = this.action(step, errors);
+    const action = await this.action(step, errors);
     return action ? { step: action, errors } : { errors };
   }
 
@@ -78,15 +86,33 @@ export class CommandValidator {
     return id;
   }
 
-  private action(a: Action, errors: string[]): ResolvedAction | null {
+  private async action(a: Action, errors: string[]): Promise<ResolvedAction | null> {
     switch (a.op) {
       case 'spawn': {
         const at = this.place(a.at, errors);
         if (!at) return null;
+        const built = this.structures ? await this.structures.forSpawn(a.word, a.alt, this.command).catch(() => null) : null;
+        if (built) {
+          const id = this.allocate(a.ref, a.word);
+          this.kinds.set(id, 'object');
+          return { op: 'build', ref: a.ref, id, word: a.word, label: built.label, at, delay: a.delay, structure: built.structure };
+        }
         const res = this.vocab.resolve(a.word, a.alt);
         const id = this.allocate(a.ref, a.word);
         this.kinds.set(id, res.kind);
         return { ...a, at, id, res, face: this.face(a.face) };
+      }
+      case 'build': {
+        const at = this.place(a.at, errors);
+        if (!at) return null;
+        const built = this.structures?.forBuild(a.word, a.gen, a.params, a.parts) ?? null;
+        if (!built) {
+          errors.push(`could not build "${a.word}"`);
+          return null;
+        }
+        const id = this.allocate(a.ref, a.word);
+        this.kinds.set(id, 'object');
+        return { op: 'build', ref: a.ref, id, word: a.word, label: built.label, at, delay: a.delay, structure: built.structure };
       }
       case 'move': {
         const id = this.mapId(a.id);

@@ -6,11 +6,13 @@ import type { LlmProvider } from '../llm/provider';
 import { buildSystemPrompt, buildUserPrompt } from '../llm/prompt';
 import { StepStreamParser } from '../llm/stream-parser';
 import { CommandValidator } from '../llm/validate';
+import type { StructureResolver } from '../structures';
 import type { Vocab } from '../vocab';
 
 export interface CommandDeps {
   vocab: Vocab;
   provider: LlmProvider;
+  structures?: StructureResolver;
   timeoutMs?: number;
   onCommand?: (info: { slug: string; command: string; steps: number; ms: number; model: string; errors: string[]; raw: string }) => void;
 }
@@ -41,7 +43,7 @@ export function commandRoutes(deps: CommandDeps): Hono {
       s.onAbort(() => controller.abort());
       const write = (ev: StreamEvent) => s.write(JSON.stringify(ev) + '\n');
       const ping = setInterval(() => void write({ t: 'ping' }), PING_MS);
-      const validator = new CommandValidator(deps.vocab, context);
+      const validator = new CommandValidator(deps.vocab, context, deps.structures, command);
       const parser = new StepStreamParser();
       let steps = 0;
       const errors: string[] = [];
@@ -61,7 +63,7 @@ export function commandRoutes(deps: CommandDeps): Hono {
               await write({ t: 'error', msg: 'skipped an unreadable step' });
               continue;
             }
-            const v = validator.handle(raw);
+            const v = await validator.handle(raw);
             errors.push(...v.errors);
             for (const e of v.errors) await write({ t: 'error', msg: e });
             if (v.step) {
@@ -96,11 +98,11 @@ export function commandRoutes(deps: CommandDeps): Hono {
     ndjsonHeaders(c);
     return stream(c, async (s) => {
       const write = (ev: StreamEvent) => s.write(JSON.stringify(ev) + '\n');
-      const validator = new CommandValidator(deps.vocab, body.data.context);
+      const validator = new CommandValidator(deps.vocab, body.data.context, deps.structures);
       let steps = 0;
       await write({ t: 'meta', commandId: 'script', model: 'script' });
       for (const raw of body.data.steps) {
-        const v = validator.handle(raw);
+        const v = await validator.handle(raw);
         for (const e of v.errors) await write({ t: 'error', msg: e });
         if (v.step) {
           await write({ t: 'step', step: v.step as ResolvedStep });

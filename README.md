@@ -15,6 +15,16 @@ the title too), Undo, Reset and Copy link. Worlds lists every world you have ope
 starts a new one, and opens any world from its link or name; the bare site address reopens the
 world you used last. `?dev=1` opens a console that runs hand-written scripts.
 
+**Views.** The buttons at the top right (or `V`, `R`, `B` on a keyboard) switch between first
+person, third person and a free camera that flies with WASD, Space and C; cycle the third-person
+angle (behind, high, bird, top: the last one is an overhead 2.5D view); and turn wall fading on or
+off. With fading on, any wall or roof between the camera and your character goes see-through, so
+you can follow yourself into a house.
+
+**Village.** Worlds -> "+ New village" (or `?preset=village`) starts a meadow with one of each
+structure: three houses, a fenced yard, a gingerbread house, a witch's hut with a hat for a roof, a
+lighthouse and a three-level bunker with outside stairs you can climb. Reset brings the village back.
+
 ## Run locally
 
 ```
@@ -31,6 +41,8 @@ Environment (all optional in development, see `src/server/env.ts`):
 | `COOKIE_SECRET` | Signs the auth cookie |
 | `DB_PATH` | SQLite file (default `data/world.db`; `/data/world.db` on Railway) |
 | `DAILY_COMMAND_CAP` | Global daily LLM command cap (default 500) |
+| `TYPESAFE_API_KEY` | Jev (TypeSafe's classifier) decides whether a word nobody drew is a building; empty = keyword heuristic |
+| `AVATAR_WORD` | Vocabulary word drawn as you in third person (default `boy`) |
 
 ```
 npm run build && npm start   # production build (dist/) and server
@@ -54,6 +66,27 @@ XAI_API_KEY=... npx tsx scripts/eval-prompt.ts   # run 20 commands against Grok 
    dropped things land on whatever is below, and bumping into things triggers reactions.
 4. The renderer draws entities as upright paper cutouts, named effects as particles, and speech
    as bubbles. The world is saved to SQLite after each scene settles.
+
+## Structures
+
+Decor is drawn (the 3,700 cutouts). Structures are built: a handful of flat-faced shapes (box, wall
+with doorways, n-gon prism or cone, gable/hip/shed roof, stairs, a sticker for doors, windows and
+signs) with a tinted crayon tile and an ink outline. No image generation is involved.
+
+- `src/shared/structure/` is the kit: `types.ts` (parts), `geometry.ts` (parts -> mesh data with
+  metre-based UVs, face shading and outline edges), `collide.ts` (walls push, patios and stairs
+  support), and `gen/` with one generator per family: `house` (also `randomHouse` and the
+  gingerbread house), `fence`/`yard`, `tower`/`lighthouse`, `witchHut`, `bunker`, and `custom`,
+  which lays out parts the model describes by relation ("a cone on the base") so nothing floats.
+- The LLM never places coordinates. Spawning a building word (`house`, `cottage`, `barn`, `tower`,
+  `fence`, `yard`, `fire station`...) builds a structure; the `build` action adds a look
+  (`params: {color: "blue", roof: "hip", stories: 2}`) or a parts list for one-offs. A word nobody
+  drew ("quantum bakery") goes to the classifier: Jev when `TYPESAFE_API_KEY` is set, otherwise a
+  keyword heuristic; a yes builds a random house with a sign, a no shows the usual card.
+- Materials are drawn on a canvas at runtime (`src/client/render/materials.ts`) and tinted per
+  part, so AI-drawn tiles can replace them later by name without touching the structures.
+- `node scripts/shots-village.mjs http://localhost:8787 out/` screenshots every structure in the
+  village from the front, plus third-person, top-down, wall-fade and indoor views.
 
 ## Sprites and vocabulary
 

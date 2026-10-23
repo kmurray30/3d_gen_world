@@ -11,6 +11,11 @@ export const env = {
   llmModel: process.env.LLM_MODEL ?? 'grok-4-1-fast-non-reasoning',
   llmBaseUrl: process.env.LLM_BASE_URL ?? 'https://api.x.ai/v1',
   mockLlm: process.env.MOCK_LLM === '1',
+  /** TypeSafe Jev: decides whether a novel word is a building. Empty = keyword heuristic. */
+  typesafeApiKey: process.env.TYPESAFE_API_KEY ?? '',
+  typesafeModel: process.env.TYPESAFE_MODEL ?? 'jev-latest',
+  typesafeUrl: process.env.TYPESAFE_URL ?? 'https://api.typesafe.ai/v1/systemone',
+  avatarWord: process.env.AVATAR_WORD ?? 'boy',
   dailyCommandCap: Number(process.env.DAILY_COMMAND_CAP ?? 500),
   clientDir: path.resolve('dist/client'),
   assetsDir: path.resolve('assets'),

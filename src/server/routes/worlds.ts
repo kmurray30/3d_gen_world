@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import type { World } from '../../shared/types';
-import { starterWorld } from '../../shared/engine/presets';
+import { PRESET_NAMES, presetWorld } from '../../shared/engine/presets';
+import type { DecalResolver } from '../../shared/structure/types';
 import type { Db } from '../db';
 import type { Vocab } from '../vocab';
 
@@ -22,6 +23,7 @@ const WorldBody = z.object({
     player: z.object({ pos: z.tuple([z.number(), z.number(), z.number()]), yaw: z.number(), pitch: z.number() }),
     entities: z.array(z.record(z.string(), z.unknown())).max(400),
     createdAt: z.number(),
+    preset: z.string().max(24).optional(),
   }),
 });
 
@@ -31,12 +33,22 @@ export function worldsRoutes(db: Db, vocab: Vocab): Hono {
     const hit = vocab.resolveWord(word, kind);
     return hit ? vocab.entry(hit).sprite : null;
   };
-  const fresh = (slug: string): World => starterWorld(slug, resolver);
+  const decals: DecalResolver = (word) => {
+    const hit = vocab.resolveWord(word);
+    return hit ? vocab.entry(hit).sprite : null;
+  };
+  const fresh = (slug: string, preset?: string): World => presetWorld(preset, slug, resolver, decals);
 
-  app.post('/', (c) => {
+  app.post('/', async (c) => {
+    let preset = c.req.query('preset');
+    if (!preset) {
+      const body = (await c.req.json().catch(() => null)) as { preset?: string } | null;
+      preset = body?.preset;
+    }
+    if (preset && !(PRESET_NAMES as readonly string[]).includes(preset)) return c.json({ error: `unknown preset; try one of ${PRESET_NAMES.join(', ')}` }, 400);
     let slug = randomSlug();
     while (db.hasWorld(slug)) slug = randomSlug();
-    const world = fresh(slug);
+    const world = fresh(slug, preset);
     db.createWorld(world);
     return c.json({ slug, world }, 201);
   });
@@ -64,7 +76,7 @@ export function worldsRoutes(db: Db, vocab: Vocab): Hono {
     const slug = c.req.param('slug');
     if (!SLUG.test(slug)) return c.json({ error: 'bad slug' }, 400);
     const prev = db.getWorld(slug);
-    const world = fresh(slug);
+    const world = fresh(slug, prev?.preset);
     world.rev = (prev?.rev ?? 0) + 1;
     if (prev) world.createdAt = prev.createdAt;
     db.replaceWorld(world);

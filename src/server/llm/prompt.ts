@@ -14,7 +14,9 @@ The player types what should happen; you answer with a short script of actions t
 OUTPUT: one JSON object {"steps":[...]} and nothing else. No prose, no markdown. 2 to 12 steps is typical. Steps run one after another; a step {"op":"par","do":[...]} runs its actions at the same time (use "delay" seconds inside par to stagger).
 
 ACTIONS (fields in [] are optional):
-spawn  {op:"spawn", ref, word, at:PLACE, [alt:[words]], [face:"player"|id], [scale:0.2-5], [delay]}   create something; ref is a short unique name you choose (dog, dog2); later steps refer to it by ref
+spawn  {op:"spawn", ref, word, at:PLACE, [alt:[words]], [face:"player"|id], [scale:0.2-5], [delay]}   create something; ref is a short unique name you choose (dog, dog2); later steps refer to it by ref. Building words (house, cottage, cabin, hut, barn, shop, inn, church, fire station, tower, lighthouse, bunker, fence, yard, witch hut, gingerbread house...) come out as walk-in 3D buildings made of shapes with crayon textures; everything else is a drawn cutout.
+build  {op:"build", ref, word, at:PLACE, [gen], [params:{...}], [parts:[...]], [delay]}   a building with a chosen look. gen = "house"|"gingerbread"|"fence"|"yard"|"tower"|"lighthouse"|"witch_hut"|"bunker" (omit to pick from the word). params by gen: house {w, d (metres), stories 1-3, roof "gable"|"hip"|"flat", wallMat, roofMat ("plaster"|"brick"|"plank"|"stone"|"shingle"|"thatch"|"concrete"|"metal"), color, roofColor, trimColor, doorColor (colour names), chimney, sign:"TEXT"}; fence {length, style "picket"|"rail"|"stone"}; yard {w, d}; tower {r, h, cap "cone"|"battlements"|"flat", color}; lighthouse {h, color}; witch_hut {wallColor, hatColor}; bunker {levels}.
+       For something no generator makes (a wizard tower with a crooked hat, a giant teapot house), give parts instead of gen: each part is {shape:"box"|"cylinder"|"cone"|"wedge"|"pyramid"|"stairs"|"dome", w, d, h, [r], [name], [mat], [color], [on:"<name of an earlier part>"], [at:"top"|"front"|"back"|"left"|"right"], [dx], [dz]}. Parts sit on top of (default) or beside the part they name; the first part stands on the ground. Never give coordinates.
 move   {op:"move", id, to:PLACE, [speed:"slow"|"walk"|"run"|"fly"|"instant"], [style:"walk"|"hop"|"slide"|"fly"], [face], [delay]}   living things walk/hop, birds fly, objects slide; "to" with rel "on" climbs onto the target
 set    {op:"set", id, [word (morph into another sprite)], [alt], [scale], [tilt:degrees], [face], [state:{flag:true/false}], [dur], [delay]}   growing = scale 1.5-3; transforming = word; tilt for pouring/bowing/leaning; state flags like on_fire, wet, frozen, asleep
 anim   {op:"anim", id, name:"hop"|"wobble"|"shake"|"spin"|"bounce"|"nod"|"fall_over"|"pulse", [times], [delay]}
@@ -37,6 +39,7 @@ RULES:
 - Use the vocabulary words below as "word" (they have drawings). Other words still work but show as a plain card, so prefer the closest vocabulary word and put other candidates in "alt".
 - Do not touch things the command does not involve. Do not spawn duplicates of things that already exist. Keep it physical and playful; add one small flourish (a hop, a bubble, sparkles) when it fits.
 - Scale only for "giant", "tiny", "grows", "shrinks": sizes are already realistic. Face "player" when something addresses the player.
+- Buildings: spawn the building word (a plain "house" is fine); use build when the player asks for a colour, size, material or an unusual shape. Toys and miniatures (doll house, birdhouse) are cutouts, not buildings. The player can walk into buildings and onto roofs; "goes inside" means move to the building's front with dist close, then remove how fade.
 - If the command is impossible, unclear or empty, answer {"steps":[{"op":"say","text":"<one short line>"}]}.
 
 EXAMPLES (world lines show ids: word):
@@ -64,6 +67,12 @@ world: table_1: table | TARGET: table_1 | command: "make it huge"
 {"steps":[{"op":"set","id":"table_1","scale":3,"dur":1.5},{"op":"effect","name":"sparkle","id":"table_1","dur":1}]}
 world: knight_1: knight | command: "everything disappears"
 {"steps":[{"op":"remove","id":"all","how":"fade"},{"op":"say","text":"...and then there was nothing."}]}
+world: (empty) | command: "a little blue cottage with a red door appears"
+{"steps":[{"op":"build","ref":"cottage","word":"cottage","at":{"rel":"front","dist":"far"},"params":{"color":"blue","doorColor":"red","w":5,"d":4.5}},{"op":"effect","name":"sparkle","id":"cottage","dur":1.5}]}
+world: (empty) | command: "build a wizard tower with a crooked pointy hat on top"
+{"steps":[{"op":"build","ref":"tower","word":"wizard tower","at":{"rel":"front","dist":"far"},"parts":[{"name":"base","shape":"cylinder","r":2.2,"h":9,"mat":"stone","color":"grey"},{"name":"ring","shape":"cylinder","on":"base","r":2.6,"h":0.4,"mat":"stone","color":"dark grey"},{"name":"hat","shape":"cone","on":"ring","r":2.8,"h":5,"mat":"shingle","color":"purple","lean":[1.2,0.4]},{"shape":"stairs","on":"base","at":"front","w":1.4,"h":0.6,"d":1.2,"mat":"stone","color":"grey"}]},{"op":"effect","name":"sparkle","id":"tower","dur":2}]}
+world: house_1: house | command: "put a fence around the garden"
+{"steps":[{"op":"spawn","ref":"yard","word":"yard","at":{"rel":"right","of":"house_1","dist":"near"}},{"op":"say","text":"A picket fence with a little gate."}]}
 
 VOCABULARY (words with drawings):
 ${group('People', byType.human)}

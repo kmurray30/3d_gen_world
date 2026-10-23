@@ -1,5 +1,5 @@
 import type { Entity, Vec3, World } from '../types';
-import type { ResolvedSpawn, ResolvedStep } from '../schema';
+import type { ResolvedBuild, ResolvedSpawn, ResolvedStep } from '../schema';
 import { makeRng } from './math';
 import { footprintRadius, massClassFor } from './sizing';
 import { resolvePlace } from './place';
@@ -7,7 +7,9 @@ import { Scheduler, type Script } from './scheduler';
 import { FallTask, makeTasks } from './tasks';
 import { WorldModel } from './world';
 import { Rules } from './rules';
-import { resolvePlayerCollisions, type Bump } from './collide';
+import { resolvePlayerCollisions, resolvePlayerVsStructures, type Bump } from './collide';
+import { structureRadius } from '../structure/collide';
+import { structureEntity, yawToward } from '../structure/entity';
 
 export type EngineEvent =
   | { type: 'spawn'; id: string }
@@ -44,10 +46,17 @@ export class Engine {
     this.rules = new Rules(this);
   }
 
-  /** Move the player out of big solid things and let the rules react to whatever was touched. */
-  collidePlayer(): Bump[] {
-    const bumps = resolvePlayerCollisions(this.world, this.world.player.pos);
+  /** Height of whatever the player stood on after the last `collidePlayer` (0 = the meadow). */
+  playerGround = 0;
+
+  /**
+   * Move the player out of big solid things and structure walls, and let the rules react to whatever was touched.
+   * Also records the height the player can stand on where they ended up in `playerGround`.
+   */
+  collidePlayer(pos: Vec3 = this.world.player.pos): Bump[] {
+    const bumps = resolvePlayerCollisions(this.world, pos);
     if (bumps.length) this.rules.bumps(bumps);
+    this.playerGround = resolvePlayerVsStructures(this.world, pos).support;
     return bumps;
   }
 
@@ -150,6 +159,27 @@ export class Engine {
     return e;
   }
 
+  /** Create and place a structure from a resolved build action, facing the player. Null when the world is full. */
+  build(action: ResolvedBuild): Entity | null {
+    const s = action.structure;
+    const id = this.uniqueId(action.id);
+    const radius = structureRadius(s);
+    let placement = resolvePlace(action.at, this.world, { id, radius, heightM: s.bounds.h }, this.rng);
+    if (placement.parent || placement.pos[1] > 0) {
+      // structures stand on the ground; "on the house" means next to it
+      placement = resolvePlace({ ...action.at, rel: 'near', height: 'ground' }, this.world, { id, radius, heightM: s.bounds.h }, this.rng);
+    }
+    const pos: Vec3 = [placement.pos[0], 0, placement.pos[2]];
+    const yaw = Math.round(yawToward(pos, this.world.player.pos));
+    const e = structureEntity(id, action.word, s, pos, yaw, this.time, action.label);
+    if (!this.world.add(e)) {
+      this.emit({ type: 'warn', msg: `world is full (${this.world.size})` });
+      return null;
+    }
+    this.emit({ type: 'spawn', id: e.id });
+    return e;
+  }
+
   /** Remove an entity now; anything attached to it falls. */
   removeEntity(id: string, how?: string): void {
     const orphans = this.world.remove(id);
@@ -185,3 +215,4 @@ export class Engine {
 
 export { WorldModel } from './world';
 export type { Script } from './scheduler';
+export type { Bump } from './collide';

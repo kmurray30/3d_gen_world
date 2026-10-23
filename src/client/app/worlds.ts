@@ -101,8 +101,8 @@ export async function worldExists(slug: string): Promise<boolean> {
   return true;
 }
 
-export async function createWorld(): Promise<string> {
-  const r = await fetch('/api/worlds', { method: 'POST' });
+export async function createWorld(preset?: string): Promise<string> {
+  const r = await fetch(`/api/worlds${preset ? `?preset=${encodeURIComponent(preset)}` : ''}`, { method: 'POST' });
   if (!r.ok) throw new Error(`could not create a world (${r.status})`);
   return ((await r.json()) as { slug: string }).slug;
 }

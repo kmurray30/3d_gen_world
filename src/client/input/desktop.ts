@@ -9,6 +9,8 @@ export class DesktopInput {
   onLockChange?: (locked: boolean) => void;
   onLockError?: () => void;
   onRequestCommand?: () => void;
+  /** Single-press hotkeys (view, angle, walls...) by key code. */
+  onHotkey?: (code: string) => void;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', (e) => {
@@ -23,6 +25,7 @@ export class DesktopInput {
         e.preventDefault();
         if (!this.keys.has('Space')) this.jumpQueued = true;
       }
+      if (!e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) this.onHotkey?.(e.code);
       this.keys.add(e.code);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
@@ -56,6 +59,12 @@ export class DesktopInput {
     const x = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
     const y = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
     return [x, y];
+  }
+
+  /** Free camera: Space rises, C (or Ctrl) sinks. */
+  get upAxis(): number {
+    if (isTyping()) return 0;
+    return (this.keys.has('Space') ? 1 : 0) - (this.keys.has('KeyC') || this.keys.has('ControlLeft') ? 1 : 0);
   }
 
   get sprint(): boolean {

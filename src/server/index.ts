@@ -4,6 +4,7 @@ import { createApp } from './app';
 import { Db } from './db';
 import { env } from './env';
 import { MockProvider, OpenAICompatProvider, type LlmProvider } from './llm/provider';
+import { makeClassifier } from './llm/classify';
 import { Vocab } from './vocab';
 
 const vocab = Vocab.load(path.join(env.assetsDir, 'manifest.json'));
@@ -18,6 +19,8 @@ if (env.mockLlm || !env.xaiApiKey) {
   console.log(`[llm] ${env.llmModel} via ${env.llmBaseUrl}`);
 }
 if (!env.passcode) console.log('[auth] APP_PASSCODE not set: the app is open to anyone who can reach it');
+const classifier = makeClassifier({ typesafeApiKey: env.typesafeApiKey, model: env.typesafeModel, url: env.typesafeUrl, log: (m) => console.log(m) });
+console.log(env.typesafeApiKey ? `[classify] Jev (${env.typesafeModel}) decides whether novel words are buildings` : '[classify] no TYPESAFE_API_KEY: keyword heuristic decides whether novel words are buildings');
 
 const app = createApp({
   vocab,
@@ -27,6 +30,8 @@ const app = createApp({
   auth: { passcode: env.passcode, secret: env.cookieSecret, secure: env.isProd },
   dailyCap: env.dailyCommandCap,
   log: !env.isProd || process.env.LOG_REQUESTS === '1',
+  classifier,
+  avatarWord: env.avatarWord,
 });
 
 serve({ fetch: app.fetch, port: env.port, hostname: '0.0.0.0' }, (info) => {

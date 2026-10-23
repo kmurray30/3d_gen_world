@@ -1,7 +1,8 @@
 import { displayName, forgetWorld, listWorlds, parseWorldRef, prettySlug, renameWorld, timeAgo, worldExists } from '../app/worlds';
 
 export interface WorldsPanelHandlers {
-  onNew: () => Promise<void>;
+  /** Create a world; `preset` names a starter layout ("village"), undefined = the meadow. */
+  onNew: (preset?: string) => Promise<void>;
   onOpen: (slug: string) => Promise<void>;
 }
 
@@ -31,7 +32,10 @@ export class WorldsPanel {
     el.className = 'modal';
     el.innerHTML = `<div class="card worlds">
       <div class="worlds-head"><h2>Worlds</h2><button type="button" class="x" aria-label="Close">&times;</button></div>
-      <button type="button" class="primary new-world">+ New world</button>
+      <div class="new-row">
+        <button type="button" class="primary new-world">+ New world</button>
+        <button type="button" class="primary new-village" title="A meadow with houses, a fenced yard, a gingerbread house, a witch's hut, a lighthouse and a bunker to explore">+ New village</button>
+      </div>
       <div class="world-list"></div>
       <form class="open-form" autocomplete="off">
         <input type="text" name="ref" placeholder="Open a world: paste a link or name" autocapitalize="off" autocorrect="off" spellcheck="false" />
@@ -63,6 +67,7 @@ export class WorldsPanel {
     };
 
     el.querySelector('.new-world')!.addEventListener('click', () => void busy('Creating a world...', () => this.handlers.onNew()));
+    el.querySelector('.new-village')!.addEventListener('click', () => void busy('Building the village...', () => this.handlers.onNew('village')));
     el.querySelector('.open-form')!.addEventListener('submit', (e) => {
       e.preventDefault();
       const input = (e.target as HTMLFormElement).elements.namedItem('ref') as HTMLInputElement;

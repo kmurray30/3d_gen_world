@@ -50,6 +50,27 @@ export function mockScript(command: string, ctx: CompactWorld): Step[] {
       { op: 'say', id: 'knight', text: 'My liege.' },
     ];
   if (/grow|bigger|huge/.test(c) && any) return [{ op: 'set', id: any, scale: 2.5, dur: 1.5 }, { op: 'effect', name: 'sparkle', id: any, dur: 1 }];
+  if (/wizard tower|crooked/.test(c))
+    return [
+      {
+        op: 'build',
+        ref: 'tower',
+        word: 'wizard tower',
+        at: { rel: 'front', of: 'player', dist: 'far', height: 'ground' },
+        parts: [
+          { name: 'base', shape: 'cylinder', r: 2.2, h: 9, mat: 'stone', color: 'grey' },
+          { name: 'ring', shape: 'cylinder', on: 'base', r: 2.6, h: 0.4, mat: 'stone', color: 'dark grey' },
+          { name: 'hat', shape: 'cone', on: 'ring', r: 2.8, h: 5, mat: 'shingle', color: 'purple', lean: [1.2, 0.4] },
+          { shape: 'stairs', on: 'base', at: 'front', w: 1.4, h: 0.6, d: 1.2, mat: 'stone', color: 'grey' },
+        ],
+      },
+      { op: 'effect', name: 'sparkle', id: 'tower', dur: 2 },
+    ];
+  if (/cottage|blue house|red door/.test(c))
+    return [
+      { op: 'build', ref: 'cottage', word: 'cottage', at: { rel: 'front', of: 'player', dist: 'far', height: 'ground' }, params: { color: 'blue', doorColor: 'red' } },
+      { op: 'effect', name: 'sparkle', id: 'cottage', dur: 1.5 },
+    ];
   if (/shrink|smaller|tiny/.test(c) && any) return [{ op: 'set', id: any, scale: 0.4, dur: 1 }];
   // default: spawn the last noun-ish token in front of the player
   const words = c.replace(/[^a-z\s]/g, '').split(/\s+/).filter((w) => w.length > 2 && !['the', 'and', 'spawn', 'make', 'create', 'appear', 'appears', 'please', 'with', 'into', 'here', 'there'].includes(w));

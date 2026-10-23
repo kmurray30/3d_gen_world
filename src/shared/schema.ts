@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import type { Kind, SpriteRef } from './types';
+import type { Structure } from './structure/types';
+import { CUSTOM_AT, CUSTOM_SHAPES, MAX_CUSTOM_PARTS } from './structure/gen/custom';
 
 /* ----- primitives the model emits ----- */
 
@@ -54,6 +56,36 @@ export const SpawnSchema = z.object({
   scale: num(0.2, 5, 1).optional(),
   delay,
 });
+const dim = num(0.1, 30).optional();
+export const CustomPartSchema = z.object({
+  name: z.string().trim().max(24).optional(),
+  shape: z.enum(CUSTOM_SHAPES).catch('box'),
+  w: dim,
+  d: dim,
+  h: dim,
+  r: dim,
+  sides: num(3, 24).optional(),
+  mat: z.string().trim().max(24).optional(),
+  color: z.string().trim().max(24).optional(),
+  on: z.string().trim().max(24).optional(),
+  at: z.enum(CUSTOM_AT).optional().catch(undefined),
+  dx: num(-30, 30).optional(),
+  dz: num(-30, 30).optional(),
+  rot: num(-360, 360).optional(),
+  lean: z.tuple([num(-5, 5), num(-5, 5)]).optional().catch(undefined),
+  noInk: z.boolean().optional(),
+});
+/** Build a structure: a generator with parameters, or a custom parts list laid out by relation. */
+export const BuildSchema = z.object({
+  op: z.literal('build'),
+  ref: id,
+  word: z.string().trim().min(1).max(60),
+  at: PlaceSchema.catch(DEFAULT_PLACE),
+  gen: z.string().trim().max(24).optional(),
+  params: z.record(z.string().max(32), z.unknown()).optional(),
+  parts: z.array(CustomPartSchema).max(MAX_CUSTOM_PARTS).optional(),
+  delay,
+});
 export const MoveSchema = z.object({
   op: z.literal('move'),
   id,
@@ -99,6 +131,7 @@ export const WaitSchema = z.object({ op: z.literal('wait'), dur: num(0, 20, 1) }
 
 export const ActionSchema = z.discriminatedUnion('op', [
   SpawnSchema,
+  BuildSchema,
   MoveSchema,
   SetSchema,
   AnimSchema,
@@ -113,6 +146,8 @@ export const ParSchema = z.object({ op: z.literal('par'), do: z.array(ActionSche
 export const StepSchema = z.union([ActionSchema, ParSchema]);
 
 export type SpawnAction = z.infer<typeof SpawnSchema>;
+export type BuildAction = z.infer<typeof BuildSchema>;
+export type CustomPart = z.infer<typeof CustomPartSchema>;
 export type MoveAction = z.infer<typeof MoveSchema>;
 export type SetAction = z.infer<typeof SetSchema>;
 export type AnimAction = z.infer<typeof AnimSchema>;
@@ -139,8 +174,10 @@ export interface WordResolution {
   placeholder: boolean;
 }
 export type ResolvedSpawn = Omit<SpawnAction, 'ref'> & { ref: string; id: string; res: WordResolution };
+/** A build after the server ran the generator: the parts travel with the step, so the client never generates. */
+export type ResolvedBuild = Pick<BuildAction, 'op' | 'word' | 'at' | 'delay'> & { ref: string; id: string; structure: Structure; label: string };
 export type ResolvedSet = SetAction & { res?: WordResolution };
-export type ResolvedAction = Exclude<Action, SpawnAction | SetAction> | ResolvedSpawn | ResolvedSet;
+export type ResolvedAction = Exclude<Action, SpawnAction | BuildAction | SetAction> | ResolvedSpawn | ResolvedBuild | ResolvedSet;
 export type ResolvedStep = ResolvedAction | { op: 'par'; do: ResolvedAction[] };
 
 /* ----- stream protocol (server -> client), one JSON object per line ----- */

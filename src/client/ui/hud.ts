@@ -4,6 +4,16 @@ export interface HudHandlers {
   onReset?: () => void;
   onShare?: () => void;
   onWorlds?: () => void;
+  /** View toolbar: cycle first/third/free, cycle the camera angle, toggle wall fading. */
+  onView?: () => void;
+  onAngle?: () => void;
+  onWalls?: () => void;
+}
+
+export interface ViewLabels {
+  view: string;
+  angle: string;
+  walls: string;
 }
 
 /** DOM overlay: command bar, hint, top bar with menu, target label, toasts, desktop pointer-lock overlay. */
@@ -18,6 +28,7 @@ export class Hud {
   private readonly lockOverlay: HTMLDivElement;
   private readonly menu: HTMLDivElement;
   private readonly status: HTMLDivElement;
+  private readonly viewbar: HTMLDivElement;
 
   constructor(root: HTMLElement, handlers: HudHandlers) {
     this.root = root;
@@ -32,6 +43,11 @@ export class Hud {
           <button type="button" data-act="reset">Reset world</button>
           <button type="button" data-act="share">Copy share link</button>
         </div>
+      </div>
+      <div class="viewbar">
+        <button type="button" data-view="view" title="Switch between first person, third person and a free camera (V)"><span class="k">View</span><span class="v"></span></button>
+        <button type="button" data-view="angle" title="Cycle the camera angle: behind, high, bird, top (R)"><span class="k">Angle</span><span class="v"></span></button>
+        <button type="button" data-view="walls" title="Fade walls that hide you (B)"><span class="k">Walls</span><span class="v"></span></button>
       </div>
       <div class="target-label" hidden></div>
       <div class="toasts"></div>
@@ -83,6 +99,14 @@ export class Hud {
     document.addEventListener('pointerdown', (e) => {
       if (!this.menu.hidden && !(e.target as HTMLElement).closest('.topbar')) this.menu.hidden = true;
     });
+    this.viewbar = root.querySelector('.viewbar')!;
+    this.viewbar.addEventListener('click', (e) => {
+      const act = (e.target as HTMLElement).closest('button')?.dataset.view;
+      if (act === 'view') handlers.onView?.();
+      if (act === 'angle') handlers.onAngle?.();
+      if (act === 'walls') handlers.onWalls?.();
+      (e.target as HTMLElement).closest('button')?.blur();
+    });
     // Keep the command bar above the on-screen keyboard.
     const vv = window.visualViewport;
     if (vv) {
@@ -105,6 +129,13 @@ export class Hud {
 
   setStatus(text: string): void {
     this.status.textContent = text;
+  }
+
+  setViewLabels(labels: ViewLabels): void {
+    for (const [key, value] of Object.entries(labels)) {
+      const el = this.viewbar.querySelector(`button[data-view="${key}"] .v`);
+      if (el) el.textContent = value;
+    }
   }
 
   setBusy(busy: boolean): void {

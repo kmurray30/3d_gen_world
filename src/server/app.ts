@@ -7,6 +7,8 @@ import { RateLimiter, clientIp } from './ratelimit';
 import { commandRoutes } from './routes/command';
 import { worldsRoutes } from './routes/worlds';
 import { mountStatic } from './static';
+import { HeuristicClassifier, type StructureClassifier } from './llm/classify';
+import { StructureResolver } from './structures';
 import type { Vocab } from './vocab';
 
 export interface AppDeps {
@@ -18,6 +20,10 @@ export interface AppDeps {
   dailyCap: number;
   limits?: { perIpPerMin: number; perSlugPerMin: number };
   log?: boolean;
+  /** Decides whether novel words are buildings; defaults to the keyword heuristic. */
+  classifier?: StructureClassifier;
+  /** Vocabulary word drawn as the player's own cutout in third person. */
+  avatarWord?: string;
 }
 
 export function createApp(deps: AppDeps): Hono {
@@ -25,6 +31,11 @@ export function createApp(deps: AppDeps): Hono {
   if (deps.log) app.use(logger());
   const perIp = new RateLimiter(deps.limits?.perIpPerMin ?? 10);
   const perSlug = new RateLimiter(deps.limits?.perSlugPerMin ?? 30);
+  const classifier = deps.classifier ?? new HeuristicClassifier();
+  const structures = new StructureResolver(deps.vocab, classifier);
+  const avatarHit = deps.vocab.resolveWord(deps.avatarWord ?? 'boy', 'human');
+  const avatarRes = avatarHit ? deps.vocab.entry(avatarHit) : null;
+  const avatar = avatarRes ? { word: avatarRes.word, sprite: avatarRes.sprite, heightM: avatarRes.heightM } : undefined;
 
   app.get('/api/health', (c) =>
     c.json({
@@ -33,11 +44,12 @@ export function createApp(deps: AppDeps): Hono {
       words: deps.vocab.counts.words,
       version: deps.version,
       llm: deps.provider.name,
+      classifier: classifier.name,
       commandsToday: deps.db.usage(),
     }),
   );
   app.get('/api/config', (c) =>
-    c.json({ spriteVersion: deps.vocab.version, llm: deps.provider.name, needsPasscode: !!deps.auth.passcode, authed: isAuthed(c, deps.auth) }),
+    c.json({ spriteVersion: deps.vocab.version, llm: deps.provider.name, needsPasscode: !!deps.auth.passcode, authed: isAuthed(c, deps.auth), avatar }),
   );
   app.post('/api/auth', async (c) => {
     const body = (await c.req.json().catch(() => ({}))) as { passcode?: string };
@@ -65,6 +77,7 @@ export function createApp(deps: AppDeps): Hono {
     commandRoutes({
       vocab: deps.vocab,
       provider: deps.provider,
+      structures,
       onCommand: (info) => {
         deps.db.logCommand({ slug: info.slug, text: info.command, steps: info.steps, ms: info.ms, model: info.model, errors: info.errors });
         console.log(`[cmd] ${info.slug} "${info.command}" -> ${info.steps} steps in ${info.ms}ms${info.errors.length ? ` (${info.errors.length} skipped: ${info.errors.join('; ').slice(0, 200)})` : ''}`);

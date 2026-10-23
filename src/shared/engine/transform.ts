@@ -1,12 +1,20 @@
 import type { Entity, Vec3 } from '../types';
 import { renderHeight } from './sizing';
+import { structureTopAt } from '../structure/collide';
 
 export type EntityLookup = (id: string) => Entity | undefined;
 
-/** Anchor offset of a child relative to its parent's feet point. */
-export function anchorOffset(parent: Entity, anchor: Entity['anchor']): Vec3 {
+/**
+ * Anchor offset of a child relative to its parent's feet point. On a structure, "top" is the surface under the
+ * child's own offset (a cat lands on the roof slope, not at the chimney's height).
+ */
+export function anchorOffset(parent: Entity, anchor: Entity['anchor'], childRel?: Vec3): Vec3 {
   switch (anchor) {
     case 'top':
+      if (parent.structure && childRel) {
+        const top = structureTopAt(parent.structure, parent, [0, 0, 0], childRel[0], childRel[2]);
+        return [0, top ?? renderHeight(parent), 0];
+      }
       return [0, renderHeight(parent), 0];
     case 'held':
       return [0, renderHeight(parent) * 0.45, 0];
@@ -26,7 +34,7 @@ export function worldPos(e: Entity, lookup: EntityLookup): Vec3 {
   for (let depth = 0; depth < 6 && cur.parent; depth++) {
     const parent = lookup(cur.parent);
     if (!parent) break;
-    const [ax, ay, az] = anchorOffset(parent, cur.anchor);
+    const [ax, ay, az] = anchorOffset(parent, cur.anchor, cur.pos);
     x += parent.pos[0] + ax;
     y += parent.pos[1] + ay;
     z += parent.pos[2] + az;

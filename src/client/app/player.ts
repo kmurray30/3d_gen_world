@@ -5,12 +5,18 @@ const WALK = 3;
 const SPRINT = 6;
 const GRAVITY = 20;
 const JUMP = 7;
+/** How fast the feet climb a step they are standing on (metres per second); stairs feel smooth, not teleporty. */
+const STEP_CLIMB = 9;
 const PITCH_LIMIT = (70 * Math.PI) / 180;
 
 export class PlayerController {
   private vy = 0;
-  /** Set by the collision layer (M6) to push the player out of solids. */
-  resolveCollisions?: (pos: Vec3) => void;
+  /** Set by the app: pushes the player out of solids and returns the height they can stand on there. */
+  resolveCollisions?: (pos: Vec3) => number;
+  /** Height of whatever the player stands on (0 = the meadow). */
+  ground = 0;
+  /** Pitch range in radians; the camera rig widens it for the overhead views. */
+  pitchLimits: [number, number] = [-PITCH_LIMIT, PITCH_LIMIT];
 
   constructor(readonly state: PlayerState) {}
 
@@ -18,7 +24,7 @@ export class PlayerController {
     const s = this.state;
     s.yaw -= look[0] * lookSens;
     s.pitch -= look[1] * lookSens;
-    s.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, s.pitch));
+    s.pitch = Math.max(this.pitchLimits[0], Math.min(this.pitchLimits[1], s.pitch));
 
     let [ax, ay] = move;
     const len = Math.hypot(ax, ay);
@@ -35,18 +41,23 @@ export class PlayerController {
       s.pos[0] += (rx * ax + fx * ay) * speed * dt;
       s.pos[2] += (rz * ax + fz * ay) * speed * dt;
     }
-    if (jump && s.pos[1] <= 0.001) this.vy = JUMP;
-    if (s.pos[1] > 0 || this.vy > 0) {
-      this.vy -= GRAVITY * dt;
-      s.pos[1] = Math.max(0, s.pos[1] + this.vy * dt);
-      if (s.pos[1] === 0) this.vy = 0;
-    }
     const r = Math.hypot(s.pos[0], s.pos[2]);
     if (r > WORLD_RADIUS) {
       s.pos[0] *= WORLD_RADIUS / r;
       s.pos[2] *= WORLD_RADIUS / r;
     }
-    this.resolveCollisions?.(s.pos);
+    this.ground = this.resolveCollisions?.(s.pos) ?? 0;
+    const onGround = s.pos[1] <= this.ground + 0.001 && this.vy <= 0;
+    if (jump && onGround) this.vy = JUMP;
+    if (s.pos[1] < this.ground && this.vy <= 0) {
+      // stepped onto something higher: climb up to it
+      s.pos[1] = Math.min(this.ground, s.pos[1] + STEP_CLIMB * dt);
+      this.vy = 0;
+    } else if (s.pos[1] > this.ground || this.vy > 0) {
+      this.vy -= GRAVITY * dt;
+      s.pos[1] = Math.max(this.ground, s.pos[1] + this.vy * dt);
+      if (s.pos[1] === this.ground) this.vy = 0;
+    }
   }
 
   get moving(): boolean {

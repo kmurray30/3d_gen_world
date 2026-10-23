@@ -3,6 +3,8 @@
  * World coordinates: x right, y up, z toward the viewer at yaw 0 (Three.js convention).
  * An entity's `pos` is its feet point; sprites stand upright on it.
  */
+import type { Structure } from './structure/types';
+
 export type Kind = 'object' | 'human' | 'humanoid' | 'animal' | 'other';
 export type MassClass = 'light' | 'medium' | 'heavy' | 'animal' | 'person';
 export type Anchor = 'top' | 'front' | 'held' | 'inside';
@@ -49,6 +51,10 @@ export interface Entity {
   /** Seconds to live from creation; undefined = permanent. */
   ttl?: number;
   createdAt: number;
+  /** Structures only: rotation about y in degrees (the structure's front, +z local, turns this way). */
+  yaw?: number;
+  /** Built from parts instead of drawn: see shared/structure. */
+  structure?: Structure;
 }
 
 export interface PlayerState {
@@ -65,6 +71,8 @@ export interface World {
   player: PlayerState;
   entities: Entity[];
   createdAt: number;
+  /** Which starter layout this world began as (reset restores it); undefined = the meadow. */
+  preset?: string;
 }
 
 export interface HealthResponse {

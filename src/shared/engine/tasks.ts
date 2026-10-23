@@ -1,5 +1,5 @@
 import type { Entity, Vec3 } from '../types';
-import type { AnimAction, EffectAction, MoveAction, RemoveAction, ResolvedAction, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
+import type { AnimAction, EffectAction, MoveAction, RemoveAction, ResolvedAction, ResolvedBuild, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
 import { DEG, clamp, dir2, easeIn, easeInOut, easeOut, easeOutBack, lerp } from './math';
 import { footprintRadius, renderHeight, massClassFor } from './sizing';
 import { resolveOverlap, resolvePlace, stopAtEdge, supportAt } from './place';
@@ -99,6 +99,37 @@ class SpawnTask extends BaseTask {
   cancel(): void {
     const e = this.entity && this.engine.world.get(this.entity);
     if (e) e.scale = this.action.scale ?? 1;
+  }
+}
+
+/** Build: place a structure facing the player and let it rise out of the ground. */
+class BuildTask extends BaseTask {
+  private rise?: Tween;
+  constructor(
+    private readonly action: ResolvedBuild,
+    private readonly engine: Engine,
+  ) {
+    super(action.delay ?? 0);
+  }
+  start(): boolean {
+    const e = this.engine.build(this.action);
+    if (!e) return false;
+    e.scale = 0.05;
+    this.rise = new Tween(e.id, 'scale', 0.7, (k) => {
+      e.scale = lerp(0.05, 1, easeOutBack(k));
+    });
+    this.entity = e.id;
+    this.channel = 'scale';
+    this.rise.started = true;
+    this.engine.emit({ type: 'effect', key: `build:${e.id}:${this.engine.nextKey()}`, name: 'dust', id: e.id, dur: 0.8 });
+    return true;
+  }
+  update(dt: number): boolean {
+    return this.rise ? this.rise.update(dt) : true;
+  }
+  cancel(): void {
+    const e = this.entity && this.engine.world.get(this.entity);
+    if (e) e.scale = 1;
   }
 }
 
@@ -569,6 +600,8 @@ export function makeTasks(action: ResolvedAction, _script: Script, engine: Engin
   switch (action.op) {
     case 'spawn':
       return [new SpawnTask(action as ResolvedSpawn, engine)];
+    case 'build':
+      return [new BuildTask(action as ResolvedBuild, engine)];
     case 'move':
       return [new MoveTask(action, engine)];
     case 'set':

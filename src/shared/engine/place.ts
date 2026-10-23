@@ -4,6 +4,7 @@ import type { Place } from '../schema';
 import { DEG, add3, dir2, rotateY, scale3 } from './math';
 import { footprintRadius, renderHeight } from './sizing';
 import type { WorldModel } from './world';
+import { structureTopAt } from '../structure/collide';
 
 export const DIST_M = { touch: 0.1, close: 0.8, near: 2, far: 7 } as const;
 export const HEIGHT_M = { ground: 0, low: 1, high: 3, sky: 10 } as const;
@@ -189,15 +190,20 @@ export function stopAtEdge(from: Vec3, targetPos: Vec3, rTarget: number, rSelf: 
 }
 
 /** Highest solid thing under (x, z): its top height and id, or the ground (y 0, no id). */
-export function supportAt(world: WorldModel, x: number, z: number, exclude: Set<string>): { y: number; id?: string } {
+export function supportAt(world: WorldModel, x: number, z: number, exclude: Set<string>, maxY = Infinity): { y: number; id?: string } {
   let best: { y: number; id?: string } = { y: 0 };
   for (const e of world.entities.values()) {
     if (exclude.has(e.id) || e.hidden || !e.solid || e.parent) continue;
     const p = e.pos;
+    if (e.structure) {
+      const top = structureTopAt(e.structure, e, p, x, z, maxY);
+      if (top !== null && top > best.y) best = { y: top, id: e.id };
+      continue;
+    }
     const r = footprintRadius(e);
     if (Math.hypot(p[0] - x, p[2] - z) <= r) {
       const top = p[1] + renderHeight(e);
-      if (top > best.y) best = { y: top, id: e.id };
+      if (top > best.y && top <= maxY) best = { y: top, id: e.id };
     }
   }
   return best;

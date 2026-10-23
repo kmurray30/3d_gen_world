@@ -24,6 +24,8 @@ export interface Manifest {
 const ARTICLES = /^(a|an|the|some|my|your|his|her|their|our|this|that)\s+/;
 const FUZZY_MIN = 0.9;
 
+export type MatchKind = 'exact' | 'alias' | 'tail' | 'fuzzy';
+
 /** The vocabulary: which words have sprites, their sizes, and how to map what people (and the model) say onto them. */
 export class Vocab {
   readonly words: Record<string, ManifestWord>;
@@ -70,26 +72,35 @@ export class Vocab {
 
   /** Map a word to a vocabulary entry, or null. */
   resolveWord(input: string, kindHint?: Kind): string | null {
+    return this.resolveWordHow(input, kindHint)?.word ?? null;
+  }
+
+  /** How confidently a word matches: exact/alias are real drawings of it; tail/fuzzy are guesses. */
+  matchKind(input: string, kindHint?: Kind): MatchKind | null {
+    return this.resolveWordHow(input, kindHint)?.how ?? null;
+  }
+
+  resolveWordHow(input: string, kindHint?: Kind): { word: string; how: MatchKind } | null {
     const w = Vocab.normalize(input);
     if (!w) return null;
     const direct = this.lookup(w, kindHint);
-    if (direct) return direct;
+    if (direct) return { word: direct, how: 'exact' };
     for (const f of singularForms(w)) {
       const hit = this.lookup(f, kindHint);
-      if (hit) return hit;
+      if (hit) return { word: hit, how: 'exact' };
     }
     const al = this.aliases[w] ?? singularForms(w).map((f) => this.aliases[f]).find(Boolean);
     if (al?.length) {
-      if (al.length === 1) return al[0];
+      if (al.length === 1) return { word: al[0], how: 'alias' };
       const byKind = kindHint ? al.find((x) => this.words[x]?.t === kindHint) : undefined;
-      return byKind ?? al[0];
+      return { word: byKind ?? al[0], how: 'alias' };
     }
     // last word of a multi-word phrase: "tall oak tree" -> "tree"
     const tokens = w.split(' ');
     if (tokens.length > 1) {
       const last = tokens[tokens.length - 1];
       const tail = this.lookup(last, kindHint) ?? singularForms(last).map((f) => this.lookup(f, kindHint)).find(Boolean);
-      if (tail) return tail;
+      if (tail) return { word: tail, how: 'tail' };
     }
     if (w.length >= 4) {
       let best: string | null = null;
@@ -102,7 +113,7 @@ export class Vocab {
           best = cand;
         }
       }
-      if (best) return best;
+      if (best) return { word: best, how: 'fuzzy' };
     }
     return null;
   }

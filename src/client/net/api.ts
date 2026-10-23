@@ -7,6 +7,8 @@ export interface ClientConfig {
   llm: string;
   needsPasscode: boolean;
   authed: boolean;
+  /** The player's own cutout for third person; absent offline. */
+  avatar?: { word: string; sprite: { file: string | null; w: number; h: number }; heightM: number };
 }
 
 export async function fetchConfig(): Promise<ClientConfig> {

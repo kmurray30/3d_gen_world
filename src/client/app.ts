@@ -2,7 +2,7 @@ import type { World } from '../shared/types';
 import { Engine } from '../shared/engine/index';
 import { resolveStepsLocally } from '../shared/engine/resolve-local';
 import { DevConsole } from './ui/dev-console';
-import { compactWorld, fetchConfig, streamNdjson } from './net/api';
+import { compactWorld, fetchConfig, streamNdjson, type ClientConfig } from './net/api';
 import { WorldStore, openWorld } from './app/state';
 import type { Step } from '../shared/schema';
 import { starterWorld } from '../shared/engine/presets';
@@ -11,15 +11,18 @@ import { SceneView } from './render/scene';
 import { DesktopInput } from './input/desktop';
 import { TouchInput } from './input/touch';
 import { PlayerController } from './app/player';
+import { ANGLES, CameraRig, loadViewSettings, saveViewSettings, type ViewMode } from './app/camera';
 import { Hud } from './ui/hud';
 import { WorldsPanel } from './ui/worlds-panel';
 import { createWorld, goToWorld, recordVisit, takeFreshFlag } from './app/worlds';
 
 declare global {
   interface Window {
-    __game?: { world: World; engine: Engine; scene: SceneView; player: PlayerController; store: WorldStore };
+    __game?: { world: World; engine: Engine; scene: SceneView; player: PlayerController; store: WorldStore; camera: CameraRig };
   }
 }
+
+const VIEW_NAMES: Record<ViewMode, string> = { first: '1st person', third: '3rd person', free: 'free cam' };
 
 export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement): Promise<void> {
   const coarse = isTouchFirst();
@@ -29,9 +32,12 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     onReset: () => void onReset(),
     onShare: () => void onShare(),
     onWorlds: () => worldsPanel?.open(),
+    onView: () => cycleView(),
+    onAngle: () => cycleAngle(),
+    onWalls: () => toggleWalls(),
   });
   let worldsPanel: WorldsPanel | undefined;
-  const config = await fetchConfig().catch(() => ({ spriteVersion: 'dev', llm: 'offline', needsPasscode: false, authed: true }));
+  const config: ClientConfig = await fetchConfig().catch(() => ({ spriteVersion: 'dev', llm: 'offline', needsPasscode: false, authed: true }));
   if (config.needsPasscode && !config.authed) {
     await hud.askPasscode(async (code) => {
       const r = await fetch('/api/auth', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ passcode: code }) });
@@ -57,22 +63,56 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   });
   const scene = new SceneView(canvas, config.spriteVersion, hudRoot);
   const player = new PlayerController(engine.world.player);
+  player.resolveCollisions = (pos) => {
+    engine.collidePlayer(pos);
+    return engine.playerGround;
+  };
+  scene.setAvatar(config.avatar ?? { word: 'you', sprite: defaultSprite('human'), heightM: 1.5 });
   recordVisit(slug, engine.world.size);
-  if (created || takeFreshFlag(slug)) hud.toast('New world. The menu has Worlds to switch, and Copy link to share this one.', 'info', 5000);
+  if (created || takeFreshFlag(slug)) {
+    hud.toast(engine.world.list().some((e) => e.structure) ? 'Welcome to the village. Walk into the houses, climb the bunker. V switches the view.' : 'New world. The menu has Worlds to switch, and Copy link to share this one.', 'info', 6000);
+  }
   const leave = async (): Promise<void> => {
     if (busy) throw new Error('Wait for the current command to finish first.');
     await store.save(true).catch(() => undefined);
   };
   worldsPanel = new WorldsPanel(hudRoot, slug, {
-    onNew: async () => {
+    onNew: async (preset) => {
       await leave();
-      goToWorld(await createWorld(), true);
+      goToWorld(await createWorld(preset), true);
     },
     onOpen: async (target) => {
       await leave();
       goToWorld(target);
     },
   });
+
+  /* ----- view: camera modes, angles, wall fading ----- */
+  const rig = new CameraRig();
+  const settings = loadViewSettings();
+  rig.setAngle(settings.angle, engine.world.player);
+  rig.setMode(settings.mode, engine.world.player);
+  scene.fadeWalls = settings.fade;
+  const refreshViewLabels = () => {
+    hud.setViewLabels({ view: VIEW_NAMES[rig.mode], angle: rig.mode === 'third' ? ANGLES[rig.angle].name : '-', walls: scene.fadeWalls ? 'fade' : 'solid' });
+    saveViewSettings({ mode: rig.mode, angle: rig.angle, fade: scene.fadeWalls });
+  };
+  const cycleView = () => {
+    const mode = rig.cycleMode(engine.world.player);
+    hud.toast(mode === 'first' ? 'First person.' : mode === 'third' ? 'Third person. R cycles the angle.' : 'Free camera: fly with WASD, Space up, C down. V to return.', 'info', 2500);
+    refreshViewLabels();
+  };
+  const cycleAngle = () => {
+    const a = rig.cycleAngle(engine.world.player);
+    hud.toast(`Camera: ${a.name}.`, 'info', 1500);
+    refreshViewLabels();
+  };
+  const toggleWalls = () => {
+    scene.fadeWalls = !scene.fadeWalls;
+    hud.toast(scene.fadeWalls ? 'Walls in the way fade out.' : 'Walls stay solid.', 'info', 1500);
+    refreshViewLabels();
+  };
+  refreshViewLabels();
 
   const onCommand = (text: string) => {
     store.pushUndo();
@@ -88,7 +128,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   const onReset = async () => {
     if (busy) return;
     await store.reset();
-    hud.toast('Back to the starter meadow.', 'info', 2000);
+    hud.toast(engine.world.list().some((e) => e.structure) ? 'Back to the village as it was.' : 'Back to the starter meadow.', 'info', 2000);
   };
   const onShare = async () => {
     try {
@@ -148,12 +188,17 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   const touch = coarse ? new TouchInput(canvas, hudRoot) : null;
   if (!coarse) {
     hud.showLockOverlay(true);
-    hud.setHint('WASD to walk, Shift to run, Space to jump, / to type');
+    hud.setHint('WASD to walk, Shift to run, Space to jump, / to type. V view, R angle, B walls');
     desktop.onLockChange = (locked) => hud.showLockOverlay(!locked && !document.activeElement?.matches('input'));
     desktop.onLockError = () => hud.toast('Could not capture the mouse. Click the scene again.', 'error');
     desktop.onRequestCommand = () => {
       hud.showLockOverlay(false);
       hud.focusInput();
+    };
+    desktop.onHotkey = (code) => {
+      if (code === 'KeyV') cycleView();
+      else if (code === 'KeyR') cycleAngle();
+      else if (code === 'KeyB') toggleWalls();
     };
     hud.input.addEventListener('blur', () => hud.showLockOverlay(!desktop.locked));
   } else {
@@ -171,6 +216,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
 
   let last = performance.now();
   let paused = false;
+  let faceDir: [number, number] | null = null;
   document.addEventListener('visibilitychange', () => {
     paused = document.hidden;
     last = performance.now();
@@ -183,8 +229,25 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     last = now;
     const move = touch ? touch.moveAxis() : desktop.moveAxis();
     const look = touch ? touch.consumeLook() : desktop.consumeLook();
-    player.update(dt, move, look, touch ? 0.005 : 0.0022, desktop.sprint, desktop.consumeJump());
-    engine.collidePlayer();
+    const sens = touch ? 0.005 : 0.0022;
+    const p = engine.world.player;
+    const [lo, hi] = rig.pitchLimits;
+    player.pitchLimits = [lo, hi];
+    let moving = false;
+    if (rig.drivesPlayer) {
+      const before: [number, number] = [p.pos[0], p.pos[2]];
+      player.update(dt, move, look, sens, desktop.sprint, desktop.consumeJump());
+      const dx = p.pos[0] - before[0];
+      const dz = p.pos[2] - before[1];
+      if (Math.hypot(dx, dz) > 1e-4) {
+        moving = true;
+        faceDir = [dx, dz];
+      }
+    } else {
+      desktop.consumeJump();
+      engine.collidePlayer();
+    }
+    const cam = rig.update(dt, p, rig.drivesPlayer ? [0, 0] : look, sens, { move, up: desktop.upAxis, fast: desktop.sprint });
     if (!coarse) {
       const id = desktop.locked ? scene.pick(0, 0) : null;
       const e = id ? engine.world.get(id) : undefined;
@@ -193,11 +256,13 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     }
     engine.update(dt);
     store.tick();
-    scene.sync(engine.world, dt);
-    scene.render(engine.world.player);
+    scene.sync(engine.world, dt, cam);
+    scene.updateAvatar(p, rig.showsAvatar, moving, faceDir, cam, dt);
+    scene.updateFades(cam, p, rig.mode !== 'first');
+    scene.render(cam);
   };
   requestAnimationFrame(loop);
-  window.__game = { world, engine, scene, player, store };
+  window.__game = { world, engine, scene, player, store, camera: rig };
 }
 
 /** Phones and tablets: coarse pointer, or touch points without hover. Touch laptops keep desktop controls. */

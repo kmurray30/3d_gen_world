@@ -15,11 +15,12 @@ export interface StoreEvents {
 
 /**
  * Which world to open: the slug from /w/<slug>; with no slug, the world this device used last; otherwise a new one.
- * `?new=1` forces a new world.
+ * `?new=1` forces a new world; `?preset=village` forces a new world from that starter layout.
  */
 export async function openWorld(): Promise<{ world: World; created: boolean }> {
   const m = /^\/w\/([a-z0-9][a-z0-9-]{2,63})$/i.exec(location.pathname);
-  const forceNew = new URLSearchParams(location.search).get('new') === '1';
+  const preset = new URLSearchParams(location.search).get('preset');
+  const forceNew = new URLSearchParams(location.search).get('new') === '1' || (!!preset && !m);
   const candidate = m ? m[1].toLowerCase() : forceNew ? null : lastWorld();
   if (candidate) {
     const r = await fetch(`/api/worlds/${candidate}`);
@@ -32,8 +33,9 @@ export async function openWorld(): Promise<{ world: World; created: boolean }> {
   }
   const params = new URLSearchParams(location.search);
   params.delete('new');
+  params.delete('preset');
   const search = params.toString() ? `?${params.toString()}` : '';
-  const r = await fetch('/api/worlds', { method: 'POST' });
+  const r = await fetch(`/api/worlds${preset ? `?preset=${encodeURIComponent(preset)}` : ''}`, { method: 'POST' });
   if (!r.ok) throw new Error(`could not create a world (${r.status})`);
   const { slug, world } = (await r.json()) as { slug: string; world: World };
   history.replaceState(null, '', `/w/${slug}${search}`);

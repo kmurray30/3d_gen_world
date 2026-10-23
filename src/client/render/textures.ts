@@ -76,6 +76,42 @@ export class TextureStore {
     return tex;
   }
 
+  /** A paper sign with text, for structures ("FIRE STATION"). */
+  sign(text: string, color = '#fff3c4'): THREE.Texture {
+    const key = `sign:${color}:${text}`;
+    const hit = this.slots.get(key);
+    if (hit) {
+      hit.last = ++this.tick;
+      return hit.tex;
+    }
+    const h = 128;
+    const w = Math.max(128, Math.min(768, Math.round(h * (0.55 * Math.max(4, text.length) + 0.8))));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = color;
+    ctx.strokeStyle = '#2b2b2b';
+    ctx.lineWidth = 8;
+    roundRect(ctx, 6, 6, w - 12, h - 12, 14);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#2b2b2b';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    let size = 64;
+    ctx.font = `800 ${size}px "Trebuchet MS", "Segoe UI", system-ui, sans-serif`;
+    while (size > 18 && ctx.measureText(text).width > w - 40) {
+      size -= 4;
+      ctx.font = `800 ${size}px "Trebuchet MS", "Segoe UI", system-ui, sans-serif`;
+    }
+    ctx.fillText(text, w / 2, h / 2 + 2);
+    const tex = new THREE.CanvasTexture(canvas);
+    finishTexture(tex);
+    this.insert(key, tex, w * h * 4);
+    return tex;
+  }
+
   load(file: string): Promise<THREE.Texture> {
     const key = this.url(file);
     const hit = this.slots.get(key);

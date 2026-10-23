@@ -1,4 +1,5 @@
 import type { Entity, Kind, MassClass, SpriteRef } from '../types';
+import type { Structure } from '../structure/types';
 
 export const HEIGHT_MIN_M = 0.1;
 export const HEIGHT_MAX_M = 12;
@@ -28,8 +29,13 @@ export function renderWidth(e: Pick<Entity, 'heightM' | 'scale' | 'sprite'>): nu
   return renderHeight(e) * aspect;
 }
 
-/** Footprint circle radius on the ground. Sprites are wider than their physical footprint. */
-export function footprintRadius(e: Pick<Entity, 'heightM' | 'scale' | 'sprite'>): number {
+/** Footprint circle radius on the ground. Sprites are wider than their physical footprint; structures use their bounds. */
+export function footprintRadius(e: Pick<Entity, 'heightM' | 'scale' | 'sprite'> & { structure?: Structure }): number {
+  if (e.structure) {
+    // fences and yards are hollow: things may be placed inside them
+    if (e.structure.gen === 'fence' || e.structure.gen === 'yard') return 0.4;
+    return (Math.hypot(e.structure.bounds.w, e.structure.bounds.d) / 2) * e.scale;
+  }
   return Math.min(4, Math.max(0.1, renderWidth(e) * 0.35));
 }
 
@@ -41,7 +47,7 @@ export function massClassFor(kind: Kind, heightM: number): MassClass {
   return 'heavy';
 }
 
-/** Objects the player cannot walk through. */
+/** Objects the player cannot walk through. Structures collide part by part instead (see structure/collide). */
 export function blocksPlayer(e: Entity): boolean {
-  return e.solid && !e.parent && !e.hidden && e.massClass === 'heavy' && renderHeight(e) >= 0.9;
+  return !e.structure && e.solid && !e.parent && !e.hidden && e.massClass === 'heavy' && renderHeight(e) >= 0.9;
 }
