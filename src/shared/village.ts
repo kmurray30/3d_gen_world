@@ -19,6 +19,8 @@ import type { DecalResolver, Structure } from './structure/types';
 const WALK_R = 54;
 const ROAD_W = 3.2;
 const PLAZA_R = 7.5;
+/** Width of the slope from the plaza back into the hills. */
+const PLAZA_BLEND = 6;
 const BANK = 2.6;
 /** Flat ground kept round a building beyond its footprint. */
 const PAD_MARGIN = 1.6;
@@ -37,6 +39,8 @@ interface Lot {
   hd: number;
   /** Where its door path starts (world), when it has a door. */
   door?: P2;
+  /** The height its ground was flattened to (set when the lot is claimed). */
+  padH?: number;
 }
 
 export interface Village {
@@ -202,6 +206,7 @@ class Planner {
   addLot(l: Lot, padBlend = 3.2, h?: number): number {
     this.lots.push(l);
     const padH = this.padHeight(l, h);
+    l.padH = padH;
     const m = PAD_MARGIN;
     this.spec.pads.push({ x: round(l.x), z: round(l.z), h: padH, hw: round(l.hw + m), hd: round(l.hd + m), rot: round(l.yaw), blend: padBlend });
     return padH;
@@ -344,7 +349,7 @@ function roads(pl: Planner, geo: ReturnType<typeof riverAndLake>): void {
   perp.sort((a, b) => gap(b) - gap(a));
   road(pl, perp[0] + pl.range(-0.2, 0.2), (x, z) => lakeStop(x, z) || wet(x, z));
   if (gap(perp[1]) > 0.9 && pl.rng() < 0.7) road(pl, perp[1] + pl.range(-0.2, 0.2), (x, z) => lakeStop(x, z) || wet(x, z));
-  pl.spec.pads.push({ x: 0, z: 0, h: round(pl.hills(0, 0)), r: PLAZA_R, blend: 6 });
+  pl.spec.pads.push({ x: 0, z: 0, h: round(pl.hills(0, 0)), r: PLAZA_R, blend: PLAZA_BLEND });
 }
 
 /** Where a road crosses the river: one bridge per crossing, spanning the channel and its banks. */
@@ -392,7 +397,7 @@ function houses(pl: Planner, want: number): void {
       const dir = norm2([b[0] - a[0], b[1] - a[1]]);
       for (let k = 0; k < len; k += 3) {
         const along = s + k;
-        if (along < PLAZA_R + 6) continue;
+        if (along < PLAZA_R + PLAZA_BLEND) continue;
         const x = a[0] + dir[0] * k;
         const z = a[1] + dir[1] * k;
         candidates.push({ x, z, nx: -dir[1], nz: dir[0], s: along });
@@ -434,20 +439,41 @@ function houses(pl: Planner, want: number): void {
 /** A fenced garden beside one of the houses, gate toward the same road. */
 function garden(pl: Planner): Lot | null {
   const houses = pl.lots.filter((l) => l.word === 'house');
+  // beside the house at `gap`, its front in line with the house's (or its back, when set back from the road)
+  const claim = (h: Lot, s: Structure, side: number, gap: number, back: boolean): Lot | null => {
+    const [x, z] = toWorld(h, side * (h.hw + gap + s.bounds.w / 2), back ? -h.hd + s.bounds.d / 2 : h.hd - s.bounds.d / 2);
+    const lot: Lot = { id: '', word: 'yard', s, x, z, yaw: h.yaw, hw: s.bounds.w / 2, hd: s.bounds.d / 2 };
+    // it may hug its own house, but keeps the usual gap from every other lot, whose ground may sit at another height
+    if (!pl.fits(lot, { lots: 0.8 })) return null;
+    if (pl.lots.some((o) => o !== h && lotsOverlap(lot, o, 2 * PAD_MARGIN + 0.4))) return null;
+    // clear of the plaza's slope, which would tip one side of the garden
+    if (corners(lot).some(([cx, cz]) => Math.hypot(cx, cz) < PLAZA_R + PLAZA_BLEND)) return null;
+    // the garden shares its house's ground; skip spots where water would have to cut it lower
+    const houseH = h.padH;
+    if (houseH === undefined || Math.abs(pl.padHeight(lot, houseH) - houseH) > 0.01) return null;
+    lot.id = pl.id('yard');
+    pl.addLot(lot, 3, houseH);
+    return lot;
+  };
   for (const h of houses) {
     const w = pl.range(7, 9);
     const d = pl.range(5.5, 7);
     const s = pl.nextStructure('yard', { w, d });
     for (const side of [1, -1]) {
-      const [x, z] = toWorld(h, side * (h.hw + 1.4 + s.bounds.w / 2), h.hd - s.bounds.d / 2);
-      const lot: Lot = { id: '', word: 'yard', s, x, z, yaw: h.yaw, hw: s.bounds.w / 2, hd: s.bounds.d / 2 };
-      if (!pl.fits(lot, { lots: 0.8 })) continue;
-      // the garden shares its house's ground; skip spots where water would have to cut it lower
-      const houseH = pl.spec.pads.find((p) => Math.abs(p.x - round(h.x)) < 1e-6 && Math.abs(p.z - round(h.z)) < 1e-6)?.h;
-      if (houseH === undefined || Math.abs(pl.padHeight(lot, houseH) - houseH) > 0.01) continue;
-      lot.id = pl.id('yard');
-      pl.addLot(lot, 3, houseH);
-      return lot;
+      const lot = claim(h, s, side, 1.4, false);
+      if (lot) return lot;
+    }
+  }
+  // every village has one: a smaller garden, set back or further out, beside whichever house has room
+  for (const [w, d] of [[6, 5], [5, 4]]) {
+    for (const h of houses) {
+      const s = pl.nextStructure('yard', { w, d });
+      for (const [gap, back] of [[1.4, true], [2.6, false], [2.6, true], [4, false], [4, true]] as const) {
+        for (const side of [1, -1]) {
+          const lot = claim(h, s, side, gap, back);
+          if (lot) return lot;
+        }
+      }
     }
   }
   return null;
@@ -547,6 +573,11 @@ function smallPond(pl: Planner): void {
     if (pl.lots.some((l) => insideLot(l, x, z, rad + 5))) continue;
     if (Math.hypot(x, z) + rad > WALK_R - 2) continue;
     pl.spec.ponds.push({ x: round(x), z: round(z), rx: round(rad), rz: round(rad * pl.range(0.7, 1)), rot: round(pl.rng() * 360), depth: 1 });
+    // its banks slope down from far out: no lot's flattened ground may end up cut lower
+    if (pl.lots.some((l) => l.padH !== undefined && pl.padHeight(l, l.padH) < l.padH - 0.01)) {
+      pl.spec.ponds.pop();
+      continue;
+    }
     pl.place('duck', 'animal', 0.5, x + rad * 0.3, z);
     return;
   }

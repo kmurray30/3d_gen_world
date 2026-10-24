@@ -5,6 +5,7 @@
  */
 import type { Structure } from './structure/types';
 import type { TerrainSpec } from './terrain/field';
+import type { DecorShape } from './shape';
 
 export type Kind = 'object' | 'human' | 'humanoid' | 'animal' | 'other';
 export type MassClass = 'light' | 'medium' | 'heavy' | 'animal' | 'person';
@@ -57,6 +58,8 @@ export interface Entity {
   yaw?: number;
   /** Built from parts instead of drawn: see shared/structure. */
   structure?: Structure;
+  /** How a drawn thing stands: crossed sheets or a turned solid; undefined = flat paper (or decided by its word). */
+  shape?: DecorShape;
 }
 
 export interface PlayerState {

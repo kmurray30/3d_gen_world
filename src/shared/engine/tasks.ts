@@ -432,6 +432,8 @@ function setTasks(action: ResolvedSet, engine: Engine): Task[] {
             e.label = action.res.placeholder ? action.word ?? action.res.word : action.res.word;
             e.sprite = { ...action.res.sprite };
             e.kind = action.res.kind;
+            if (action.res.shape && action.res.shape !== 'flat') e.shape = action.res.shape;
+            else delete e.shape;
             e.heightM = action.res.heightM;
             e.solid = action.res.solid;
             e.huge = action.res.huge;

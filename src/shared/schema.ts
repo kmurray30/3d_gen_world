@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { Kind, SpriteRef } from './types';
 import type { Structure } from './structure/types';
+import type { DecorShape } from './shape';
 import { CUSTOM_AT, CUSTOM_SHAPES, MAX_CUSTOM_PARTS } from './structure/gen/custom';
 
 /* ----- primitives the model emits ----- */
@@ -179,6 +180,8 @@ export interface WordResolution {
   huge: boolean;
   /** true when the word was not in the vocabulary and the placeholder card is shown */
   placeholder: boolean;
+  /** Crossed sheets or a turned solid; absent = flat paper. */
+  shape?: DecorShape;
 }
 export type ResolvedSpawn = Omit<SpawnAction, 'ref'> & { ref: string; id: string; res: WordResolution };
 /** A build after the server ran the generator: the parts travel with the step, so the client never generates. */

@@ -26,7 +26,8 @@ lamps, windows and the lighthouse light up. `Tab` (or `Alt`) frees the mouse wit
 the scene to look around again.
 
 **Paper in the world.** Cutouts no longer turn to face the camera: each has a yaw in the world, so
-you can walk around one and see its edge. Things spawn facing you, walkers turn their paper along
+you can walk around one and see its edge. They always stand upright: looking up or down never tips
+them (or your own character); only scripted moves like pouring or falling over lean them. Things spawn facing you, walkers turn their paper along
 their path, and anything living turns, wanders a few steps around home, or fidgets on its own when
 no command is using it, favouring orientations you can see. Buildings can be changed in place
 ("add a story to the house", "paint the cottage blue"): the model sets new generator parameters
@@ -82,7 +83,13 @@ XAI_API_KEY=... npx tsx scripts/eval-prompt.ts   # run 20 commands against Grok 
 
 ## Structures
 
-Decor is drawn (the 3,700 cutouts). Structures are built: a handful of flat-faced shapes (box, wall
+Decor is drawn (the 3,700 cutouts). Round decor (fountains, lamp posts, barrels, wells, pumpkins,
+vases...) stands as a ten-sided solid turned from the drawing's own outline, with the drawing mapped
+from your side so it reads the same from anywhere; thin or branching decor (flowers, signposts,
+mailboxes, statues, scarecrows) stands as two crossed sheets like the paper trees. A word list in
+`src/shared/shape.ts` decides for common words, and Jev answers a "round / cross / flat" choice for
+objects nobody listed; a round drawing that is not symmetric falls back to crossed sheets
+(`src/client/render/solid.ts`). `scripts/shots-decor.mjs` shows them up close. Structures are built: a handful of flat-faced shapes (box, wall
 with doorways, n-gon prism or cone, gable/hip/shed roof, stairs, a sticker for doors, windows and
 signs) with a tinted crayon tile and an ink outline. No image generation is involved.
 

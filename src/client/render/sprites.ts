@@ -4,6 +4,8 @@ import { footprintRadius, renderHeight, renderWidth } from '../../shared/engine/
 import type { TextureStore } from './textures';
 import { DEFAULT_TREE_COLORS, OrigamiPlant, sampleTreeColors, type TreeColors } from './origami';
 import { LIGHT, tinted } from './tint';
+import { CrossDecor, RoundDecor, analyseSprite, canTurn } from './solid';
+import { shapeForWord } from '../../shared/shape';
 
 const PLANE = new THREE.PlaneGeometry(1, 1);
 const SHADOW = new THREE.CircleGeometry(0.5, 28).rotateX(-Math.PI / 2);
@@ -18,11 +20,7 @@ export interface GroundView {
 /** Words whose things give off light at night. */
 const LAMPS = /\b(lamp|lamppost|lantern|torch|candle|campfire|bonfire|street ?light|fire ?place|jack-o-lantern)\b/;
 
-/** How much upright sprites lean back toward the camera when it looks DOWN at them (0 = always upright). Looking up
- *  never leans them away: that is what used to squash the nearest tall thing. */
-const PITCH_FOLLOW = 0.35;
 const DEG = Math.PI / 180;
-const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 
 /** Words drawn as origami paper pieces (trunk cross + leaf clouds) instead of a camera-facing cutout. */
 const TREE_WORDS = /(^|\s)(tree|trees|sapling|topiary|bonsai)$|^(oak|willow|maple|apple|cherry|birch|elm|peach|pear|plum|orange|lemon|olive|magnolia|family|money) tree$/;
@@ -36,9 +34,9 @@ export function origamiKind(word: string): 'tree' | 'bush' | null {
 }
 
 /**
- * One entity on screen: a shadow blob flat on the ground and an upright paper cutout that turns to face the camera.
- * root sits at the feet; `pivot` carries the billboard rotation; `body` is the textured plane centred at half height
- * so tilts rotate about the sprite centre.
+ * One entity on screen: a shadow blob flat on the ground and an upright paper cutout with its own yaw in the world.
+ * root sits at the feet; `pivot` carries the yaw; `body` is the textured plane centred at half height so tilts
+ * rotate about the sprite centre. Trees and bushes become origami pieces, and round or plant-like decor a solid.
  */
 export class SpriteView {
   readonly root = new THREE.Group();
@@ -52,6 +50,10 @@ export class SpriteView {
   private wantedFile: string | null = null;
   private hasRealTexture = false;
   private halo: THREE.Sprite | null = null;
+  /** A round thing turned into a ten-sided solid, or a crossed pair of sheets, once its drawing has loaded. */
+  private solid: RoundDecor | CrossDecor | null = null;
+  private solidKey = '';
+  private loadedTex: THREE.Texture | null = null;
 
   constructor(
     public readonly id: string,
@@ -78,7 +80,7 @@ export class SpriteView {
     this.root.add(this.pivot, this.shadow);
   }
 
-  update(e: Entity, pos: Vec3, camYaw: number, camPitch: number, textures: TextureStore, flip: boolean, sq = 1, origami: 'tree' | 'bush' | null = null, ground?: GroundView): void {
+  update(e: Entity, pos: Vec3, camYaw: number, textures: TextureStore, flip: boolean, sq = 1, origami: 'tree' | 'bush' | null = null, ground?: GroundView): void {
     this.root.position.set(pos[0], pos[1], pos[2]);
     this.root.visible = !e.hidden;
     const h = renderHeight(e);
@@ -93,20 +95,19 @@ export class SpriteView {
       this.origami!.layout(ws, hs, 1, mat.opacity);
     } else {
       this.setOrigami(null, e);
-      // Turn toward the camera around the vertical axis. When the camera looks down, lean back toward it about the
-      // sprite's centre: a little at shallow angles (paper stays upright), fully at steep angles so a cutout seen
-      // from above faces the camera instead of foreshortening into a squashed sliver. Looking up never leans.
-      const down = Math.max(0, -camPitch);
-      const t = clamp01((down - 15 * DEG) / (50 * DEG));
-      const follow = PITCH_FOLLOW + (1 - PITCH_FOLLOW) * t * t * (3 - 2 * t);
-      const lean = down * follow;
-      // the paper keeps its own yaw in the world; only the lean (looking down) tracks the camera
+      // Paper keeps its own yaw in the world and always stands upright: the camera looking up or down never tips
+      // it. Only scripted tilts (pouring, bowing, falling over) lean it, about its centre.
       const yaw = e.yaw === undefined ? camYaw : e.yaw * DEG;
+      const tilt = (e.tilt * Math.PI) / 180;
+      const mirror = flip && this.hasRealTexture;
+      this.updateSolid(e);
+      if (this.solid instanceof RoundDecor) this.solid.layout(ws, hs, mat.opacity, tilt);
+      else if (this.solid instanceof CrossDecor) this.solid.layout(ws, hs, mat.opacity, yaw, tilt, mirror);
+      this.pivot.visible = !this.solid;
       this.pivot.rotation.set(0, yaw, 0, 'YXZ');
       this.pivot.position.y = hs / 2;
       this.body.position.y = 0;
-      this.body.rotation.set(lean, 0, (e.tilt * Math.PI) / 180, 'YXZ');
-      const mirror = flip && this.hasRealTexture;
+      this.body.rotation.set(0, 0, tilt, 'YXZ');
       this.body.scale.set(mirror ? -ws : ws, hs, 1);
     }
     // Shadow lies on the ground under the entity, tilted with the slope; shrinks and fades as the entity rises.
@@ -144,6 +145,7 @@ export class SpriteView {
       mat.map = textures.placeholder(e.label, e.kind, e.sprite.w / Math.max(1, e.sprite.h));
       mat.needsUpdate = true;
       this.hasRealTexture = false;
+      this.loadedTex = null;
       if (e.sprite.file) {
         const file = e.sprite.file;
         textures
@@ -151,6 +153,7 @@ export class SpriteView {
           .then((tex) => {
             if (this.wantedFile !== file) return;
             this.hasRealTexture = true;
+            this.loadedTex = tex;
             mat.map = tex;
             mat.needsUpdate = true;
             this.origamiColors = sampleTreeColors(tex);
@@ -175,13 +178,41 @@ export class SpriteView {
     }
   }
 
+  /**
+   * Stand round and plant-like things as solids once their drawing is here: round words become a turned solid
+   * when the drawing is symmetric enough, crossed sheets otherwise; cross words become crossed sheets.
+   */
+  private updateSolid(e: Entity): void {
+    const shape = e.shape ?? shapeForWord(e.word, e.kind);
+    const tex = this.loadedTex;
+    const want = tex && (shape === 'round' || shape === 'cross') ? `${shape}|${tex.uuid}` : '';
+    if (want === this.solidKey) return;
+    this.solidKey = want;
+    if (this.solid) {
+      this.root.remove(this.solid.group);
+      this.solid.dispose();
+      this.solid = null;
+    }
+    if (!tex || !want) return;
+    const profile = shape === 'round' ? analyseSprite(tex) : null;
+    if (shape === 'round' && profile && canTurn(profile)) this.solid = new RoundDecor(this.id, tex, profile);
+    else {
+      const cross = new CrossDecor(this.id);
+      cross.setMap(tex);
+      this.solid = cross;
+    }
+    this.root.add(this.solid.group);
+  }
+
   /** Meshes that count for picking. */
   get pickables(): THREE.Object3D[] {
-    return this.origami ? this.origami.pickables : [this.body];
+    if (this.origami) return this.origami.pickables;
+    return this.solid ? this.solid.pickables : [this.body];
   }
 
   dispose(): void {
     this.setOrigami(null, { id: this.id, word: '' } as Entity);
+    this.solid?.dispose();
     this.body.material.dispose();
     this.shadow.material.dispose();
     this.halo?.material.dispose();

@@ -53,6 +53,12 @@ export class StructureResolver {
     return this.make('house', { random: true, sign: norm.toUpperCase().slice(0, 24) }, norm);
   }
 
+  /** How an object nobody listed should stand in 3D, when the classifier has an opinion (Jev); null = flat. */
+  async shapeOf(word: string): Promise<'cross' | 'round' | null> {
+    const shape = await this.classifier.shapeOf?.(word).catch(() => null);
+    return shape === 'cross' || shape === 'round' ? shape : null;
+  }
+
   /** An explicit build action. */
   forBuild(word: string, gen: string | undefined, params: Record<string, unknown> | undefined, parts: CustomPart[] | undefined): Built | null {
     const label = Vocab.normalize(word) || word;

@@ -2,7 +2,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../../src/server/app';
 import { MockProvider } from '../../src/server/llm/provider';
-import { CachedClassifier, HeuristicClassifier, JevClassifier, readProbability, type StructureClassifier } from '../../src/server/llm/classify';
+import { CachedClassifier, HeuristicClassifier, JevClassifier, readChoice, readProbability, type StructureClassifier } from '../../src/server/llm/classify';
 import { CommandValidator } from '../../src/server/llm/validate';
 import { StructureResolver } from '../../src/server/structures';
 import { Vocab } from '../../src/server/vocab';
@@ -54,6 +54,64 @@ describe('jev classifier', () => {
     expect(calls[0].auth).toBe('Bearer k');
     expect(calls[0].body.model).toBe('jev-latest');
     expect((calls[0].body.questions as Record<string, { type: string }>).structure.type).toBe('noul');
+  });
+});
+
+describe('decor shape from jev', () => {
+  it('reads the chosen option from the likely response shapes', () => {
+    expect(readChoice({ answers: { shape: 'round' } }, 'shape')).toBe('round');
+    expect(readChoice({ answers: { shape: { choice: 'cross', confidence: 0.8 } } }, 'shape')).toBe('cross');
+    expect(readChoice({ results: { shape: { round: 0.1, cross: 0.7, flat: 0.2 } } }, 'shape')).toBe('cross');
+    expect(readChoice({ shape: { probabilities: { round: 0.6, cross: 0.1, flat: 0.3 } } }, 'shape')).toBe('round');
+    expect(readChoice({ answers: { shape: 'banana' } }, 'shape')).toBeNull();
+    expect(readChoice(null, 'shape')).toBeNull();
+  });
+
+  it('asks one choice question per word and caches it', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const fetchFn = (async (_url: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(init?.body as string) as Record<string, unknown>;
+      bodies.push(body);
+      return new Response(JSON.stringify({ answers: { shape: (body.state as { word: string }).word === 'birdbath tower' ? 'round' : 'flat' } }), { status: 200 });
+    }) as typeof fetch;
+    const c = new CachedClassifier(new JevClassifier({ apiKey: 'k', fetchFn }));
+    expect(await c.shapeOf('Birdbath Tower')).toBe('round');
+    expect(await c.shapeOf('birdbath tower')).toBe('round');
+    expect(await c.shapeOf('bench')).toBe('flat');
+    expect(bodies.length).toBe(2);
+    const q = (bodies[0].questions as Record<string, { type: string; options: string[] }>).shape;
+    expect(q.type).toBe('choice');
+    expect(q.options).toEqual(['round', 'cross', 'flat']);
+  });
+
+  it('the heuristic has no opinion and failures stay flat', async () => {
+    expect(await new CachedClassifier(new HeuristicClassifier()).shapeOf('bench')).toBeNull();
+    const boom = (async () => new Response('nope', { status: 500 })) as typeof fetch;
+    expect(await new CachedClassifier(new JevClassifier({ apiKey: 'k', fetchFn: boom })).shapeOf('bench')).toBeNull();
+  });
+
+  it('spawns: listed words keep their shape, others ask the classifier', async () => {
+    const asked: string[] = [];
+    const spy: StructureClassifier = {
+      name: 'spy',
+      isStructure: async () => false,
+      shapeOf: async (w) => {
+        asked.push(w);
+        return w === 'bench' ? 'round' : 'flat';
+      },
+    };
+    const v = new CommandValidator(vocab, context, new StructureResolver(vocab, spy));
+    const fountain = await v.handle({ op: 'spawn', ref: 'f', word: 'fountain', at: { rel: 'front' } });
+    expect(fountain.step).toMatchObject({ op: 'spawn', res: { shape: 'round' } });
+    const sign = await v.handle({ op: 'spawn', ref: 's', word: 'signpost', at: { rel: 'front' } });
+    expect(sign.step).toMatchObject({ op: 'spawn', res: { shape: 'cross' } });
+    const bench = await v.handle({ op: 'spawn', ref: 'b', word: 'bench', at: { rel: 'front' } });
+    expect(bench.step).toMatchObject({ op: 'spawn', res: { shape: 'round' } });
+    const car = await v.handle({ op: 'spawn', ref: 'c', word: 'car', at: { rel: 'front' } });
+    expect((car.step as { res: { shape?: string } }).res.shape).toBeUndefined();
+    const dog = await v.handle({ op: 'spawn', ref: 'd', word: 'dog', at: { rel: 'front' } });
+    expect((dog.step as { res: { shape?: string } }).res.shape).toBeUndefined();
+    expect(asked).toEqual(['bench', 'car']);
   });
 });
 

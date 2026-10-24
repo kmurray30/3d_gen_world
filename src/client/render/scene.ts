@@ -199,7 +199,7 @@ export class SceneView {
       const phase = hashPhase(e.id);
       if (living) sq *= 1 + 0.015 * Math.sin(this.clock * 2.2 + phase);
       if (living && !e.parent && pos[1] - model.ground(pos[0], pos[2]) > 0.3) pos[1] += 0.08 * Math.sin(this.clock * 1.8 + phase);
-      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, camState), sq, e.parent ? null : origamiKind(e.word), this.groundView);
+      view.update(e, pos, cam.yaw, this.textures, this.resolveFlip(e, pos, byId, camState), sq, e.parent ? null : origamiKind(e.word), this.groundView);
     }
     this.terrain?.update(dt);
     this.effects.syncPersistent(model);
@@ -248,7 +248,7 @@ export class SceneView {
       sq = 1 + Math.sin(this.avatarPhase * 18) * 0.02;
     }
     const camState: PlayerState = { pos: cam.pos, yaw: cam.yaw, pitch: cam.pitch };
-    this.avatar.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, new Map(), camState), sq, null, this.groundView);
+    this.avatar.update(e, pos, cam.yaw, this.textures, this.resolveFlip(e, pos, new Map(), camState), sq, null, this.groundView);
   }
 
 

@@ -56,7 +56,16 @@ describe('village generator', () => {
     expect(JSON.stringify(a.terrain)).not.toBe(JSON.stringify(c.terrain));
   });
 
-  for (const seed of [1, 2, 3, 42, 777, 9001]) {
+  it('every village gets each special structure, including the fenced garden on tight seeds', () => {
+    // these seeds once found no room for a full-size garden beside any house
+    for (const seed of [7, 13, 43, 273]) {
+      const v = generateVillage(seed, resolve, noDecals, 0);
+      const gens = new Set(v.entities.filter((e) => e.structure).map((e) => e.structure!.gen));
+      for (const g of ['bunker', 'gingerbread', 'house', 'lighthouse', 'witch_hut', 'yard', 'bridge']) expect(gens, `seed ${seed}: ${g}`).toContain(g);
+    }
+  });
+
+  for (const seed of [1, 2, 3, 42, 43, 44, 64, 78, 273, 777, 9001]) {
     it(`seed ${seed}: buildings on dry flat ground, facing a road or path, bridges where roads cross the river`, () => {
       const v = generateVillage(seed, resolve, noDecals, 0);
       const f = new TerrainField(v.terrain);
