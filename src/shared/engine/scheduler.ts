@@ -68,8 +68,12 @@ export class Scheduler {
     return s;
   }
 
+  /** Whether a command's script is still playing. Idle life and bump reactions never count: they never stop. */
   get busy(): boolean {
-    for (const s of this.scripts.values()) if (!s.finished && (s.running.length || s.cursor < s.steps.length)) return true;
+    for (const s of this.scripts.values()) {
+      if (s.id.startsWith('idle_') || s.id.startsWith('rule_')) continue;
+      if (!s.finished && (s.running.length || s.cursor < s.steps.length)) return true;
+    }
     return false;
   }
 

@@ -139,3 +139,30 @@ describe('server routes', () => {
     expect(build?.step.structure.parts.length).toBe(4);
   });
 });
+
+describe('changing buildings', () => {
+  it('set with params regenerates a building from its recorded parameters (add a story)', async () => {
+    const resolver = new StructureResolver(vocab, new HeuristicClassifier());
+    const ctx = {
+      player: { pos: [0, 0, 0] as [number, number, number], yaw: 0 },
+      entities: [
+        { id: 'house_1', word: 'house', kind: 'object' as const, pos: [0, 0, 6] as [number, number, number], h: 4, structure: { gen: 'house', params: { stories: 1, w: 5, d: 4, wallMat: 'brick', wallColor: '#c96a4b', roof: 'gable' } } },
+        { id: 'dog_1', word: 'dog', kind: 'animal' as const, pos: [1, 0, 2] as [number, number, number], h: 0.6 },
+      ],
+    };
+    const v = new CommandValidator(vocab, ctx, resolver);
+    const r = await v.handle({ op: 'set', id: 'house_1', params: { stories: 2 } });
+    const step = r.step as { op: string; id: string; structure?: { gen: string; params: Record<string, unknown>; heightM: number } };
+    expect(step.op).toBe('set');
+    expect(step.structure?.gen).toBe('house');
+    expect(step.structure?.params.stories).toBe(2);
+    expect(step.structure?.params.wallMat).toBe('brick'); // the rest of the house is kept
+    expect(step.structure?.params.wallColor).toBe('#c96a4b');
+    expect(r.errors).toEqual([]);
+    const again = await v.handle({ op: 'set', id: 'house_1', params: { stories: 3 } });
+    expect((again.step as typeof step).structure?.params.stories).toBe(3);
+    const dog = await v.handle({ op: 'set', id: 'dog_1', params: { stories: 2 } });
+    expect((dog.step as typeof step).structure).toBeUndefined();
+    expect(dog.errors.length).toBe(1);
+  });
+});

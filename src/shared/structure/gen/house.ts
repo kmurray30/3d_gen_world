@@ -79,16 +79,16 @@ export function houseBody(b: Parts, p: HouseParams, ox = 0, oz = 0): { H: number
   // a floor slab so the inside is not bare meadow
   b.box(ox, 0, oz, p.w - 0.1, 0.06, p.d - 0.1, 'plank', '#c9a36a', { noInk: true });
 
-  // door frame and the door itself, swung open against the wall
+  // door frame and the door itself, closed in the doorway (a poke swings it open about its hinge)
   b.box(ox + p.doorAt, DOOR_H, oz + hd - t / 2, DOOR_W + 0.3, 0.16, t + 0.08, 'flat', p.trimColor);
   b.box(ox + p.doorAt - DOOR_W / 2 - 0.07, 0, oz + hd - t / 2, 0.14, DOOR_H, t + 0.08, 'flat', p.trimColor);
   b.box(ox + p.doorAt + DOOR_W / 2 + 0.07, 0, oz + hd - t / 2, 0.14, DOOR_H, t + 0.08, 'flat', p.trimColor);
   const sticker = b.decals('door');
   if (sticker?.file) {
-    const dw = (DOOR_H - 0.05) * (sticker.w / Math.max(1, sticker.h));
-    b.decal(ox + p.doorAt + DOOR_W / 2 + 0.05, 0, oz + hd + dw / 2, sticker, dw, DOOR_H - 0.05, 90);
+    const dw = Math.min(DOOR_W - 0.04, (DOOR_H - 0.05) * (sticker.w / Math.max(1, sticker.h)));
+    b.decal(ox + p.doorAt, 0, oz + hd + 0.01, sticker, dw, DOOR_H - 0.05, 0, { role: 'door' });
   } else {
-    b.box(ox + p.doorAt + DOOR_W / 2 + 0.04, 0, oz + hd + DOOR_W / 2, 0.06, DOOR_H - 0.05, DOOR_W - 0.05, 'plank', p.doorColor);
+    b.box(ox + p.doorAt, 0, oz + hd - t / 2, DOOR_W - 0.05, DOOR_H - 0.05, 0.06, 'plank', p.doorColor, { ghost: true });
   }
   b.box(ox + p.doorAt, 0, oz + hd + 0.3, 1.6, 0.16, 0.6, 'stone', '#b9bcb6');
   if (p.sign) {

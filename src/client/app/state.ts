@@ -67,6 +67,8 @@ export class WorldStore {
       /* ignore */
     }
     engine.on((ev) => {
+      // idle fidgeting is not a change worth a save on its own; the periodic save picks positions up anyway
+      if (ev.type === 'scriptDone' && ev.id.startsWith('idle_')) return;
       if (['spawn', 'remove', 'morph', 'attach', 'stateChange', 'arrive', 'land', 'scriptDone', 'sky'].includes(ev.type)) this.markDirty();
     });
     window.addEventListener('pagehide', () => void this.save(true, true));

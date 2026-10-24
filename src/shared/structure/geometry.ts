@@ -26,7 +26,7 @@ export interface MeshGroup {
   /** Lit at night (windows, lamps). */
   glow?: boolean;
   /** Set for decal quads: draw the sprite (or a text card) instead of a material tile. */
-  decal?: { sprite: SpriteRef; text?: string };
+  decal?: { sprite: SpriteRef; text?: string; role?: 'door' };
 }
 
 export interface StructureMesh {
@@ -211,7 +211,7 @@ class StructureBuilder {
     else this.edges.set(key, { a, b, normals: [n] });
   }
 
-  decal(pts: V3[], sprite: SpriteRef, color: string, text?: string, glow = false): void {
+  decal(pts: V3[], sprite: SpriteRef, color: string, text?: string, role?: 'door', glow = false): void {
     const n = polygonNormal(pts);
     const b = new SlotBuilder();
     b.polygon(
@@ -225,7 +225,7 @@ class StructureBuilder {
         [0, 1],
       ],
     );
-    this.decals.push({ mat: 'flat', color, mesh: b.mesh, decal: { sprite, text }, ...(glow ? { glow } : {}) });
+    this.decals.push({ mat: 'flat', color, mesh: b.mesh, decal: { sprite, text, role }, ...(glow ? { glow } : {}) });
   }
 
   finish(): StructureMesh {
@@ -486,7 +486,7 @@ export function buildStructureMesh(s: Structure): StructureMesh {
           [x, part.h, e],
           [-x, part.h, e],
         ];
-        b.decal(pts.map(place), part.sprite, part.color, part.text, glow || /window/.test(part.sprite.file ?? ''));
+        b.decal(pts.map(place), part.sprite, part.color, part.text, part.role, glow || /window/.test(part.sprite.file ?? ''));
         break;
       }
     }

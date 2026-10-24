@@ -9,6 +9,10 @@ export class DesktopInput {
   onLockChange?: (locked: boolean) => void;
   onLockError?: () => void;
   onRequestCommand?: () => void;
+  /** Click while the pointer is free: return true to consume it (an interaction) instead of locking the pointer. */
+  onFreeClick?: (x: number, y: number) => boolean;
+  /** Click while the pointer is locked: interact with whatever the crosshair is on. */
+  onLockedClick?: () => void;
   /** Single-press hotkeys (view, angle, walls...) by key code. */
   onHotkey?: (code: string) => void;
 
@@ -38,9 +42,14 @@ export class DesktopInput {
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
-    canvas.addEventListener('click', () => {
-      if (this.locked || isTyping()) return;
+    canvas.addEventListener('click', (e) => {
+      if (isTyping()) return;
+      if (this.locked) {
+        this.onLockedClick?.();
+        return;
+      }
       if (matchMedia('(pointer: coarse)').matches) return;
+      if (this.onFreeClick?.(e.clientX, e.clientY)) return;
       canvas.requestPointerLock?.();
     });
     document.addEventListener('pointerlockchange', () => {

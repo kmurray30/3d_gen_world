@@ -29,12 +29,14 @@ export class PlayerController {
 
     let [ax, ay] = move;
     const len = Math.hypot(ax, ay);
-    if (len > 1) {
+    // A magnitude up to 1 walks proportionally; 1..2 (the joystick's outer zone) ramps from walking to running.
+    const ramp = Math.min(2, len);
+    if (len > 0) {
       ax /= len;
       ay /= len;
     }
     if (len > 0) {
-      const speed = sprint ? SPRINT : WALK;
+      const speed = sprint ? SPRINT : ramp <= 1 ? WALK * ramp : WALK + (SPRINT - WALK) * (ramp - 1);
       const fx = -Math.sin(s.yaw);
       const fz = -Math.cos(s.yaw);
       const rx = Math.cos(s.yaw);

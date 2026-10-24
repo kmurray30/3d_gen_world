@@ -3,6 +3,8 @@ import type { AnimAction, EffectAction, MoveAction, RemoveAction, ResolvedAction
 import { DEG, clamp, dir2, easeIn, easeInOut, easeOut, easeOutBack, lerp } from './math';
 import { footprintRadius, renderHeight, massClassFor } from './sizing';
 import { resolveOverlap, resolvePlace, stopAtEdge, supportAt, walkSurfaceAt } from './place';
+import { flipFor, lerpAngle, visibleYaw, yawAlong } from './facing';
+import { structureEntity } from '../structure/entity';
 import type { Channel, Script, Task } from './scheduler';
 import type { Engine } from './index';
 
@@ -167,14 +169,19 @@ class MoveTask extends BaseTask {
     const to = this.action.to;
     const target = to.of !== 'player' ? this.engine.world.get(to.of) : undefined;
     const chaseRels = new Set(['near', 'at', 'front', 'on', 'touch']);
-    if (target && chaseRels.has(to.rel)) {
+    if (this.action.dest) {
+      this.dest = [...this.action.dest];
+    } else if (target && chaseRels.has(to.rel)) {
       this.chase = target;
       this.attachOnArrive = to.rel === 'on';
       this.dest = this.chaseDest();
     } else {
       const p = resolvePlace(to, this.engine.world, { id: e.id, radius: footprintRadius(e), heightM: renderHeight(e) }, this.engine.rng);
       this.dest = p.pos;
-      if (to.of === 'player' && to.rel === 'at') this.dest = stopAtEdge(e.pos, [this.engine.world.player.pos[0], 0, this.engine.world.player.pos[2]], 0.35, footprintRadius(e), 0.3);
+      if (to.of === 'player' && to.rel === 'at') {
+        this.dest = stopAtEdge(e.pos, [this.engine.world.player.pos[0], 0, this.engine.world.player.pos[2]], 0.35, footprintRadius(e), 0.3);
+        this.dest[1] = this.engine.world.ground(this.dest[0], this.dest[2]);
+      }
     }
     const w = this.engine.world;
     this.groundWalk = this.style !== 'fly' && to.height === 'ground' && Math.abs(e.pos[1] - walkSurfaceAt(w, e.pos[0], e.pos[2], e.pos[1] + 0.6)) < 0.3;
@@ -211,7 +218,13 @@ class MoveTask extends BaseTask {
     const dz = this.dest[2] - e.pos[2];
     const dist = Math.hypot(dx, dz);
     const step = this.speed * dt;
-    if (dist > 0.02) e.faceDir = [dx / dist, dz / dist];
+    if (dist > 0.02) {
+      e.faceDir = [dx / dist, dz / dist];
+      // the paper turns to contain the direction of travel, nudged so the player still sees its face
+      const want = visibleYaw(yawAlong(dx / dist, dz / dist), e.pos, w.player.pos, 0.6);
+      e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
+      e.flip = flipFor(e.yaw, dx / dist, dz / dist);
+    }
     const dy = this.dest[1] - e.pos[1];
     if (dist <= step || this.elapsed > CHASE_CAP_S) {
       e.pos[0] = this.dest[0];
@@ -333,8 +346,71 @@ export class FallTask extends BaseTask {
   }
 }
 
+/** Turn the paper to a yaw over `dur` seconds. */
+export class YawTask extends BaseTask {
+  private t = 0;
+  private from = 0;
+  constructor(
+    private readonly id: string,
+    private readonly to: number,
+    private readonly dur: number,
+    private readonly engine: Engine,
+    private readonly flip?: boolean,
+  ) {
+    super(0);
+    this.entity = id;
+    this.channel = 'facing';
+  }
+  start(): boolean {
+    const e = this.engine.world.get(this.id);
+    if (!e) return false;
+    this.from = e.yaw ?? this.to;
+    if (this.flip !== undefined) e.flip = this.flip;
+    return true;
+  }
+  update(dt: number): boolean {
+    const e = this.engine.world.get(this.id);
+    if (!e) return true;
+    this.t += dt;
+    const k = this.dur <= 0 ? 1 : Math.min(1, this.t / this.dur);
+    e.yaw = lerpAngle(this.from, this.to, easeInOut(k));
+    return k >= 1;
+  }
+}
+
 function setTasks(action: ResolvedSet, engine: Engine): Task[] {
   const tasks: Task[] = [];
+  if (action.structure) {
+    const w = engine.world;
+    const next = action.structure;
+    tasks.push(
+      new Tween(
+        action.id,
+        'sprite',
+        0.7,
+        (k) => {
+          const e = w.get(action.id);
+          if (!e) return;
+          w.trans(e.id).sq = k < 0.5 ? 1 - k * 0.16 : 0.92 + (k - 0.5) * 0.16;
+          if (k >= 0.5 && e.structure !== next) {
+            const fresh = structureEntity(e.id, e.word, next, e.pos, e.yaw ?? 0, e.createdAt, e.label);
+            e.structure = next;
+            e.heightM = fresh.heightM;
+            e.sprite = fresh.sprite;
+            e.huge = fresh.huge;
+            engine.emit({ type: 'morph', id: e.id, word: e.word });
+            engine.emit({ type: 'effect', key: `rebuild:${e.id}:${engine.nextKey()}`, name: 'dust', id: e.id, dur: 0.9 });
+          }
+        },
+        () => w.has(action.id),
+        () => {
+          const e = w.get(action.id);
+          if (e) w.trans(e.id).sq = 1;
+        },
+        action.delay ?? 0,
+      ),
+    );
+  }
   const dur = action.dur ?? 0.5;
   const delay = action.delay ?? 0;
   const w = engine.world;

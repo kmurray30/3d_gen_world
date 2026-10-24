@@ -188,7 +188,8 @@ class Planner {
       if (this.roadGap(x, z) < (opts.road ?? 1.2)) return false;
       if (Math.hypot(x, z) < PLAZA_R + 1.5) return false;
     }
-    for (const o of this.lots) if (lotsOverlap(l, o, opts.lots ?? 2.5)) return false;
+    // far enough apart that the flattened pads under neighbours never overlap (unless they share a height, like a garden)
+    for (const o of this.lots) if (lotsOverlap(l, o, opts.lots ?? 2 * PAD_MARGIN + 0.4)) return false;
     // not on a cliff: the pad would leave a wall of earth
     const hs = pts.map(([x, z]) => this.hills(x, z));
     return Math.max(...hs) - Math.min(...hs) < 3.2;
@@ -200,13 +201,19 @@ class Planner {
    */
   addLot(l: Lot, padBlend = 3.2, h?: number): number {
     this.lots.push(l);
+    const padH = this.padHeight(l, h);
+    const m = PAD_MARGIN;
+    this.spec.pads.push({ x: round(l.x), z: round(l.z), h: padH, hw: round(l.hw + m), hd: round(l.hd + m), rot: round(l.yaw), blend: padBlend });
+    return padH;
+  }
+
+  /** The height a lot's pad would get: as asked (or the road's, or the hills'), kept under nearby water's carve. */
+  padHeight(l: Lot, h?: number): number {
     let padH = h ?? (this.roadGap(l.x, l.z) < l.hd + 6 ? this.roadHeight(l.x, l.z) : this.hills(l.x, l.z));
     const m = PAD_MARGIN;
     for (const [lx, lz] of [[-1, -1], [1, -1], [1, 1], [-1, 1], [0, 1], [0, -1], [1, 0], [-1, 0], [0, 0]])
       padH = Math.min(padH, waterCeiling(this.spec, ...toWorld(l, lx * (l.hw + m), lz * (l.hd + m))) - 0.02);
-    padH = round(padH);
-    this.spec.pads.push({ x: round(l.x), z: round(l.z), h: padH, hw: round(l.hw + m), hd: round(l.hd + m), rot: round(l.yaw), blend: padBlend });
-    return padH;
+    return round(padH);
   }
 
   /** Height of the nearest road's surface to (x, z). */
@@ -435,8 +442,10 @@ function garden(pl: Planner): Lot | null {
       const [x, z] = toWorld(h, side * (h.hw + 1.4 + s.bounds.w / 2), h.hd - s.bounds.d / 2);
       const lot: Lot = { id: '', word: 'yard', s, x, z, yaw: h.yaw, hw: s.bounds.w / 2, hd: s.bounds.d / 2 };
       if (!pl.fits(lot, { lots: 0.8 })) continue;
-      lot.id = pl.id('yard');
+      // the garden shares its house's ground; skip spots where water would have to cut it lower
       const houseH = pl.spec.pads.find((p) => Math.abs(p.x - round(h.x)) < 1e-6 && Math.abs(p.z - round(h.z)) < 1e-6)?.h;
+      if (houseH === undefined || Math.abs(pl.padHeight(lot, houseH) - houseH) > 0.01) continue;
+      lot.id = pl.id('yard');
       pl.addLot(lot, 3, houseH);
       return lot;
     }

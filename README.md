@@ -10,7 +10,9 @@ Open the hosted URL, enter the passcode once per device, and you get a fresh wor
 That link is the save file: open it on any device to continue, or share it. Type what should
 happen in the box ("water the flower", "a dragon flies in and breathes fire at the house", "make
 it huge" while looking at something). Desktop: click to look, WASD to walk, Shift to run, `/` to
-type. Phone: left thumb walks, right thumb looks, tap a thing to name it. The menu has Worlds (tap
+type. Phone: left thumb walks, right thumb looks, tap a thing to name it. Clicking or tapping a
+thing also pokes it: objects jiggle, animals and people turn to you and answer, and a building's
+door swings open or shut. The menu has Worlds (tap
 the title too), Undo, Reset and Copy link. Worlds lists every world you have opened on this device,
 starts a new one, and opens any world from its link or name; the bare site address reopens the
 world you used last. `?dev=1` opens a console that runs hand-written scripts.
@@ -22,6 +24,13 @@ and change the time of day (dawn, day, sunset, night). With fading on, any wall 
 camera and your character goes see-through, so you can follow yourself into a house. At night the
 lamps, windows and the lighthouse light up. `Tab` (or `Alt`) frees the mouse without `Esc`; click
 the scene to look around again.
+
+**Paper in the world.** Cutouts no longer turn to face the camera: each has a yaw in the world, so
+you can walk around one and see its edge. Things spawn facing you, walkers turn their paper along
+their path, and anything living turns, wanders a few steps around home, or fidgets on its own when
+no command is using it, favouring orientations you can see. Buildings can be changed in place
+("add a story to the house", "paint the cottage blue"): the model sets new generator parameters
+and the structure regenerates with the rest kept.
 
 **Village.** Worlds -> "+ New village" (or `?preset=village`) generates a new village from a random
 seed: rolling hills, a river with a bridge where the road crosses it, a lake with a lighthouse on its
@@ -90,7 +99,9 @@ signs) with a tinted crayon tile and an ink outline. No image generation is invo
 - Materials are drawn on a canvas at runtime (`src/client/render/materials.ts`) and tinted per
   part, so AI-drawn tiles can replace them later by name without touching the structures.
 - `node scripts/shots-village.mjs http://localhost:8787 out/` screenshots a generated village: an
-  overview, each special structure, third-person and top-down views, sunset and night.
+  overview, each special structure, third-person and top-down views, sunset and night;
+  `scripts/shots-door.mjs` shows doors closed and poked open, and `scripts/shots-facing.mjs`
+  shows cutouts from the side and after a stretch of idle life.
 
 ## Terrain, water and villages
 

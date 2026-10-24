@@ -10,6 +10,8 @@ async function enterVillage(page: Page): Promise<void> {
 }
 
 test('village preset: structures load, views cycle, walls fade, the player walks into a house', async ({ page, isMobile }) => {
+  // a whole generated village under a software GPU: slow frames, so this long walk-through gets more time
+  test.setTimeout(150_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await enterVillage(page);

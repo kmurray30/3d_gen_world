@@ -24,8 +24,11 @@ export function meadowWorld(): World {
   return starterWorld('t', (_w, kind) => defaultSprite(kind), 0);
 }
 
-export function makeEngine(world: World = emptyWorld()): Engine {
-  return new Engine(world, 7);
+/** An engine with idle life off, so long ticks in tests stay deterministic; idle tests switch it on. */
+export function makeEngine(world: World = emptyWorld(), idle = false): Engine {
+  const engine = new Engine(world, 7);
+  engine.idle.enabled = idle;
+  return engine;
 }
 
 /** Advance the engine in fixed steps. */

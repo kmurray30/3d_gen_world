@@ -28,9 +28,23 @@ export function injectTint(shader: Shader, glow = false): void {
   shader.fragmentShader = head + shader.fragmentShader.replace('#include <fog_fragment>', body + '#include <fog_fragment>');
 }
 
-/** Make a material follow the time of day. `glow` = lit from inside at night. */
+/** Make a material follow the time of day. `glow` = lit from inside at night. Chains onto other shader hooks. */
 export function tinted<T extends THREE.Material>(m: T, glow = false): T {
-  m.onBeforeCompile = (shader) => injectTint(shader, glow);
-  m.customProgramCacheKey = () => (glow ? 'tint-glow' : 'tint');
+  chainShaderHook(m, glow ? 'tint-glow' : 'tint', (shader) => injectTint(shader, glow));
   return m;
+}
+
+/**
+ * Add an onBeforeCompile step without dropping one already set (the crayon grain and the night tint both edit
+ * the same shaders), and fold its name into the program cache key.
+ */
+export function chainShaderHook(m: THREE.Material, key: string, hook: (shader: Shader) => void): void {
+  const prev = m.userData.shaderHooks as Array<{ key: string; hook: (shader: Shader) => void }> | undefined;
+  const hooks = [...(prev ?? []), { key, hook }];
+  m.userData.shaderHooks = hooks;
+  m.onBeforeCompile = (shader) => {
+    for (const h of hooks) h.hook(shader);
+  };
+  const cacheKey = hooks.map((h) => h.key).join('+');
+  m.customProgramCacheKey = () => cacheKey;
 }

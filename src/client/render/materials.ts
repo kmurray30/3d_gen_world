@@ -27,6 +27,9 @@ function rng(seed: number): () => number {
 
 /** Diagonal crayon strokes: slightly darker streaks that leave the base showing through. */
 function scribble(ctx: CanvasRenderingContext2D, s: number, rnd: () => number, strength = 0.1, count = 120, angle = -0.7): void {
+  // The shared crayon grain (crayon.ts) now provides the wax texture at a fixed world size; tiles keep only a
+  // whisper of their own streaks so patterns with different tile sizes do not fight it.
+  strength *= 0.35;
   ctx.save();
   ctx.lineCap = 'round';
   for (let i = 0; i < count; i++) {

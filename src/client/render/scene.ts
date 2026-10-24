@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import type { Entity, PlayerState, SpriteRef, Vec3 } from '../../shared/types';
 import { worldPos } from '../../shared/engine/transform';
 import type { WorldModel } from '../../shared/engine/world';
-import { SpriteView, type GroundView } from './sprites';
+import { SpriteView, origamiKind, type GroundView } from './sprites';
+import { applyCrayon, crayonTexture, CRAYON_METRES } from './crayon';
+import { flipFor, lerpAngle, visibleYaw, yawAlong, yawFacing } from '../../shared/engine/facing';
 import { StructureView } from './structures';
 import { MaterialTiles } from './materials';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
@@ -70,10 +72,15 @@ export class SceneView {
     const budget = this.coarse ? 40 * 1024 * 1024 : 96 * 1024 * 1024;
     this.textures = new TextureStore(budget, `/sprites/${spriteVersion}/${size}`);
 
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2),
-      tinted(new THREE.MeshBasicMaterial({ map: makeGroundTexture() })),
-    );
+    const groundMat = tinted(new THREE.MeshBasicMaterial({ map: makeGroundTexture() }));
+    applyCrayon(groundMat, () => 1, 0.45);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), groundMat);
+    // the ground plane's UVs span 0..1; the crayon shader expects metres, so hand it metre UVs
+    const guv = ground.geometry.attributes.uv as THREE.BufferAttribute;
+    for (let i = 0; i < guv.count; i++) guv.setXY(i, guv.getX(i) * 400, guv.getY(i) * 400);
+    (groundMat.map as THREE.Texture).repeat.set(1 / 6, 1 / 6);
+    void crayonTexture;
+    void CRAYON_METRES;
     ground.name = 'ground';
     this.scene.add(ground);
     this.flatGround = ground;
@@ -191,8 +198,8 @@ export class SceneView {
       const living = e.kind === 'animal' || e.kind === 'human' || e.kind === 'humanoid';
       const phase = hashPhase(e.id);
       if (living) sq *= 1 + 0.015 * Math.sin(this.clock * 2.2 + phase);
-      if (living && pos[1] > 0.3 && !e.parent) pos[1] += 0.08 * Math.sin(this.clock * 1.8 + phase);
-      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, camState, view.lastFlip), sq, this.groundView);
+      if (living && !e.parent && pos[1] - model.ground(pos[0], pos[2]) > 0.3) pos[1] += 0.08 * Math.sin(this.clock * 1.8 + phase);
+      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, camState), sq, e.parent ? null : origamiKind(e.word), this.groundView);
     }
     this.terrain?.update(dt);
     this.effects.syncPersistent(model);
@@ -219,7 +226,7 @@ export class SceneView {
    * decided on screen by the caller (which way the player last walked across the view), so turning the camera never
    * flips the character.
    */
-  updateAvatar(player: PlayerState, visible: boolean, moving: boolean, faceRight: boolean, cam: CameraPose, dt: number): void {
+  updateAvatar(player: PlayerState, visible: boolean, moving: boolean, faceDir: [number, number] | null, cam: CameraPose, dt: number): void {
     if (!this.avatar || !this.avatarEntity) return;
     const e = this.avatarEntity;
     e.hidden = !visible;
@@ -228,14 +235,22 @@ export class SceneView {
       return;
     }
     const pos: Vec3 = [player.pos[0], player.pos[1], player.pos[2]];
+    if (faceDir) {
+      e.faceDir = faceDir;
+      const want = visibleYaw(yawAlong(faceDir[0], faceDir[1]), pos, cam.pos, 0.6);
+      e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
+      e.flip = flipFor(e.yaw, faceDir[0], faceDir[1]);
+    } else if (e.yaw === undefined) e.yaw = yawFacing(pos, cam.pos);
     let sq = 1;
     if (moving) {
       this.avatarPhase += dt;
       pos[1] += Math.abs(Math.sin(this.avatarPhase * 9)) * 0.06;
       sq = 1 + Math.sin(this.avatarPhase * 18) * 0.02;
     }
-    this.avatar.update(e, pos, cam.yaw, cam.pitch, this.textures, faceRight, sq, this.groundView);
+    const camState: PlayerState = { pos: cam.pos, yaw: cam.yaw, pitch: cam.pitch };
+    this.avatar.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, new Map(), camState), sq, null, this.groundView);
   }
+
 
   /** Fade structures between the eye and the avatar (feet, chest, head); nothing fades in first person. */
   updateFades(cam: CameraPose, player: PlayerState, thirdPerson: boolean): void {
@@ -246,19 +261,10 @@ export class SceneView {
     for (const s of this.structures.values()) s.setFade(enabled, eye, targets);
   }
 
-  /** Mirror so the sprite "looks" toward its facing target in camera space. Sprites are assumed to face left by default. */
-  private resolveFlip(e: Entity, pos: [number, number, number], byId: Map<string, Entity>, cam: PlayerState, prev: boolean): boolean {
-    if (!e.facing) {
-      if (e.faceDir) {
-        const rx0 = Math.cos(cam.yaw);
-        const rz0 = -Math.sin(cam.yaw);
-        const side = (e.faceDir[0] * rx0 + e.faceDir[1] * rz0) / (Math.hypot(e.faceDir[0], e.faceDir[1]) || 1);
-        // heading mostly toward or away from the camera: keep facing the way it was
-        if (Math.abs(side) < 0.3) return prev;
-        return side > 0;
-      }
-      return e.flip;
-    }
+  /** Mirror so the sprite looks toward its facing target along its own paper plane (art faces left by default). */
+  private resolveFlip(e: Entity, pos: [number, number, number], byId: Map<string, Entity>, cam: PlayerState): boolean {
+    if (!e.facing) return e.flip;
+    const yaw = e.yaw ?? (cam.yaw * 180) / Math.PI;
     let tx: number;
     let tz: number;
     if (e.facing === 'player') {
@@ -268,11 +274,7 @@ export class SceneView {
       if (!t) return e.flip;
       [tx, , tz] = worldPos(t, (id) => byId.get(id));
     }
-    // Camera right vector in the ground plane.
-    const rx = Math.cos(cam.yaw);
-    const rz = -Math.sin(cam.yaw);
-    const side = (tx - pos[0]) * rx + (tz - pos[2]) * rz;
-    return side > 0;
+    return flipFor(yaw, tx - pos[0], tz - pos[2]);
   }
 
   render(cam: CameraPose, dt = 0): void {
@@ -289,7 +291,7 @@ export class SceneView {
   pick(ndcX: number, ndcY: number): string | null {
     this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
     const bodies: THREE.Object3D[] = [];
-    for (const v of this.views.values()) if (v.root.visible) bodies.push(v.body);
+    for (const v of this.views.values()) if (v.root.visible) bodies.push(...v.pickables);
     for (const s of this.structures.values()) if (s.root.visible) bodies.push(...s.pickables);
     const hits = this.raycaster.intersectObjects(bodies, false);
     for (const hit of hits) {

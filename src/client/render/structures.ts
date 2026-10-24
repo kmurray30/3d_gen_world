@@ -12,6 +12,7 @@ import { DEG } from '../../shared/engine/math';
 import { buildStructureMesh, type MeshGroup } from '../../shared/structure/geometry';
 import type { Structure } from '../../shared/structure/types';
 import { MaterialTiles } from './materials';
+import { applyCrayon } from './crayon';
 import type { TextureStore } from './textures';
 import { LIGHT, tinted } from './tint';
 
@@ -32,6 +33,8 @@ interface Piece {
   box: THREE.Box3;
   alpha: number;
   target: number;
+  /** Doors: swing amount 0..1 and the rotation sign that opens inward. */
+  door?: { k: number; sign: number };
 }
 
 export class StructureView {
@@ -126,19 +129,59 @@ export class StructureView {
     } else {
       mat.map = this.assets.tiles.get(g.mat);
       mat.color.set(g.color);
+      applyCrayon(mat, () => this.root.scale.x);
     }
     const mesh = new THREE.Mesh(geo, mat);
     mesh.userData.entityId = this.id;
     this.root.add(mesh);
-    this.pieces.push({ mesh, mat, box: geo.boundingBox!.clone(), alpha: 1, target: 1 });
+    const piece: Piece = { mesh, mat, box: geo.boundingBox!.clone(), alpha: 1, target: 1 };
+    if (g.decal?.role === 'door') this.hingeDoor(piece, geo);
+    this.pieces.push(piece);
+  }
+
+  /** Move a door quad's origin to its hinge edge so it can swing open about it. */
+  private hingeDoor(piece: Piece, geo: THREE.BufferGeometry): void {
+    const p = geo.attributes.position as THREE.BufferAttribute;
+    const n = geo.attributes.normal as THREE.BufferAttribute;
+    if (!p || !n || p.count < 3) return;
+    const normal = new THREE.Vector3(n.getX(0), n.getY(0), n.getZ(0));
+    normal.y = 0;
+    if (normal.lengthSq() < 1e-6) return;
+    normal.normalize();
+    const right = new THREE.Vector3(0, 1, 0).cross(normal).normalize();
+    let min = Infinity;
+    let hinge = new THREE.Vector3();
+    for (let i = 0; i < p.count; i++) {
+      const v = new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i));
+      const d = v.dot(right);
+      if (d < min - 1e-6) {
+        min = d;
+        hinge = v;
+      }
+    }
+    geo.translate(-hinge.x, 0, -hinge.z);
+    geo.computeBoundingBox();
+    piece.mesh.position.set(hinge.x, 0, hinge.z);
+    piece.box = geo.boundingBox!.clone().translate(new THREE.Vector3(hinge.x, 0, hinge.z));
+    // swing inward (away from the outward normal): pick the rotation sign that moves the free edge that way
+    const swung = right.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), 1);
+    piece.door = { k: 0, sign: swung.dot(normal) < 0 ? 1 : -1 };
   }
 
   update(e: Entity, pos: Vec3, dt: number): void {
     if (e.structure && e.structure !== this.built) this.build(e.structure);
+    const open = e.state.door_open === true ? 1 : 0;
+    for (const p of this.pieces) {
+      if (!p.door) continue;
+      p.door.k += (open - p.door.k) * Math.min(1, dt * 6);
+      if (Math.abs(p.door.k - open) < 0.005) p.door.k = open;
+      p.mesh.rotation.y = p.door.sign * p.door.k * 1.8;
+    }
     this.root.position.set(pos[0], pos[1], pos[2]);
     this.root.rotation.set(0, (e.yaw ?? 0) * DEG, 0);
     const sc = Math.max(0.001, e.scale);
     this.root.scale.set(sc, sc, sc);
+    for (const p of this.pieces) (p.mat.userData.crayonUpdate as (() => void) | undefined)?.();
     this.root.visible = !e.hidden;
     const base = e.alpha ?? 1;
     let anyFaded = false;

@@ -104,6 +104,8 @@ export const SetSchema = z.object({
   tilt: num(-180, 180, 0).optional(),
   face: z.string().trim().max(64).optional(),
   state: z.record(z.string().max(32), z.union([z.boolean(), z.number(), z.string().max(40)])).optional(),
+  /** Buildings only: regenerate with these generator parameters changed (stories, roof, color, wallMat, w, d...). */
+  params: z.record(z.string().max(32), z.unknown()).optional(),
   dur,
   delay,
 });
@@ -152,7 +154,7 @@ export const StepSchema = z.union([ActionSchema, ParSchema]);
 export type SpawnAction = z.infer<typeof SpawnSchema>;
 export type BuildAction = z.infer<typeof BuildSchema>;
 export type CustomPart = z.infer<typeof CustomPartSchema>;
-export type MoveAction = z.infer<typeof MoveSchema>;
+export type MoveAction = z.infer<typeof MoveSchema> & { /** engine-internal: exact destination (idle wandering) */ dest?: [number, number, number] };
 export type SetAction = z.infer<typeof SetSchema>;
 export type AnimAction = z.infer<typeof AnimSchema>;
 export type AttachAction = z.infer<typeof AttachSchema>;
@@ -181,8 +183,8 @@ export interface WordResolution {
 export type ResolvedSpawn = Omit<SpawnAction, 'ref'> & { ref: string; id: string; res: WordResolution };
 /** A build after the server ran the generator: the parts travel with the step, so the client never generates. */
 export type ResolvedBuild = Pick<BuildAction, 'op' | 'word' | 'at' | 'delay'> & { ref: string; id: string; structure: Structure; label: string };
-export type ResolvedSet = SetAction & { res?: WordResolution };
-export type ResolvedAction = Exclude<Action, SpawnAction | BuildAction | SetAction> | ResolvedSpawn | ResolvedBuild | ResolvedSet;
+export type ResolvedSet = SetAction & { res?: WordResolution; structure?: Structure };
+export type ResolvedAction = Exclude<Action, SpawnAction | BuildAction | SetAction | MoveAction> | MoveAction | ResolvedSpawn | ResolvedBuild | ResolvedSet;
 export type ResolvedStep = ResolvedAction | { op: 'par'; do: ResolvedAction[] };
 
 /* ----- stream protocol (server -> client), one JSON object per line ----- */
@@ -205,6 +207,8 @@ export const CompactEntitySchema = z.object({
   parent: z.string().max(64).optional(),
   state: z.record(z.string().max(32), z.union([z.boolean(), z.number(), z.string().max(40)])).optional(),
   effects: z.array(z.string().max(32)).max(8).optional(),
+  /** Buildings: how they were generated, so a set with params can regenerate them. */
+  structure: z.object({ gen: z.string().max(24), params: z.record(z.string().max(32), z.unknown()) }).optional(),
 });
 export const CompactWorldSchema = z.object({
   player: z.object({ pos: z.tuple([z.number(), z.number(), z.number()]), yaw: z.number() }),

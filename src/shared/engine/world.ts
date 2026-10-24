@@ -40,6 +40,15 @@ export class WorldModel {
     this.seed = world.seed;
     this.sky = world.sky ?? 'day';
     this.setTerrain(world.terrain);
+    this.ensureYaw();
+  }
+
+  /** Older saves have no yaw on sprites: face the player, like a fresh spawn. */
+  ensureYaw(): void {
+    const p = this.player.pos;
+    for (const e of this.entities.values()) {
+      if (e.yaw === undefined) e.yaw = Math.round((Math.atan2(p[0] - e.pos[0], p[2] - e.pos[2]) * 180) / Math.PI);
+    }
   }
 
   setTerrain(spec: TerrainSpec | undefined): void {
@@ -201,6 +210,7 @@ export class WorldModel {
     this.seed = world.seed;
     this.sky = world.sky ?? 'day';
     if (JSON.stringify(world.terrain ?? null) !== JSON.stringify(this.terrainSpec ?? null)) this.setTerrain(world.terrain);
+    this.ensureYaw();
   }
 }
 

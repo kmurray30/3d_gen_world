@@ -78,6 +78,7 @@ export function compactWorld(model: WorldModel, target?: string, limit = 40): Co
       parent: e.parent,
       state: Object.keys(e.state).length ? e.state : undefined,
       effects: e.effects.length ? e.effects : undefined,
+      structure: e.structure ? { gen: e.structure.gen, params: e.structure.params } : undefined,
     }));
   return { player: { pos: [r1(p[0]), r1(p[1] - model.ground(p[0], p[2])), r1(p[2])], yaw: Math.round(model.player.yaw * 100) / 100 }, target, entities };
 }

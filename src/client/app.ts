@@ -199,10 +199,20 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   }
 
   const desktop = new DesktopInput(canvas);
+  desktop.onLockedClick = () => {
+    const id = scene.pick(0, 0);
+    if (id) engine.poke(id);
+  };
+  desktop.onFreeClick = (x, y) => {
+    // poke whatever was clicked, then lock the pointer as before so the click also starts looking around
+    const id = scene.pick((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+    if (id) engine.poke(id);
+    return false;
+  };
   const touch = coarse ? new TouchInput(canvas, hudRoot) : null;
   if (!coarse) {
     hud.showLockOverlay(true);
-    hud.setHint('WASD walk, Shift run, Space jump, / type, Tab frees the mouse. V view, R angle, B walls, T time');
+    hud.setHint('WASD walk, Shift run, Space jump, click to poke, / type, Tab frees the mouse. V view, R angle, B walls, T time');
     desktop.onLockChange = (locked) => hud.showLockOverlay(!locked && !document.activeElement?.matches('input'));
     desktop.onLockError = () => hud.toast('Could not capture the mouse. Click the scene again.', 'error');
     desktop.onRequestCommand = () => {
@@ -217,12 +227,13 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     };
     hud.input.addEventListener('blur', () => hud.showLockOverlay(!desktop.locked));
   } else {
-    hud.setHint('Left thumb: walk. Right thumb: look. Tap a thing to name it.');
+    hud.setHint('Left thumb: walk, push further to run. Right thumb: look. Tap a thing to name it.');
   }
 
   if (touch) {
     touch.onTap = (x, y) => {
       const id = scene.pick((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+      if (id) engine.poke(id);
       const e = id ? engine.world.get(id) : undefined;
       targetId = e?.id;
       hud.setTarget(e ? e.label : null);
@@ -231,7 +242,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
 
   let last = performance.now();
   let paused = false;
-  let faceRight = false;
+  let faceDir: [number, number] | null = null;
   scene.sky.set(engine.world.sky, true);
   document.addEventListener('visibilitychange', () => {
     paused = document.hidden;
@@ -255,13 +266,9 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       player.update(dt, move, look, sens, desktop.sprint, desktop.consumeJump());
       const dx = p.pos[0] - before[0];
       const dz = p.pos[2] - before[1];
-      const len = Math.hypot(dx, dz);
-      if (len > 1e-4) {
+      if (Math.hypot(dx, dz) > 1e-4) {
         moving = true;
-        // face the way the walk goes across the screen; straight toward or away from the camera keeps the last facing
-        const across = (dx * Math.cos(rig.pose.yaw) - dz * Math.sin(rig.pose.yaw)) / len;
-        if (across > 0.3) faceRight = true;
-        else if (across < -0.3) faceRight = false;
+        faceDir = [dx, dz];
       }
     } else {
       desktop.consumeJump();
@@ -282,7 +289,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     }
     scene.setTerrain(engine.world.terrain);
     scene.sync(engine.world, dt, cam);
-    scene.updateAvatar(p, rig.showsAvatar, moving, faceRight, cam, dt);
+    scene.updateAvatar(p, rig.showsAvatar, moving, faceDir, cam, dt);
     scene.updateFades(cam, p, rig.mode !== 'first');
     scene.render(cam, dt);
   };

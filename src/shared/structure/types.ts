@@ -98,6 +98,8 @@ export interface DecalPart extends PartBase {
   h: number;
   /** Sign text drawn on a paper card instead of the sprite (sprite.file is null then). */
   text?: string;
+  /** Doors swing open on a hinge when the player interacts with the building. */
+  role?: 'door';
 }
 
 export type Part = BoxPart | WallPart | PrismPart | RoofPart | StairsPart | DecalPart;
