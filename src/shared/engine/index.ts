@@ -7,6 +7,9 @@ import { Scheduler, type Script } from './scheduler';
 import { FallTask, makeTasks } from './tasks';
 import { WorldModel } from './world';
 import { Rules } from './rules';
+import { Idle } from './idle';
+import { yawFacing } from './facing';
+import { YawTask } from './tasks';
 import { resolvePlayerCollisions, resolvePlayerVsStructures, type Bump } from './collide';
 import { structureRadius } from '../structure/collide';
 import { structureEntity, yawToward } from '../structure/entity';
@@ -23,6 +26,7 @@ export type EngineEvent =
   | { type: 'arrive'; id: string; target?: string }
   | { type: 'stateChange'; id: string; key: string; value: boolean | number | string }
   | { type: 'scriptDone'; id: string }
+  | { type: 'poke'; id: string }
   | { type: 'warn'; msg: string };
 
 /**
@@ -33,17 +37,67 @@ export class Engine {
   readonly world: WorldModel;
   readonly scheduler: Scheduler;
   readonly rules: Rules;
+  readonly idle: Idle;
   rng: () => number;
   time = 0;
   private listeners: Array<(e: EngineEvent) => void> = [];
   private keySeq = 0;
   private idSeq = 0;
+  private readonly pokeUntil = new Map<string, number>();
 
   constructor(world: World, seed = 1) {
     this.world = new WorldModel(world);
     this.rng = makeRng(seed);
-    this.scheduler = new Scheduler((action, script) => makeTasks(action, script, this));
+    this.scheduler = new Scheduler((action, script) => {
+      // remember what commands touched so idle life leaves it alone for a while
+      if (!script.id.startsWith('idle_') && !script.id.startsWith('rule_')) {
+        const target = (action as { id?: string }).id;
+        if (target) this.idle.lastScripted.set(target, this.time);
+      }
+      return makeTasks(action, script, this);
+    });
     this.rules = new Rules(this);
+    this.idle = new Idle(this);
+  }
+
+  /** Turn an entity's paper to a yaw (degrees) over a moment, optionally hopping while it turns. */
+  turn(id: string, yaw: number, flip: boolean | undefined, hop: 'hop' | undefined, scriptId?: string): void {
+    const s = this.scheduler.start(scriptId);
+    s.running.push(new YawTask(id, yaw, 0.35, this, flip));
+    this.scheduler.seal(s);
+    if (hop) this.run([{ op: 'anim', id, name: 'hop', times: 1 }], `${scriptId ?? 'turn'}_hop`);
+  }
+
+  /** The player clicked or tapped a thing: a small reaction by kind; buildings with a door open or close it. */
+  poke(id: string): boolean {
+    const e = this.world.get(id);
+    if (!e || e.hidden) return false;
+    const key = `poke:${id}`;
+    if ((this.pokeUntil.get(key) ?? -1) > this.time) return false;
+    this.pokeUntil.set(key, this.time + 0.6);
+    const sid = `rule_poke_${this.nextKey()}`;
+    const toward = yawFacing(this.world.worldPos(e), this.world.player.pos);
+    const pick = (arr: string[]) => arr[Math.floor(this.rng() * arr.length)];
+    if (e.structure) {
+      const hasDoor = e.structure.parts.some((p) => p.t === 'decal' && p.role === 'door');
+      if (hasDoor) {
+        const open = e.state.door_open !== true;
+        e.state.door_open = open;
+        this.emit({ type: 'stateChange', id, key: 'door_open', value: open });
+      } else {
+        this.run([{ op: 'anim', id, name: 'shake', times: 1 }], sid);
+      }
+    } else if (e.kind === 'animal') {
+      this.turn(id, toward, undefined, undefined, `${sid}_t`);
+      this.run([{ op: 'par', do: [{ op: 'anim', id, name: 'hop', times: 1 }, { op: 'say', id, text: pick(['!', '?', '!!']), dur: 1 }] }], sid);
+    } else if (e.kind === 'human' || e.kind === 'humanoid') {
+      this.turn(id, toward, undefined, undefined, `${sid}_t`);
+      this.run([{ op: 'par', do: [{ op: 'anim', id, name: 'nod', times: 1 }, { op: 'say', id, text: pick(['Hello!', 'Yes?', 'Oh, hi.', 'Hm?', 'Nice day.', 'Can I help you?']), dur: 1.8 }] }], sid);
+    } else {
+      this.run([{ op: 'anim', id, name: e.massClass === 'heavy' ? 'shake' : 'wobble', times: 1 }], sid);
+    }
+    this.emit({ type: 'poke', id });
+    return true;
   }
 
   /** Height of whatever the player stood on after the last `collidePlayer` (0 = the meadow). */
@@ -82,6 +136,7 @@ export class Engine {
   update(dt: number): void {
     this.time += dt;
     for (const id of this.scheduler.update(dt)) this.emit({ type: 'scriptDone', id });
+    this.idle.tick();
     for (const e of this.world.list()) {
       if (e.ttl !== undefined && this.time - e.createdAt > e.ttl) this.removeEntity(e.id, 'fade');
     }
@@ -146,6 +201,7 @@ export class Engine {
       massClass: massClassFor(res.kind, res.heightM),
       huge: res.huge,
       createdAt: this.time,
+      yaw: Math.round(yawFacing(placement.pos, this.world.player.pos)),
     };
     if (placement.parent) {
       e.parent = placement.parent;

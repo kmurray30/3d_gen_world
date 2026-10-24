@@ -24,7 +24,7 @@ export interface MeshGroup {
   color: string;
   mesh: MeshData;
   /** Set for decal quads: draw the sprite (or a text card) instead of a material tile. */
-  decal?: { sprite: SpriteRef; text?: string };
+  decal?: { sprite: SpriteRef; text?: string; role?: 'door' };
 }
 
 export interface StructureMesh {
@@ -209,7 +209,7 @@ class StructureBuilder {
     else this.edges.set(key, { a, b, normals: [n] });
   }
 
-  decal(pts: V3[], sprite: SpriteRef, color: string, text?: string): void {
+  decal(pts: V3[], sprite: SpriteRef, color: string, text?: string, role?: 'door'): void {
     const n = polygonNormal(pts);
     const b = new SlotBuilder();
     b.polygon(
@@ -223,7 +223,7 @@ class StructureBuilder {
         [0, 1],
       ],
     );
-    this.decals.push({ mat: 'flat', color, mesh: b.mesh, decal: { sprite, text } });
+    this.decals.push({ mat: 'flat', color, mesh: b.mesh, decal: { sprite, text, role } });
   }
 
   finish(): StructureMesh {
@@ -482,7 +482,7 @@ export function buildStructureMesh(s: Structure): StructureMesh {
           [x, part.h, e],
           [-x, part.h, e],
         ];
-        b.decal(pts.map(place), part.sprite, part.color, part.text);
+        b.decal(pts.map(place), part.sprite, part.color, part.text, part.role);
         break;
       }
     }

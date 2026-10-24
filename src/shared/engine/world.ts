@@ -29,6 +29,15 @@ export class WorldModel {
     this.createdAt = world.createdAt;
     this.player = { pos: [...world.player.pos], yaw: world.player.yaw, pitch: world.player.pitch };
     for (const e of world.entities) this.entities.set(e.id, cloneEntity(e));
+    this.ensureYaw();
+  }
+
+  /** Older saves have no yaw on sprites: face the player, like a fresh spawn. */
+  ensureYaw(): void {
+    const p = this.player.pos;
+    for (const e of this.entities.values()) {
+      if (e.yaw === undefined) e.yaw = Math.round((Math.atan2(p[0] - e.pos[0], p[2] - e.pos[2]) * 180) / Math.PI);
+    }
   }
 
   get(id: string): Entity | undefined {
@@ -154,6 +163,7 @@ export class WorldModel {
     this.player.yaw = world.player.yaw;
     this.player.pitch = world.player.pitch;
     this.rev = Math.max(this.rev, world.rev);
+    this.ensureYaw();
   }
 }
 

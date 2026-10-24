@@ -29,8 +29,8 @@ export function witchHut(params: Partial<WitchHutParams>, _ctx: GenContext, deca
   b.box(0, 2.05, apothem, segW + 0.2, 0.2, 0.34, 'plank', '#3a2a2a', { rot: 0 });
   const door = b.decals('door');
   if (door?.file) {
-    const dw = 1.9 * (door.w / Math.max(1, door.h));
-    b.decal(segW / 2 - 0.2, 0.14, apothem + dw / 2 + 0.05, door, dw, 1.9, 90);
+    const dw = Math.min(segW - 0.5, 1.9 * (door.w / Math.max(1, door.h)));
+    b.decal(0, 0.14, apothem + 0.16, door, dw, 1.9, 0, { role: 'door' });
   }
   // round-ish windows on the front-left and front-right faces
   for (const i of [0, 2]) {

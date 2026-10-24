@@ -10,7 +10,9 @@ Open the hosted URL, enter the passcode once per device, and you get a fresh wor
 That link is the save file: open it on any device to continue, or share it. Type what should
 happen in the box ("water the flower", "a dragon flies in and breathes fire at the house", "make
 it huge" while looking at something). Desktop: click to look, WASD to walk, Shift to run, `/` to
-type. Phone: left thumb walks, right thumb looks, tap a thing to name it. The menu has Worlds (tap
+type. Phone: left thumb walks, right thumb looks, tap a thing to name it. Clicking or tapping a
+thing also pokes it: objects jiggle, animals and people turn to you and answer, and a building's
+door swings open or shut. The menu has Worlds (tap
 the title too), Undo, Reset and Copy link. Worlds lists every world you have opened on this device,
 starts a new one, and opens any world from its link or name; the bare site address reopens the
 world you used last. `?dev=1` opens a console that runs hand-written scripts.
@@ -20,6 +22,13 @@ person, third person and a free camera that flies with WASD, Space and C; cycle 
 angle (behind, high, bird, top: the last one is an overhead 2.5D view); and turn wall fading on or
 off. With fading on, any wall or roof between the camera and your character goes see-through, so
 you can follow yourself into a house.
+
+**Paper in the world.** Cutouts no longer turn to face the camera: each has a yaw in the world, so
+you can walk around one and see its edge. Things spawn facing you, walkers turn their paper along
+their path, and anything living turns, wanders a few steps around home, or fidgets on its own when
+no command is using it, favouring orientations you can see. Buildings can be changed in place
+("add a story to the house", "paint the cottage blue"): the model sets new generator parameters
+and the structure regenerates with the rest kept.
 
 **Village.** Worlds -> "+ New village" (or `?preset=village`) starts a meadow with one of each
 structure: three houses, a fenced yard, a gingerbread house, a witch's hut with a hat for a roof, a
@@ -86,7 +95,9 @@ signs) with a tinted crayon tile and an ink outline. No image generation is invo
 - Materials are drawn on a canvas at runtime (`src/client/render/materials.ts`) and tinted per
   part, so AI-drawn tiles can replace them later by name without touching the structures.
 - `node scripts/shots-village.mjs http://localhost:8787 out/` screenshots every structure in the
-  village from the front, plus third-person, top-down, wall-fade and indoor views.
+  village from the front, plus third-person, top-down, wall-fade and indoor views;
+  `scripts/shots-door.mjs` shows doors closed and poked open, and `scripts/shots-facing.mjs`
+  shows cutouts from the side and after a stretch of idle life.
 
 ## Sprites and vocabulary
 

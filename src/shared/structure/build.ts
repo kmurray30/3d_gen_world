@@ -77,7 +77,7 @@ export class Parts {
     const sprite = this.decals(word);
     if (!sprite?.file) return null;
     const w = h * (sprite.w / Math.max(1, sprite.h));
-    return this.decal(x, y, z, sprite, w, h, rot, extra);
+    return this.decal(x, y, z, sprite, w, h, rot, word === 'door' ? { role: 'door', ...extra } : extra);
   }
 
   /** A paper sign with text. */

@@ -51,7 +51,8 @@ export interface Entity {
   /** Seconds to live from creation; undefined = permanent. */
   ttl?: number;
   createdAt: number;
-  /** Structures only: rotation about y in degrees (the structure's front, +z local, turns this way). */
+  /** Rotation about y in degrees: the paper's face (or a structure's front, +z local) points this way. Sprites
+   *  keep this orientation in the world instead of turning to follow the camera. */
   yaw?: number;
   /** Built from parts instead of drawn: see shared/structure. */
   structure?: Structure;

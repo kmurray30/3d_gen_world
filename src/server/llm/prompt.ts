@@ -18,7 +18,7 @@ spawn  {op:"spawn", ref, word, at:PLACE, [alt:[words]], [face:"player"|id], [sca
 build  {op:"build", ref, word, at:PLACE, [gen], [params:{...}], [parts:[...]], [delay]}   a building with a chosen look. gen = "house"|"gingerbread"|"fence"|"yard"|"tower"|"lighthouse"|"witch_hut"|"bunker" (omit to pick from the word). params by gen: house {w, d (metres), stories 1-3, roof "gable"|"hip"|"flat", wallMat, roofMat ("plaster"|"brick"|"plank"|"stone"|"shingle"|"thatch"|"concrete"|"metal"), color, roofColor, trimColor, doorColor (colour names), chimney, sign:"TEXT"}; fence {length, style "picket"|"rail"|"stone"}; yard {w, d}; tower {r, h, cap "cone"|"battlements"|"flat", color}; lighthouse {h, color}; witch_hut {wallColor, hatColor}; bunker {levels}.
        For something no generator makes (a wizard tower with a crooked hat, a giant teapot house), give parts instead of gen: each part is {shape:"box"|"cylinder"|"cone"|"wedge"|"pyramid"|"stairs"|"dome", w, d, h, [r], [name], [mat], [color], [on:"<name of an earlier part>"], [at:"top"|"front"|"back"|"left"|"right"], [dx], [dz]}. Parts sit on top of (default) or beside the part they name; the first part stands on the ground. Never give coordinates.
 move   {op:"move", id, to:PLACE, [speed:"slow"|"walk"|"run"|"fly"|"instant"], [style:"walk"|"hop"|"slide"|"fly"], [face], [delay]}   living things walk/hop, birds fly, objects slide; "to" with rel "on" climbs onto the target
-set    {op:"set", id, [word (morph into another sprite)], [alt], [scale], [tilt:degrees], [face], [state:{flag:true/false}], [dur], [delay]}   growing = scale 1.5-3; transforming = word; tilt for pouring/bowing/leaning; state flags like on_fire, wet, frozen, asleep
+set    {op:"set", id, [word (morph into another sprite)], [alt], [scale], [tilt:degrees], [face], [state:{flag:true/false}], [params:{...} (buildings only: regenerate with changed parameters, e.g. stories, roof, color, wallMat, w, d)], [dur], [delay]}   growing = scale 1.5-3; transforming = word; tilt for pouring/bowing/leaning; state flags like on_fire, wet, frozen, asleep
 anim   {op:"anim", id, name:"hop"|"wobble"|"shake"|"spin"|"bounce"|"nod"|"fall_over"|"pulse", [times], [delay]}
 attach {op:"attach", id, to, [where:"top"|"held"], [delay]}   put something on top of / in the hands of another thing
 drop   {op:"drop", id, [delay]}   falls down (off whatever it sits on) and lands
@@ -39,6 +39,7 @@ RULES:
 - Use the vocabulary words below as "word" (they have drawings). Other words still work but show as a plain card, so prefer the closest vocabulary word and put other candidates in "alt".
 - Do not touch things the command does not involve. Do not spawn duplicates of things that already exist. Keep it physical and playful; add one small flourish (a hop, a bubble, sparkles) when it fits.
 - Scale only for "giant", "tiny", "grows", "shrinks": sizes are already realistic. Face "player" when something addresses the player.
+- Changing a building (add a storey, repaint it, new roof, make it wider): set with params on its id, giving only what changes; the world list shows a building's current parameters, so "add a story" means stories: current + 1 (max 3).
 - Buildings: spawn the building word (a plain "house" is fine); use build when the player asks for a colour, size, material or an unusual shape. Toys and miniatures (doll house, birdhouse) are cutouts, not buildings. The player can walk into buildings and onto roofs; "goes inside" means move to the building's front with dist close, then remove how fade.
 - If the command is impossible, unclear or empty, answer {"steps":[{"op":"say","text":"<one short line>"}]}.
 
@@ -63,6 +64,8 @@ world: (empty) | command: "it starts raining"
 {"steps":[{"op":"spawn","ref":"cloud","word":"cloud","at":{"rel":"above","of":"player","height":"sky"},"scale":2},{"op":"effect","name":"rain","at":{"rel":"near","of":"player"},"dur":8},{"op":"say","text":"Rain patters on the meadow."}]}
 world: man_1: man | command: "put a hat on him"
 {"steps":[{"op":"spawn","ref":"hat","word":"top hat","at":{"rel":"above","of":"man_1","height":"high"}},{"op":"drop","id":"hat"},{"op":"attach","id":"hat","to":"man_1","where":"top"},{"op":"anim","id":"man_1","name":"nod"}]}
+world: house_1: house (building house: stories 1, wallMat brick, roof gable) | command: "add a story to the house"
+{"steps":[{"op":"set","id":"house_1","params":{"stories":2}},{"op":"effect","name":"dust","id":"house_1","dur":1},{"op":"say","text":"Up it goes."}]}
 world: table_1: table | TARGET: table_1 | command: "make it huge"
 {"steps":[{"op":"set","id":"table_1","scale":3,"dur":1.5},{"op":"effect","name":"sparkle","id":"table_1","dur":1}]}
 world: knight_1: knight | command: "everything disappears"
@@ -113,6 +116,13 @@ function describe(e: CompactEntity, ctx: CompactWorld): string {
     .map(([k]) => k);
   if (flags.length) parts.push(flags.join(','));
   if (e.effects?.length) parts.push(e.effects.join(','));
+  if (e.structure) {
+    const shown = Object.entries(e.structure.params)
+      .filter(([k, v]) => (typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean') && !['random', 'label', 'parts', 'points'].includes(k))
+      .slice(0, 8)
+      .map(([k, v]) => `${k} ${typeof v === 'number' ? Math.round(v * 10) / 10 : v}`);
+    parts.push(`building ${e.structure.gen}${shown.length ? ': ' + shown.join(', ') : ''}`);
+  }
   return parts.join(' | ');
 }
 

@@ -3,6 +3,7 @@ import { StepSchema } from '../../shared/schema';
 import type { Kind } from '../../shared/types';
 import type { StructureResolver } from '../structures';
 import type { Vocab } from '../vocab';
+import type { Structure } from '../../shared/structure/types';
 
 export interface Validated {
   step?: ResolvedStep;
@@ -18,6 +19,8 @@ export class CommandValidator {
   private readonly refs = new Map<string, string>();
   private readonly known = new Set<string>();
   private readonly kinds = new Map<string, Kind>();
+  private readonly words = new Map<string, string>();
+  private readonly buildings = new Map<string, { gen: string; params: Record<string, unknown> }>();
 
   constructor(
     private readonly vocab: Vocab,
@@ -28,6 +31,8 @@ export class CommandValidator {
     for (const e of context.entities) {
       this.known.add(e.id);
       this.kinds.set(e.id, e.kind);
+      this.words.set(e.id, e.word);
+      if (e.structure) this.buildings.set(e.id, e.structure);
     }
   }
 
@@ -132,7 +137,20 @@ export class CommandValidator {
         }
         const res = a.word ? this.vocab.resolve(a.word, a.alt, this.kinds.get(id)) : undefined;
         if (res) this.kinds.set(id, res.kind);
-        return { ...a, id, res, face: this.face(a.face) };
+        let structure: Structure | undefined;
+        if (a.params) {
+          const info = this.buildings.get(id);
+          if (!info || !this.structures) errors.push(`"${a.id}" is not a building, so params were ignored`);
+          else {
+            const built = this.structures.forBuild(this.words.get(id) ?? 'house', info.gen, { ...info.params, ...a.params }, undefined);
+            if (built) {
+              structure = built.structure;
+              this.buildings.set(id, { gen: built.structure.gen, params: built.structure.params });
+            } else errors.push(`could not rebuild "${a.id}" with those parameters`);
+          }
+        }
+        const { params: _params, ...rest } = a;
+        return { ...rest, id, res, structure, face: this.face(a.face) };
       }
       case 'anim':
       case 'drop': {

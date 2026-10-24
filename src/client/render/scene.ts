@@ -4,6 +4,7 @@ import { worldPos } from '../../shared/engine/transform';
 import type { WorldModel } from '../../shared/engine/world';
 import { SpriteView, origamiKind } from './sprites';
 import { applyCrayon, crayonTexture, CRAYON_METRES } from './crayon';
+import { flipFor, lerpAngle, visibleYaw, yawAlong, yawFacing } from '../../shared/engine/facing';
 import { StructureView } from './structures';
 import { MaterialTiles } from './materials';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
@@ -203,8 +204,13 @@ export class SceneView {
       this.avatar.root.visible = false;
       return;
     }
-    if (faceDir) e.faceDir = faceDir;
     const pos: Vec3 = [player.pos[0], player.pos[1], player.pos[2]];
+    if (faceDir) {
+      e.faceDir = faceDir;
+      const want = visibleYaw(yawAlong(faceDir[0], faceDir[1]), pos, cam.pos, 0.6);
+      e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
+      e.flip = flipFor(e.yaw, faceDir[0], faceDir[1]);
+    } else if (e.yaw === undefined) e.yaw = yawFacing(pos, cam.pos);
     let sq = 1;
     if (moving) {
       this.avatarPhase += dt;
@@ -224,16 +230,10 @@ export class SceneView {
     for (const s of this.structures.values()) s.setFade(enabled, eye, targets);
   }
 
-  /** Mirror so the sprite "looks" toward its facing target in camera space. Sprites are assumed to face left by default. */
+  /** Mirror so the sprite looks toward its facing target along its own paper plane (art faces left by default). */
   private resolveFlip(e: Entity, pos: [number, number, number], byId: Map<string, Entity>, cam: PlayerState): boolean {
-    if (!e.facing) {
-      if (e.faceDir) {
-        const rx0 = Math.cos(cam.yaw);
-        const rz0 = -Math.sin(cam.yaw);
-        return e.faceDir[0] * rx0 + e.faceDir[1] * rz0 > 0;
-      }
-      return e.flip;
-    }
+    if (!e.facing) return e.flip;
+    const yaw = e.yaw ?? (cam.yaw * 180) / Math.PI;
     let tx: number;
     let tz: number;
     if (e.facing === 'player') {
@@ -243,11 +243,7 @@ export class SceneView {
       if (!t) return e.flip;
       [tx, , tz] = worldPos(t, (id) => byId.get(id));
     }
-    // Camera right vector in the ground plane.
-    const rx = Math.cos(cam.yaw);
-    const rz = -Math.sin(cam.yaw);
-    const side = (tx - pos[0]) * rx + (tz - pos[2]) * rz;
-    return side > 0;
+    return flipFor(yaw, tx - pos[0], tz - pos[2]);
   }
 
   render(cam: CameraPose): void {

@@ -85,7 +85,9 @@ export class SpriteView {
       const t = clamp01((down - 15 * DEG) / (50 * DEG));
       const follow = PITCH_FOLLOW + (1 - PITCH_FOLLOW) * t * t * (3 - 2 * t);
       const lean = down * follow;
-      this.pivot.rotation.set(0, camYaw, 0, 'YXZ');
+      // the paper keeps its own yaw in the world; only the lean (looking down) tracks the camera
+      const yaw = e.yaw === undefined ? camYaw : e.yaw * DEG;
+      this.pivot.rotation.set(0, yaw, 0, 'YXZ');
       this.pivot.position.y = hs / 2;
       this.body.position.y = 0;
       this.body.rotation.set(lean, 0, (e.tilt * Math.PI) / 180, 'YXZ');

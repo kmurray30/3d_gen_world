@@ -185,10 +185,20 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   }
 
   const desktop = new DesktopInput(canvas);
+  desktop.onLockedClick = () => {
+    const id = scene.pick(0, 0);
+    if (id) engine.poke(id);
+  };
+  desktop.onFreeClick = (x, y) => {
+    // poke whatever was clicked, then lock the pointer as before so the click also starts looking around
+    const id = scene.pick((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+    if (id) engine.poke(id);
+    return false;
+  };
   const touch = coarse ? new TouchInput(canvas, hudRoot) : null;
   if (!coarse) {
     hud.showLockOverlay(true);
-    hud.setHint('WASD to walk, Shift to run, Space to jump, / to type. V view, R angle, B walls');
+    hud.setHint('WASD to walk, Shift to run, Space to jump, click to poke things, / to type. V view, R angle, B walls');
     desktop.onLockChange = (locked) => hud.showLockOverlay(!locked && !document.activeElement?.matches('input'));
     desktop.onLockError = () => hud.toast('Could not capture the mouse. Click the scene again.', 'error');
     desktop.onRequestCommand = () => {
@@ -208,6 +218,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   if (touch) {
     touch.onTap = (x, y) => {
       const id = scene.pick((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+      if (id) engine.poke(id);
       const e = id ? engine.world.get(id) : undefined;
       targetId = e?.id;
       hud.setTarget(e ? e.label : null);
