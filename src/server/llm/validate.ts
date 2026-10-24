@@ -177,6 +177,7 @@ export class CommandValidator {
         return { ...a, id: id ?? undefined, at: at ?? undefined };
       }
       case 'wait':
+      case 'sky':
         return a;
       default:
         return null;

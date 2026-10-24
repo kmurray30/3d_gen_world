@@ -15,6 +15,7 @@ export class PlayerController {
   resolveCollisions?: (pos: Vec3) => number;
   /** Height of whatever the player stands on (0 = the meadow). */
   ground = 0;
+  private grounded = true;
   /** Pitch range in radians; the camera rig widens it for the overhead views. */
   pitchLimits: [number, number] = [-PITCH_LIMIT, PITCH_LIMIT];
 
@@ -46,7 +47,10 @@ export class PlayerController {
       s.pos[0] *= WORLD_RADIUS / r;
       s.pos[2] *= WORLD_RADIUS / r;
     }
+    const wasGrounded = this.grounded;
     this.ground = this.resolveCollisions?.(s.pos) ?? 0;
+    // walking down a slope or off a low step: keep the feet on the ground instead of hopping
+    if (wasGrounded && this.vy <= 0 && s.pos[1] > this.ground && s.pos[1] - this.ground < 0.6) s.pos[1] = this.ground;
     const onGround = s.pos[1] <= this.ground + 0.001 && this.vy <= 0;
     if (jump && onGround) this.vy = JUMP;
     if (s.pos[1] < this.ground && this.vy <= 0) {
@@ -58,6 +62,7 @@ export class PlayerController {
       s.pos[1] = Math.max(this.ground, s.pos[1] + this.vy * dt);
       if (s.pos[1] === this.ground) this.vy = 0;
     }
+    this.grounded = s.pos[1] <= this.ground + 0.001 && this.vy <= 0;
   }
 
   get moving(): boolean {

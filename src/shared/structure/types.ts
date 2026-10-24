@@ -22,6 +22,12 @@ interface PartBase {
   noInk?: boolean;
   /** Not solid: walked through, nothing lands on it (railings, hat brims that are just for looks). */
   ghost?: boolean;
+  /** Solid but not drawn: collision only (the wall that keeps you on a bridge between its railings). */
+  hidden?: boolean;
+  /** Lit from inside at night: windows, lanterns, the lighthouse lamp. */
+  glow?: boolean;
+  /** The lighthouse lamp: sweeps a beam at night. */
+  beacon?: boolean;
 }
 
 /** Axis-aligned box of w (x) by h (y) by d (z) before rotation. */

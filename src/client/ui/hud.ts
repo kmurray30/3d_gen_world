@@ -8,12 +8,14 @@ export interface HudHandlers {
   onView?: () => void;
   onAngle?: () => void;
   onWalls?: () => void;
+  onTime?: () => void;
 }
 
 export interface ViewLabels {
   view: string;
   angle: string;
   walls: string;
+  time: string;
 }
 
 /** DOM overlay: command bar, hint, top bar with menu, target label, toasts, desktop pointer-lock overlay. */
@@ -48,10 +50,11 @@ export class Hud {
         <button type="button" data-view="view" title="Switch between first person, third person and a free camera (V)"><span class="k">View</span><span class="v"></span></button>
         <button type="button" data-view="angle" title="Cycle the camera angle: behind, high, bird, top (R)"><span class="k">Angle</span><span class="v"></span></button>
         <button type="button" data-view="walls" title="Fade walls that hide you (B)"><span class="k">Walls</span><span class="v"></span></button>
+        <button type="button" data-view="time" title="Time of day: dawn, day, sunset, night (T)"><span class="k">Time</span><span class="v"></span></button>
       </div>
       <div class="target-label" hidden></div>
       <div class="toasts"></div>
-      <div class="lock-overlay" hidden><div class="card">Click to look around<br><small>WASD to walk, / to type</small></div></div>
+      <div class="lock-overlay" hidden><div class="card">Click to look around<br><small>WASD to walk, / to type, Tab frees the mouse</small></div></div>
       <div class="cmdbar">
         <div class="hint"></div>
         <form class="cmd" autocomplete="off">
@@ -105,6 +108,7 @@ export class Hud {
       if (act === 'view') handlers.onView?.();
       if (act === 'angle') handlers.onAngle?.();
       if (act === 'walls') handlers.onWalls?.();
+      if (act === 'time') handlers.onTime?.();
       (e.target as HTMLElement).closest('button')?.blur();
     });
     // Keep the command bar above the on-screen keyboard.

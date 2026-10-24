@@ -23,6 +23,8 @@ export interface MeshGroup {
   mat: MaterialName;
   color: string;
   mesh: MeshData;
+  /** Lit at night (windows, lamps). */
+  glow?: boolean;
   /** Set for decal quads: draw the sprite (or a text card) instead of a material tile. */
   decal?: { sprite: SpriteRef; text?: string };
 }
@@ -177,24 +179,24 @@ class StructureBuilder {
   readonly decals: MeshGroup[] = [];
 
   /** Small parts share a slot per material; big ones (`own` set) get a slot of their own. */
-  slot(mat: MaterialName, color: string, own?: string): SlotBuilder {
-    const key = `${mat}|${color}|${own ?? ''}`;
+  slot(mat: MaterialName, color: string, own?: string, glow = false): SlotBuilder {
+    const key = `${mat}|${color}|${own ?? ''}|${glow ? 'g' : ''}`;
     let s = this.slots.get(key);
     if (!s) {
       const builder = new SlotBuilder();
-      s = { group: { mat, color, mesh: builder.mesh }, builder };
+      s = { group: { mat, color, mesh: builder.mesh, ...(glow ? { glow } : {}) }, builder };
       this.slots.set(key, s);
     }
     return s.builder;
   }
 
   /** Add a face given in structure-local space (vertices counter-clockwise seen from outside). */
-  face(pts: V3[], mat: MaterialName, color: string, ink: boolean, own?: string): void {
+  face(pts: V3[], mat: MaterialName, color: string, ink: boolean, own?: string, glow = false): void {
     const n = polygonNormal(pts);
     if (!Number.isFinite(n[0]) || (n[0] === 0 && n[1] === 0 && n[2] === 0)) return;
     const lit = Math.max(0, dot(n, LIGHT));
     const shade = n[1] > 0.9 ? 1 : SHADE_MIN + (1 - SHADE_MIN) * (0.35 + 0.65 * lit);
-    this.slot(mat, color, own).polygon(pts, n, Math.min(1, shade));
+    this.slot(mat, color, own, glow || mat === 'glass').polygon(pts, n, Math.min(1, shade));
     if (!ink) return;
     for (let i = 0; i < pts.length; i++) this.edge(pts[i], pts[(i + 1) % pts.length], n);
   }
@@ -209,7 +211,7 @@ class StructureBuilder {
     else this.edges.set(key, { a, b, normals: [n] });
   }
 
-  decal(pts: V3[], sprite: SpriteRef, color: string, text?: string): void {
+  decal(pts: V3[], sprite: SpriteRef, color: string, text?: string, glow = false): void {
     const n = polygonNormal(pts);
     const b = new SlotBuilder();
     b.polygon(
@@ -223,7 +225,7 @@ class StructureBuilder {
         [0, 1],
       ],
     );
-    this.decals.push({ mat: 'flat', color, mesh: b.mesh, decal: { sprite, text } });
+    this.decals.push({ mat: 'flat', color, mesh: b.mesh, decal: { sprite, text }, ...(glow ? { glow } : {}) });
   }
 
   finish(): StructureMesh {
@@ -444,33 +446,35 @@ function orientOut(faces: V3[][], centre: V3): V3[][] {
 export function buildStructureMesh(s: Structure): StructureMesh {
   const b = new StructureBuilder();
   s.parts.forEach((part, i) => {
+    if (part.hidden) return;
     const place = placer(part);
     const ink = !part.noInk;
     const own = partSize(part) >= SPLIT_FROM_M ? `p${i}` : undefined;
+    const glow = !!part.glow;
     switch (part.t) {
       case 'box': {
         const c: V3 = [0, part.h / 2, 0];
-        for (const f of orientOut(boxFaces(part.w, part.h, part.d), c)) b.face(f.map(place), part.mat, part.color, ink, own);
+        for (const f of orientOut(boxFaces(part.w, part.h, part.d), c)) b.face(f.map(place), part.mat, part.color, ink, own, glow);
         break;
       }
       case 'prism': {
         const c: V3 = [0, part.h / 2, 0];
-        for (const f of orientOut(prismFaces(part), c)) b.face(f.map(place), part.mat, part.color, ink, own);
+        for (const f of orientOut(prismFaces(part), c)) b.face(f.map(place), part.mat, part.color, ink, own, glow);
         break;
       }
       case 'roof': {
         const c: V3 = [0, part.h / 3, part.style === 'shed' ? -part.d / 6 : 0];
         const { main, ends } = roofFaces(part);
-        for (const f of orientOut(main, c)) b.face(f.map(place), part.mat, part.color, ink, own);
-        for (const f of orientOut(ends, c)) b.face(f.map(place), part.endMat ?? part.mat, part.endColor ?? part.color, ink, own);
+        for (const f of orientOut(main, c)) b.face(f.map(place), part.mat, part.color, ink, own, glow);
+        for (const f of orientOut(ends, c)) b.face(f.map(place), part.endMat ?? part.mat, part.endColor ?? part.color, ink, own, glow);
         break;
       }
       case 'stairs': {
-        for (const f of stairsFaces(part)) b.face(f.map(place), part.mat, part.color, ink, own);
+        for (const f of stairsFaces(part)) b.face(f.map(place), part.mat, part.color, ink, own, glow);
         break;
       }
       case 'wall': {
-        for (const f of wallFaces(part)) b.face(f.map(place), part.mat, part.color, ink, own);
+        for (const f of wallFaces(part)) b.face(f.map(place), part.mat, part.color, ink, own, glow);
         break;
       }
       case 'decal': {
@@ -482,7 +486,7 @@ export function buildStructureMesh(s: Structure): StructureMesh {
           [x, part.h, e],
           [-x, part.h, e],
         ];
-        b.decal(pts.map(place), part.sprite, part.color, part.text);
+        b.decal(pts.map(place), part.sprite, part.color, part.text, glow || /window/.test(part.sprite.file ?? ''));
         break;
       }
     }

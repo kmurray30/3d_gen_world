@@ -67,7 +67,7 @@ export class WorldStore {
       /* ignore */
     }
     engine.on((ev) => {
-      if (['spawn', 'remove', 'morph', 'attach', 'stateChange', 'arrive', 'land', 'scriptDone'].includes(ev.type)) this.markDirty();
+      if (['spawn', 'remove', 'morph', 'attach', 'stateChange', 'arrive', 'land', 'scriptDone', 'sky'].includes(ev.type)) this.markDirty();
     });
     window.addEventListener('pagehide', () => void this.save(true, true));
     document.addEventListener('visibilitychange', () => {

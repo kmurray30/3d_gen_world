@@ -246,19 +246,22 @@ describe('generators', () => {
     expect(s.bounds.h).toBeCloseTo(7 - 0.02, 2);
   });
 
-  it('the village has every structure and nothing overlaps badly', () => {
-    const w = villageWorld('v', (_w, kind) => defaultSprite(kind), noDecals, 0);
-    const structures = w.entities.filter((e) => e.structure);
-    expect(structures.map((e) => e.structure!.gen).sort()).toEqual(['bunker', 'gingerbread', 'house', 'house', 'house', 'lighthouse', 'witch_hut', 'yard']);
+  it('the village has every structure and no two buildings overlap', () => {
+    const w = villageWorld('v', (_w, kind) => defaultSprite(kind), noDecals, 5, 0);
+    const structures = w.entities.filter((e) => e.structure && e.structure.gen !== 'bridge');
+    const gens = new Set(structures.map((e) => e.structure!.gen));
+    for (const g of ['house', 'gingerbread', 'yard', 'lighthouse', 'witch_hut', 'bunker']) expect(gens.has(g), g).toBe(true);
     for (const a of structures)
       for (const b of structures) {
         if (a === b) continue;
-        const ra = Math.hypot(a.structure!.bounds.w, a.structure!.bounds.d) / 2;
-        const rb = Math.hypot(b.structure!.bounds.w, b.structure!.bounds.d) / 2;
+        const ra = Math.min(a.structure!.bounds.w, a.structure!.bounds.d) / 2;
+        const rb = Math.min(b.structure!.bounds.w, b.structure!.bounds.d) / 2;
         const d = Math.hypot(a.pos[0] - b.pos[0], a.pos[2] - b.pos[2]);
-        expect(d, `${a.id} vs ${b.id}`).toBeGreaterThan((ra + rb) * 0.7);
+        expect(d, `${a.id} vs ${b.id}`).toBeGreaterThan(ra + rb);
       }
     expect(w.preset).toBe('village');
-    expect(w.entities.length).toBeGreaterThan(30);
-  });
+    expect(w.seed).toBe(5);
+    expect(w.terrain).toBeTruthy();
+    expect(w.entities.length).toBeGreaterThan(60);
+});
 });

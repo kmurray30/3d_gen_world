@@ -110,12 +110,13 @@ describe('structures in the engine', () => {
     expect(p.pos[1]).toBe(0);
   });
 
-  it('the village loads into the engine with a walkable origin', () => {
-    const world = villageWorld('v', (_w, kind) => defaultSprite(kind), noDecals, 0);
+  it('the village loads into the engine with the player standing on the plaza', () => {
+    const world = villageWorld('v', (_w, kind) => defaultSprite(kind), noDecals, 3, 0);
     const engine = new Engine(world, 1);
     engine.collidePlayer();
-    expect(engine.playerGround).toBe(0);
-    expect(engine.world.player.pos).toEqual([0, 0, 0]);
+    const p = engine.world.player.pos;
+    expect(engine.playerGround).toBeCloseTo(engine.world.ground(p[0], p[2]), 2);
+    expect(Math.abs(p[1] - engine.playerGround)).toBeLessThan(0.01);
     const snap = engine.snapshot();
     expect(snap.entities.find((e) => e.id === 'bunker_1')?.structure?.parts.length).toBeGreaterThan(20);
     expect(JSON.stringify(snap).length).toBeLessThan(200000);

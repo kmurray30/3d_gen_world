@@ -21,6 +21,14 @@ export class DesktopInput {
         this.onRequestCommand?.();
         return;
       }
+      if (e.code === 'Tab' || e.code === 'AltLeft' || e.code === 'AltRight') {
+        // give the mouse back without Esc (which some browsers also use to leave fullscreen)
+        if (this.locked) {
+          e.preventDefault();
+          document.exitPointerLock();
+        }
+        return;
+      }
       if (e.code === 'Space') {
         e.preventDefault();
         if (!this.keys.has('Space')) this.jumpQueued = true;

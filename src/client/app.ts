@@ -1,4 +1,5 @@
-import type { World } from '../shared/types';
+import type { TimeOfDay, World } from '../shared/types';
+import { TIMES_OF_DAY } from '../shared/types';
 import { Engine } from '../shared/engine/index';
 import { resolveStepsLocally } from '../shared/engine/resolve-local';
 import { DevConsole } from './ui/dev-console';
@@ -35,6 +36,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     onView: () => cycleView(),
     onAngle: () => cycleAngle(),
     onWalls: () => toggleWalls(),
+    onTime: () => cycleTime(),
   });
   let worldsPanel: WorldsPanel | undefined;
   const config: ClientConfig = await fetchConfig().catch(() => ({ spriteVersion: 'dev', llm: 'offline', needsPasscode: false, authed: true }));
@@ -89,14 +91,25 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
 
   /* ----- view: camera modes, angles, wall fading ----- */
   const rig = new CameraRig();
+  rig.ground = (x, z) => engine.world.ground(x, z);
   const settings = loadViewSettings();
   rig.setAngle(settings.angle, engine.world.player);
   rig.setMode(settings.mode, engine.world.player);
   scene.fadeWalls = settings.fade;
   const refreshViewLabels = () => {
-    hud.setViewLabels({ view: VIEW_NAMES[rig.mode], angle: rig.mode === 'third' ? ANGLES[rig.angle].name : '-', walls: scene.fadeWalls ? 'fade' : 'solid' });
+    hud.setViewLabels({ view: VIEW_NAMES[rig.mode], angle: rig.mode === 'third' ? ANGLES[rig.angle].name : '-', walls: scene.fadeWalls ? 'fade' : 'solid', time: engine.world.sky });
     saveViewSettings({ mode: rig.mode, angle: rig.angle, fade: scene.fadeWalls });
   };
+  /** Time of day lives in the world (saved and shared with the link); the button and T cycle it. */
+  const cycleTime = () => {
+    const order: TimeOfDay[] = ['day', 'sunset', 'night', 'dawn'];
+    const next = order[(order.indexOf(engine.world.sky) + 1) % order.length];
+    engine.world.sky = next;
+    store.markDirty();
+    hud.toast(next === 'night' ? 'Night falls. Lamps and windows light up.' : `It is ${next === 'day' ? 'daytime' : next}.`, 'info', 1800);
+    refreshViewLabels();
+  };
+  void TIMES_OF_DAY;
   const cycleView = () => {
     const mode = rig.cycleMode(engine.world.player);
     hud.toast(mode === 'first' ? 'First person.' : mode === 'third' ? 'Third person. R cycles the angle.' : 'Free camera: fly with WASD, Space up, C down. V to return.', 'info', 2500);
@@ -177,6 +190,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     else if (ev.type === 'effect') scene.effects.start(ev.key, ev.name, { entityId: ev.id, pos: ev.pos, dur: ev.dur, loop: ev.loop });
     else if (ev.type === 'effectStop') scene.effects.stop(ev.key);
     else if (ev.type === 'remove') scene.effects.stopEntity(ev.id);
+    else if (ev.type === 'sky') refreshViewLabels();
   });
   if (new URLSearchParams(location.search).get('dev') === '1') {
     new DevConsole(hudRoot, (steps: Step[]) =>
@@ -188,7 +202,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   const touch = coarse ? new TouchInput(canvas, hudRoot) : null;
   if (!coarse) {
     hud.showLockOverlay(true);
-    hud.setHint('WASD to walk, Shift to run, Space to jump, / to type. V view, R angle, B walls');
+    hud.setHint('WASD walk, Shift run, Space jump, / type, Tab frees the mouse. V view, R angle, B walls, T time');
     desktop.onLockChange = (locked) => hud.showLockOverlay(!locked && !document.activeElement?.matches('input'));
     desktop.onLockError = () => hud.toast('Could not capture the mouse. Click the scene again.', 'error');
     desktop.onRequestCommand = () => {
@@ -199,6 +213,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       if (code === 'KeyV') cycleView();
       else if (code === 'KeyR') cycleAngle();
       else if (code === 'KeyB') toggleWalls();
+      else if (code === 'KeyT') cycleTime();
     };
     hud.input.addEventListener('blur', () => hud.showLockOverlay(!desktop.locked));
   } else {
@@ -216,7 +231,8 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
 
   let last = performance.now();
   let paused = false;
-  let faceDir: [number, number] | null = null;
+  let faceRight = false;
+  scene.sky.set(engine.world.sky, true);
   document.addEventListener('visibilitychange', () => {
     paused = document.hidden;
     last = performance.now();
@@ -239,15 +255,19 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       player.update(dt, move, look, sens, desktop.sprint, desktop.consumeJump());
       const dx = p.pos[0] - before[0];
       const dz = p.pos[2] - before[1];
-      if (Math.hypot(dx, dz) > 1e-4) {
+      const len = Math.hypot(dx, dz);
+      if (len > 1e-4) {
         moving = true;
-        faceDir = [dx, dz];
+        // face the way the walk goes across the screen; straight toward or away from the camera keeps the last facing
+        const across = (dx * Math.cos(rig.pose.yaw) - dz * Math.sin(rig.pose.yaw)) / len;
+        if (across > 0.3) faceRight = true;
+        else if (across < -0.3) faceRight = false;
       }
     } else {
       desktop.consumeJump();
       engine.collidePlayer();
     }
-    const cam = rig.update(dt, p, rig.drivesPlayer ? [0, 0] : look, sens, { move, up: desktop.upAxis, fast: desktop.sprint });
+    const cam = rig.update(dt, p, look, sens, { move, up: desktop.upAxis, fast: desktop.sprint });
     if (!coarse) {
       const id = desktop.locked ? scene.pick(0, 0) : null;
       const e = id ? engine.world.get(id) : undefined;
@@ -256,10 +276,15 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     }
     engine.update(dt);
     store.tick();
+    if (scene.sky.time !== engine.world.sky) {
+      scene.sky.set(engine.world.sky);
+      refreshViewLabels();
+    }
+    scene.setTerrain(engine.world.terrain);
     scene.sync(engine.world, dt, cam);
-    scene.updateAvatar(p, rig.showsAvatar, moving, faceDir, cam, dt);
+    scene.updateAvatar(p, rig.showsAvatar, moving, faceRight, cam, dt);
     scene.updateFades(cam, p, rig.mode !== 'first');
-    scene.render(cam);
+    scene.render(cam, dt);
   };
   requestAnimationFrame(loop);
   window.__game = { world, engine, scene, player, store, camera: rig };

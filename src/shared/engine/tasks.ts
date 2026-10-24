@@ -2,7 +2,7 @@ import type { Entity, Vec3 } from '../types';
 import type { AnimAction, EffectAction, MoveAction, RemoveAction, ResolvedAction, ResolvedBuild, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
 import { DEG, clamp, dir2, easeIn, easeInOut, easeOut, easeOutBack, lerp } from './math';
 import { footprintRadius, renderHeight, massClassFor } from './sizing';
-import { resolveOverlap, resolvePlace, stopAtEdge, supportAt } from './place';
+import { resolveOverlap, resolvePlace, stopAtEdge, supportAt, walkSurfaceAt } from './place';
 import type { Channel, Script, Task } from './scheduler';
 import type { Engine } from './index';
 
@@ -144,6 +144,8 @@ class MoveTask extends BaseTask {
   private chase?: Entity;
   private attachOnArrive = false;
   private readonly rSelf: number = 0;
+  /** Follows the ground (and bridges, patios) while moving instead of sliding in a straight line through hills. */
+  private groundWalk = false;
   constructor(
     private readonly action: MoveAction,
     private readonly engine: Engine,
@@ -174,7 +176,9 @@ class MoveTask extends BaseTask {
       this.dest = p.pos;
       if (to.of === 'player' && to.rel === 'at') this.dest = stopAtEdge(e.pos, [this.engine.world.player.pos[0], 0, this.engine.world.player.pos[2]], 0.35, footprintRadius(e), 0.3);
     }
-    if (to.height !== 'ground' && !this.chase) this.dest[1] = this.dest[1];
+    const w = this.engine.world;
+    this.groundWalk = this.style !== 'fly' && to.height === 'ground' && Math.abs(e.pos[1] - walkSurfaceAt(w, e.pos[0], e.pos[2], e.pos[1] + 0.6)) < 0.3;
+    if (this.groundWalk && !this.attachOnArrive) this.dest[1] = walkSurfaceAt(w, this.dest[0], this.dest[2], this.dest[1] + 0.6);
     if (this.speed === Infinity) {
       e.pos = [...this.dest];
       this.finish();
@@ -187,7 +191,9 @@ class MoveTask extends BaseTask {
     const tp = this.engine.world.worldPos(t);
     const pad = this.action.to.dist === 'close' ? 0.6 : this.action.to.dist === 'near' ? 1.5 : 0.1;
     const d = stopAtEdge(this.e.pos, tp, footprintRadius(t), footprintRadius(this.e), pad);
-    d[1] = this.e.pos[1] > 0.05 && this.action.to.height === 'ground' ? 0 : this.action.to.height === 'ground' ? 0 : this.e.pos[1];
+    const w = this.engine.world;
+    if (this.action.to.height !== 'ground') d[1] = this.e.pos[1];
+    else d[1] = this.groundWalk ? walkSurfaceAt(w, d[0], d[2], this.e.pos[1] + 0.6) : w.ground(d[0], d[2]);
     return d;
   }
   update(dt: number): boolean {
@@ -216,8 +222,9 @@ class MoveTask extends BaseTask {
     }
     e.pos[0] += (dx / dist) * step;
     e.pos[2] += (dz / dist) * step;
+    if (this.groundWalk) e.pos[1] = walkSurfaceAt(w, e.pos[0], e.pos[2], e.pos[1] + 0.6);
     // vertical: move toward the destination height proportionally to horizontal progress
-    e.pos[1] += dy * Math.min(1, step / dist);
+    else e.pos[1] += dy * Math.min(1, step / dist);
     const tr = w.trans(e.id);
     this.phase += dt;
     const h = renderHeight(e);
@@ -236,11 +243,12 @@ class MoveTask extends BaseTask {
     const tr = this.engine.world.trans(e.id);
     tr.ofs[1] = 0;
     tr.sq = 1;
-    if (this.attachOnArrive && this.chase && this.engine.world.has(this.chase.id)) {
-      this.engine.world.attach(e.id, this.chase.id, 'top');
-    } else if (e.pos[1] <= 0.05) {
-      e.pos[1] = 0;
-      resolveOverlap(this.engine.world, e, this.engine.rng);
+    const w = this.engine.world;
+    if (this.attachOnArrive && this.chase && w.has(this.chase.id)) {
+      w.attach(e.id, this.chase.id, 'top');
+    } else if (w.heightAboveGround(e) <= 0.05) {
+      e.pos[1] = w.ground(e.pos[0], e.pos[2]);
+      resolveOverlap(w, e, this.engine.rng);
     }
     if (this.action.face) e.facing = this.action.face;
     this.engine.emit({ type: 'arrive', id: e.id, target: this.chase?.id ?? (this.action.to.of === 'player' ? 'player' : undefined) });
@@ -634,6 +642,22 @@ export function makeTasks(action: ResolvedAction, _script: Script, engine: Engin
       return [effectTask(action, engine)];
     case 'wait':
       return [new WaitTask(action.dur)];
+    case 'sky':
+      return [
+        new Tween(
+          undefined,
+          undefined,
+          0,
+          () => undefined,
+          () => {
+            engine.world.sky = action.time;
+            engine.emit({ type: 'sky', time: action.time });
+            return true;
+          },
+          undefined,
+          action.delay ?? 0,
+        ),
+      ];
     default:
       return [];
   }

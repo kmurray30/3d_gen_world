@@ -13,10 +13,13 @@ test('village preset: structures load, views cycle, walls fade, the player walks
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await enterVillage(page);
-  const gens = await page.evaluate(() => (window as any).__game.engine.world.list().filter((e: any) => e.structure).map((e: any) => e.structure.gen).sort());
-  expect(gens).toEqual(['bunker', 'gingerbread', 'house', 'house', 'house', 'lighthouse', 'witch_hut', 'yard']);
-  // structures are drawn with their own views
-  await page.waitForFunction(() => (window as any).__game.scene.structures.size === 8);
+  const gens: string[] = await page.evaluate(() => (window as any).__game.engine.world.list().filter((e: any) => e.structure).map((e: any) => e.structure.gen));
+  for (const g of ['bunker', 'gingerbread', 'house', 'lighthouse', 'witch_hut', 'yard', 'bridge']) expect(gens).toContain(g);
+  const nStructures = gens.length;
+  // structures are drawn with their own views, and the world has terrain with water
+  await page.waitForFunction((n) => (window as any).__game.scene.structures.size === n, nStructures);
+  expect(await page.evaluate(() => !!(window as any).__game.engine.world.terrain)).toBe(true);
+  expect(await page.evaluate(() => !!(window as any).__game.scene.scene.getObjectByName('water'))).toBe(true);
 
   // view toolbar: first -> third -> free -> first; angle cycles in third person; walls toggle
   await page.click('button[data-view=view]');
@@ -85,21 +88,47 @@ test('village preset: structures load, views cycle, walls fade, the player walks
     expect(stillInside).toBe(true);
 
     // on the bunker's first patio the ground is raised
-    await page.evaluate(() => {
+    const bunkerBase = await page.evaluate(() => {
       const g = (window as any).__game;
       const b = g.engine.world.get('bunker_1');
-      g.engine.world.player.pos = [b.pos[0], 3.4, b.pos[2]];
+      g.engine.world.player.pos = [b.pos[0], b.pos[1] + 3.4, b.pos[2]];
+      return b.pos[1];
     });
-    await page.waitForTimeout(300);
-    expect(await page.evaluate(() => (window as any).__game.engine.playerGround)).toBeGreaterThan(3);
+    await page.waitForFunction((base) => (window as any).__game.engine.playerGround > base + 3, bunkerBase, { timeout: 8000 }).catch(() => undefined);
+    expect(await page.evaluate(() => (window as any).__game.engine.playerGround)).toBeGreaterThan(bunkerBase + 3);
   }
 
   // a mock command that builds a custom structure streams a build step and the scene shows it
   await page.fill('.cmd input', 'build a wizard tower with a crooked hat');
   await page.press('.cmd input', 'Enter');
-  await page.waitForFunction(() => (window as any).__game.scene.structures.size === 9, null, { timeout: 20000 });
+  await page.waitForFunction((n) => (window as any).__game.scene.structures.size === n + 1, nStructures, { timeout: 20000 });
   await page.waitForFunction(() => !(window as any).__game.engine.busy, null, { timeout: 20000 });
   const tower = await page.evaluate(() => (window as any).__game.engine.world.list().find((e: any) => e.structure?.gen === 'custom'));
   expect(tower.scale).toBeCloseTo(1, 2);
+
+  // time of day: the button cycles it, a command can set it, and it is saved with the world
+  await page.click('button[data-view=time]');
+  await expect(page.locator('button[data-view=time] .v')).toHaveText('sunset');
+  await page.fill('.cmd input', 'it gets dark');
+  await page.press('.cmd input', 'Enter');
+  await page.waitForFunction(() => (window as any).__game.engine.world.sky === 'night', null, { timeout: 20000 });
+  await expect(page.locator('button[data-view=time] .v')).toHaveText('night');
+  // wait for the save to reach the server before reloading
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          const g = (window as any).__game;
+          const r = await fetch(`/api/worlds/${g.engine.world.slug}`);
+          return ((await r.json()) as { world: { sky?: string } }).world.sky;
+        }),
+      { timeout: 20000, intervals: [500] },
+    )
+    .toBe('night');
+  await page.reload();
+  await page.waitForFunction(() => !!(window as any).__game);
+  expect(await page.evaluate(() => (window as any).__game.engine.world.sky)).toBe('night');
+  expect(await page.evaluate(() => (window as any).__game.engine.world.preset)).toBe('village');
+  expect(await page.evaluate(() => !!(window as any).__game.engine.world.terrain)).toBe(true);
   expect(errors).toEqual([]);
 });

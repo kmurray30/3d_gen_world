@@ -110,7 +110,7 @@ export function lighthouse(params: Partial<LighthouseParams>, ctx: GenContext, d
   // lantern room, lamp, cap
   const lr = rTop + 0.15;
   b.prism(0, gy + 0.3, 0, 8, lr, 2.3, 'glass', '#d6f0ff');
-  b.prism(0, gy + 0.5, 0, 8, lr * 0.4, 1.3, 'flat', '#ffe066', { noInk: true });
+  b.prism(0, gy + 0.5, 0, 8, lr * 0.4, 1.3, 'flat', '#ffe066', { noInk: true, glow: true, beacon: true });
   b.prism(0, gy + 2.6, 0, 8, lr + 0.35, 1.5, 'metal', p.bandColor, { rTop: 0 });
   b.prism(0, gy + 4.05, 0, 6, 0.08, 0.7, 'flat', '#3a3a3a', { noInk: true });
   if (p.cottage) {

@@ -2,12 +2,16 @@ import * as THREE from 'three';
 import type { Entity, PlayerState, SpriteRef, Vec3 } from '../../shared/types';
 import { worldPos } from '../../shared/engine/transform';
 import type { WorldModel } from '../../shared/engine/world';
-import { SpriteView } from './sprites';
+import { SpriteView, type GroundView } from './sprites';
 import { StructureView } from './structures';
 import { MaterialTiles } from './materials';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
 import { ParticleSystem, shapeOfEntity } from './effects';
 import { BubbleLayer } from './labels';
+import { TerrainView } from './terrain';
+import { SkyView, haloTexture } from './sky';
+import { tinted } from './tint';
+import type { TerrainField } from '../../shared/terrain/field';
 import type { CameraPose } from '../app/camera';
 
 export const SKY_TOP = '#6db3ff';
@@ -39,6 +43,11 @@ export class SceneView {
   private avatarEntity: Entity | null = null;
   private avatarPhase = 0;
   private lastCam: CameraPose = { pos: [0, 1.6, 0], yaw: 0, pitch: 0 };
+  readonly sky: SkyView;
+  private readonly haloTex = haloTexture();
+  private readonly flatGround: THREE.Mesh;
+  private terrain: TerrainView | null = null;
+  private groundView: GroundView | undefined;
 
   constructor(
     public readonly canvas: HTMLCanvasElement,
@@ -63,10 +72,12 @@ export class SceneView {
 
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ map: makeGroundTexture() }),
+      tinted(new THREE.MeshBasicMaterial({ map: makeGroundTexture() })),
     );
     ground.name = 'ground';
     this.scene.add(ground);
+    this.flatGround = ground;
+    this.sky = new SkyView(this.scene, canvas.parentElement ?? document.body);
     this.effects = new ParticleSystem(this.scene);
     this.bubbles = new BubbleLayer(hudRoot ?? document.body);
 
@@ -84,6 +95,23 @@ export class SceneView {
     this.camera.updateProjectionMatrix();
     const pr = this.renderer.getPixelRatio();
     for (const s of this.structures.values()) s.setResolution(w * pr, h * pr);
+  }
+
+  /** Show this world's terrain (or the flat meadow when null). Cheap to call every frame: rebuilds only on change. */
+  setTerrain(field: TerrainField | null): void {
+    if ((this.terrain?.field ?? null) === field) return;
+    if (this.terrain) {
+      this.scene.remove(this.terrain.group);
+      this.terrain.dispose();
+      this.terrain = null;
+    }
+    this.flatGround.visible = !field;
+    this.groundView = undefined;
+    if (field) {
+      this.terrain = new TerrainView(field, this.coarse);
+      this.scene.add(this.terrain.group);
+      this.groundView = { height: (x, z) => field.height(x, z), normal: (x, z) => field.normal(x, z) };
+    }
   }
 
   /** The player's own cutout, shown in third person and free camera. */
@@ -113,7 +141,7 @@ export class SceneView {
       huge: false,
       createdAt: 0,
     };
-    this.avatar = new SpriteView('player', this.shadowTex);
+    this.avatar = new SpriteView('player', this.shadowTex, this.haloTex);
     this.scene.add(this.avatar.root);
   }
 
@@ -155,7 +183,7 @@ export class SceneView {
       }
       let view = this.views.get(e.id);
       if (!view) {
-        view = new SpriteView(e.id, this.shadowTex);
+        view = new SpriteView(e.id, this.shadowTex, this.haloTex);
         this.views.set(e.id, view);
         this.scene.add(view.root);
       }
@@ -164,8 +192,9 @@ export class SceneView {
       const phase = hashPhase(e.id);
       if (living) sq *= 1 + 0.015 * Math.sin(this.clock * 2.2 + phase);
       if (living && pos[1] > 0.3 && !e.parent) pos[1] += 0.08 * Math.sin(this.clock * 1.8 + phase);
-      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, camState), sq);
+      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, camState, view.lastFlip), sq, this.groundView);
     }
+    this.terrain?.update(dt);
     this.effects.syncPersistent(model);
     this.effects.update(dt, (id) => shapeOfEntity(model, id), this.camera);
     this.bubbles.update(this.camera, model, w, h);
@@ -186,10 +215,11 @@ export class SceneView {
   }
 
   /**
-   * Draw the avatar at the player's feet (or hide it in first person). `moving` adds the walk bob; `faceDir` is the
-   * ground direction the player last walked in.
+   * Draw the avatar at the player's feet (or hide it in first person). `moving` adds the walk bob; `faceRight` is
+   * decided on screen by the caller (which way the player last walked across the view), so turning the camera never
+   * flips the character.
    */
-  updateAvatar(player: PlayerState, visible: boolean, moving: boolean, faceDir: [number, number] | null, cam: CameraPose, dt: number): void {
+  updateAvatar(player: PlayerState, visible: boolean, moving: boolean, faceRight: boolean, cam: CameraPose, dt: number): void {
     if (!this.avatar || !this.avatarEntity) return;
     const e = this.avatarEntity;
     e.hidden = !visible;
@@ -197,7 +227,6 @@ export class SceneView {
       this.avatar.root.visible = false;
       return;
     }
-    if (faceDir) e.faceDir = faceDir;
     const pos: Vec3 = [player.pos[0], player.pos[1], player.pos[2]];
     let sq = 1;
     if (moving) {
@@ -205,8 +234,7 @@ export class SceneView {
       pos[1] += Math.abs(Math.sin(this.avatarPhase * 9)) * 0.06;
       sq = 1 + Math.sin(this.avatarPhase * 18) * 0.02;
     }
-    const camState: PlayerState = { pos: cam.pos, yaw: cam.yaw, pitch: cam.pitch };
-    this.avatar.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, new Map(), camState), sq);
+    this.avatar.update(e, pos, cam.yaw, cam.pitch, this.textures, faceRight, sq, this.groundView);
   }
 
   /** Fade structures between the eye and the avatar (feet, chest, head); nothing fades in first person. */
@@ -219,12 +247,15 @@ export class SceneView {
   }
 
   /** Mirror so the sprite "looks" toward its facing target in camera space. Sprites are assumed to face left by default. */
-  private resolveFlip(e: Entity, pos: [number, number, number], byId: Map<string, Entity>, cam: PlayerState): boolean {
+  private resolveFlip(e: Entity, pos: [number, number, number], byId: Map<string, Entity>, cam: PlayerState, prev: boolean): boolean {
     if (!e.facing) {
       if (e.faceDir) {
         const rx0 = Math.cos(cam.yaw);
         const rz0 = -Math.sin(cam.yaw);
-        return e.faceDir[0] * rx0 + e.faceDir[1] * rz0 > 0;
+        const side = (e.faceDir[0] * rx0 + e.faceDir[1] * rz0) / (Math.hypot(e.faceDir[0], e.faceDir[1]) || 1);
+        // heading mostly toward or away from the camera: keep facing the way it was
+        if (Math.abs(side) < 0.3) return prev;
+        return side > 0;
       }
       return e.flip;
     }
@@ -244,11 +275,12 @@ export class SceneView {
     return side > 0;
   }
 
-  render(cam: CameraPose): void {
+  render(cam: CameraPose, dt = 0): void {
     const k = this.effects.shake;
     const sx = k ? (Math.random() - 0.5) * k * 0.14 : 0;
     const sy = k ? (Math.random() - 0.5) * k * 0.1 : 0;
     this.camera.position.set(cam.pos[0] + sx, cam.pos[1] + sy, cam.pos[2]);
+    this.sky.update(dt, this.camera.position);
     this.camera.rotation.set(cam.pitch, cam.yaw, k ? (Math.random() - 0.5) * k * 0.02 : 0, 'YXZ');
     this.renderer.render(this.scene, this.camera);
   }

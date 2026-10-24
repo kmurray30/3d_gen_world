@@ -45,8 +45,8 @@ export function resolvePlayerCollisions(world: WorldModel, pos: Vec3): Bump[] {
 }
 
 /** Walls push the player out; patios, stairs and roofs within a step become the ground under them. */
-export function resolvePlayerVsStructures(world: WorldModel, pos: Vec3): BodyContact {
-  let support = 0;
+export function resolvePlayerVsStructures(world: WorldModel, pos: Vec3, ground = 0): BodyContact {
+  let support = ground;
   let blocked = false;
   for (const e of world.entities.values()) {
     if (!e.structure || e.hidden) continue;

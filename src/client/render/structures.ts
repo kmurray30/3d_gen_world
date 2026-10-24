@@ -13,6 +13,7 @@ import { buildStructureMesh, type MeshGroup } from '../../shared/structure/geome
 import type { Structure } from '../../shared/structure/types';
 import { MaterialTiles } from './materials';
 import type { TextureStore } from './textures';
+import { LIGHT, tinted } from './tint';
 
 const INK = '#2b2b2b';
 const INK_WIDTH_M = 0.045;
@@ -41,6 +42,8 @@ export class StructureView {
   private built: Structure | null = null;
   private fadeAll = 1;
   private readonly bounds = new THREE.Box3();
+  /** The lighthouse's sweeping beam, when this structure has a beacon. */
+  private beam: THREE.Group | null = null;
 
   constructor(
     public readonly id: string,
@@ -73,6 +76,20 @@ export class StructureView {
     }
     this.bounds.makeEmpty();
     for (const p of this.pieces) this.bounds.union(p.box);
+    const lamp = s.parts.find((p) => p.beacon);
+    if (lamp && lamp.t === 'prism') {
+      this.beam = new THREE.Group();
+      this.beam.position.set(lamp.pos[0], lamp.pos[1] + lamp.h * 0.55, lamp.pos[2]);
+      const geo = new THREE.ConeGeometry(4.5, 34, 20, 1, true).translate(0, -17, 0).rotateZ(Math.PI / 2);
+      const mat = new THREE.MeshBasicMaterial({ color: '#fff1b8', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+      for (const turn of [0, Math.PI]) {
+        const cone = new THREE.Mesh(geo, mat);
+        cone.rotation.y = turn;
+        this.beam.add(cone);
+      }
+      this.beam.renderOrder = 3;
+      this.root.add(this.beam);
+    }
   }
 
   private addGroup(g: MeshGroup): void {
@@ -85,7 +102,7 @@ export class StructureView {
     geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
     geo.setIndex(g.mesh.idx);
     geo.computeBoundingBox();
-    const mat = new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.FrontSide });
+    const mat = tinted(new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.FrontSide }), !!g.glow);
     if (g.decal) {
       mat.transparent = true;
       mat.alphaTest = 0.4;
@@ -150,6 +167,13 @@ export class StructureView {
       this.lineMat.transparent = true;
     }
     this.fadeAll = base;
+    if (this.beam) {
+      const glow = LIGHT.glow.value;
+      this.beam.visible = glow > 0.05 && !e.hidden;
+      this.beam.rotation.y += dt * 0.7;
+      const mat = (this.beam.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      mat.opacity = 0.16 * glow;
+    }
   }
 
   /**
@@ -184,6 +208,13 @@ export class StructureView {
       p.mat.dispose();
     }
     this.pieces.length = 0;
+    if (this.beam) {
+      this.root.remove(this.beam);
+      const cone = this.beam.children[0] as THREE.Mesh;
+      cone.geometry.dispose();
+      (cone.material as THREE.Material).dispose();
+      this.beam = null;
+    }
     if (this.lines) {
       this.root.remove(this.lines);
       this.lines.geometry.dispose();

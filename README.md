@@ -15,15 +15,19 @@ the title too), Undo, Reset and Copy link. Worlds lists every world you have ope
 starts a new one, and opens any world from its link or name; the bare site address reopens the
 world you used last. `?dev=1` opens a console that runs hand-written scripts.
 
-**Views.** The buttons at the top right (or `V`, `R`, `B` on a keyboard) switch between first
+**Views.** The buttons at the top right (or `V`, `R`, `B`, `T` on a keyboard) switch between first
 person, third person and a free camera that flies with WASD, Space and C; cycle the third-person
-angle (behind, high, bird, top: the last one is an overhead 2.5D view); and turn wall fading on or
-off. With fading on, any wall or roof between the camera and your character goes see-through, so
-you can follow yourself into a house.
+angle (behind, high, bird, top: the last one is an overhead 2.5D view); turn wall fading on or off;
+and change the time of day (dawn, day, sunset, night). With fading on, any wall or roof between the
+camera and your character goes see-through, so you can follow yourself into a house. At night the
+lamps, windows and the lighthouse light up. `Tab` (or `Alt`) frees the mouse without `Esc`; click
+the scene to look around again.
 
-**Village.** Worlds -> "+ New village" (or `?preset=village`) starts a meadow with one of each
-structure: three houses, a fenced yard, a gingerbread house, a witch's hut with a hat for a roof, a
-lighthouse and a three-level bunker with outside stairs you can climb. Reset brings the village back.
+**Village.** Worlds -> "+ New village" (or `?preset=village`) generates a new village from a random
+seed: rolling hills, a river with a bridge where the road crosses it, a lake with a lighthouse on its
+shore, sometimes a duck pond, a plaza with a fountain, roads out of it lined with houses that face
+them, a fenced garden, a gingerbread house, a bunker on the highest hill, a witch's hut deep in the
+woods at the end of a winding path, trees, lamps and villagers. Reset rebuilds the same village.
 
 ## Run locally
 
@@ -85,8 +89,25 @@ signs) with a tinted crayon tile and an ink outline. No image generation is invo
   keyword heuristic; a yes builds a random house with a sign, a no shows the usual card.
 - Materials are drawn on a canvas at runtime (`src/client/render/materials.ts`) and tinted per
   part, so AI-drawn tiles can replace them later by name without touching the structures.
-- `node scripts/shots-village.mjs http://localhost:8787 out/` screenshots every structure in the
-  village from the front, plus third-person, top-down, wall-fade and indoor views.
+- `node scripts/shots-village.mjs http://localhost:8787 out/` screenshots a generated village: an
+  overview, each special structure, third-person and top-down views, sunset and night.
+
+## Terrain, water and villages
+
+- `src/shared/terrain/field.ts`: a world's terrain is a saved recipe (`world.terrain`): seeded hills,
+  a rim of hills round the valley, roads and building pads that flatten the ground, rivers and ponds
+  carved below one water level. It is baked into a height grid that the engine (placing, walking,
+  landing), the player and the renderer all share, interpolated over the same triangles the mesh
+  draws. Worlds without a recipe are the flat meadow.
+- `src/shared/village.ts`: one seed decides a whole village, in an order where each step respects
+  the ones before it (river and lake, plaza, roads, lots facing the roads, the special buildings in
+  fitting spots, bridges at crossings, door paths, trees, lamps, people).
+- Structures built on slopes stand on a stone foundation with steps up to the door; fences follow
+  the ground; bridges are a structure (`gen: "bridge"`) you walk across.
+- The renderer paints the ground (grass, sand banks, roads, paths, the plaza) and draws one water
+  sheet at the water level with an ink line where it meets the shore. The sky is a CSS gradient per
+  time of day with a paper sun and moon and stars; night tints every material through one shader
+  uniform and lets windows and lamps glow. The model can change the time with `{"op":"sky"}`.
 
 ## Sprites and vocabulary
 

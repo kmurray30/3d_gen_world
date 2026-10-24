@@ -1,6 +1,7 @@
-// Screenshots of the village preset from several cameras, for eyeballing the structure kit:
-//   node scripts/shots-village.mjs http://localhost:8791 test-results/village
-// Each structure is framed from its front, plus an overview, a third-person view and an indoor first-person view.
+// Screenshots of a generated village for eyeballing terrain, water, structures and the sky:
+//   node scripts/shots-village.mjs http://localhost:8787 test-results/village [seed]
+// An overview, each special structure from its front, the bridge, third person and top-down, and the same
+// overview at sunset and at night.
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 
@@ -16,95 +17,68 @@ page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.goto(`${base}/?preset=village`, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => !!window.__game);
-await page.waitForTimeout(1500);
+await page.addStyleTag({ content: '.lock-overlay, .toasts { display: none !important; }' });
+await page.waitForTimeout(2000);
 
-const shot = async (name) => {
-  await page.waitForTimeout(500);
+const shot = async (name, wait = 600) => {
+  await page.waitForTimeout(wait);
   await page.screenshot({ path: `${out}/${name}.png` });
   console.log(`saved ${name}`);
 };
-const look = (pos, yaw, pitch) => page.evaluate(([p, y, pt]) => {
-  const g = window.__game;
-  g.camera.teleport(p, y, pt, g.engine.world.player);
-}, [pos, yaw, pitch]);
+const look = (pos, yaw, pitch) =>
+  page.evaluate(([p, y, pt]) => {
+    const g = window.__game;
+    g.camera.teleport(p, y, pt, g.engine.world.player);
+  }, [pos, yaw, pitch]);
+// headless frame rates are low, so skip the slow fade between times of day
+const sky = (t) => page.evaluate((time) => { const g = window.__game; g.engine.world.sky = time; g.scene.sky.set(time, true); }, t);
+const lookAt = async (target, from) => {
+  const dx = target[0] - from[0];
+  const dy = target[1] - from[1];
+  const dz = target[2] - from[2];
+  await look(from, Math.atan2(-dx, -dz), Math.atan2(dy, Math.hypot(dx, dz)));
+};
 
-// overview from above the start, looking toward -z
-await look([0, 26, 34], 0, -0.65);
+await lookAt([0, 0, 0], [0, 48, 62]);
 await shot('00-overview');
-
-const structures = await page.evaluate(() => window.__game.engine.world.list().filter((e) => e.structure).map((e) => ({ id: e.id, pos: e.pos, yaw: e.yaw ?? 0, b: e.structure.bounds })));
-for (const s of structures) {
+const ents = await page.evaluate(() => window.__game.engine.world.list().filter((e) => e.structure).map((e) => ({ id: e.id, pos: e.pos, yaw: e.yaw ?? 0, b: e.structure.bounds })));
+for (const s of ents.filter((e) => !/^house_[2-9]/.test(e.id))) {
   const size = Math.max(s.b.w, s.b.d, s.b.h);
-  const d = size * 1.25 + 4;
-  const yawRad = (s.yaw * Math.PI) / 180;
-  // the front faces +z local; stand in front of it, a bit to the right, and look back
-  const fx = Math.sin(yawRad);
-  const fz = Math.cos(yawRad);
-  const rx = Math.cos(yawRad);
-  const rz = -Math.sin(yawRad);
-  const camPos = [s.pos[0] + fx * d + rx * d * 0.45, s.b.h * 0.55 + 2.5, s.pos[2] + fz * d + rz * d * 0.45];
-  const dx = s.pos[0] - camPos[0];
-  const dz = s.pos[2] - camPos[2];
-  const yaw = Math.atan2(-dx, -dz);
-  const pitch = Math.atan2(s.b.h * 0.45 - camPos[1], Math.hypot(dx, dz));
-  await look(camPos, yaw, pitch);
+  const d = size * 1.2 + 5;
+  const a = (s.yaw * Math.PI) / 180;
+  const from = [s.pos[0] + Math.sin(a) * d + Math.cos(a) * d * 0.4, s.pos[1] + s.b.h * 0.5 + 3, s.pos[2] + Math.cos(a) * d - Math.sin(a) * d * 0.4];
+  await lookAt([s.pos[0], s.pos[1] + s.b.h * 0.35, s.pos[2]], from);
   await shot(`10-${s.id}`);
 }
-
-// third person from the start, high angle
+// third person on the plaza, then top-down
 await page.evaluate(() => {
   const g = window.__game;
   g.camera.setMode('third', g.engine.world.player);
   g.camera.setAngle(1, g.engine.world.player);
 });
-await shot('20-third-person');
+await shot('20-third-person', 1200);
+await page.evaluate(() => window.__game.camera.setAngle(3, window.__game.engine.world.player));
+await shot('21-top-down', 1200);
+// sunset and night over the village
+await lookAt([0, 0, -8], [0, 30, 45]);
+await sky('sunset');
+await shot('30-sunset', 3500);
+await sky('night');
+await shot('31-night', 3500);
+const lh = ents.find((e) => e.id.startsWith('lighthouse'));
+if (lh) {
+  const a = (lh.yaw * Math.PI) / 180;
+  await lookAt([lh.pos[0], lh.pos[1] + 6, lh.pos[2]], [lh.pos[0] + Math.sin(a) * 26, lh.pos[1] + 9, lh.pos[2] + Math.cos(a) * 26]);
+  await shot('32-night-lighthouse', 1500);
+}
 await page.evaluate(() => {
   const g = window.__game;
-  g.camera.setAngle(3, g.engine.world.player);
+  g.engine.world.sky = 'day';
+  g.scene.sky.set('day', true);
+  g.camera.setMode('first', g.engine.world.player);
+  g.engine.world.player.yaw = 0;
+  g.engine.world.player.pitch = -0.05;
 });
-await shot('21-top-down');
-
-// walk into house_1 in third person: fade test, then first person inside
-const house = structures.find((s) => s.id === 'house_1');
-await page.evaluate(([h]) => {
-  const g = window.__game;
-  const p = g.engine.world.player;
-  const yawRad = (h.yaw * Math.PI) / 180;
-  // just outside the door, facing the house
-  p.pos = [h.pos[0] + Math.sin(yawRad) * (h.b.d / 2 + 1.2), 0, h.pos[2] + Math.cos(yawRad) * (h.b.d / 2 + 1.2)];
-  p.yaw = Math.atan2(-(h.pos[0] - p.pos[0]), -(h.pos[2] - p.pos[2]));
-  g.camera.setMode('third', p);
-  g.camera.setAngle(1, p);
-}, [house]);
-await shot('30-house-door-third');
-await page.evaluate(([h]) => {
-  const g = window.__game;
-  const p = g.engine.world.player;
-  p.pos = [h.pos[0], 0, h.pos[2]];
-}, [house]);
-await page.waitForTimeout(600);
-await shot('31-inside-third-fade');
-await page.evaluate(() => {
-  const g = window.__game;
-  const p = g.engine.world.player;
-  g.camera.setMode('first', p);
-  p.pitch = 0.05;
-});
-await shot('32-inside-first');
-// stand on the bunker's first patio
-const bunker = structures.find((s) => s.id === 'bunker_1');
-await page.evaluate(([b]) => {
-  const g = window.__game;
-  const p = g.engine.world.player;
-  p.pos = [b.pos[0], 3.4, b.pos[2]];
-  p.yaw = Math.PI * 0.75;
-  p.pitch = -0.2;
-  g.camera.setMode('third', p);
-  g.camera.setAngle(0, p);
-}, [bunker]);
-await page.waitForTimeout(800);
-const onBunker = await page.evaluate(() => window.__game.engine.world.player.pos);
-await shot('40-bunker-patio');
-console.log('player on bunker at', onBunker.map((v) => v.toFixed(2)).join(', '));
+await shot('40-first-person-day', 3500);
 console.log(`console errors: ${errors.length ? errors.join(' | ') : 'none'}`);
 await browser.close();

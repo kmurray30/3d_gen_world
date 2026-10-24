@@ -9,7 +9,7 @@ import { WorldModel } from './world';
 import { Rules } from './rules';
 import { resolvePlayerCollisions, resolvePlayerVsStructures, type Bump } from './collide';
 import { structureRadius } from '../structure/collide';
-import { structureEntity, yawToward } from '../structure/entity';
+import { seatOnTerrain, structureEntity, yawToward } from '../structure/entity';
 
 export type EngineEvent =
   | { type: 'spawn'; id: string }
@@ -23,6 +23,7 @@ export type EngineEvent =
   | { type: 'arrive'; id: string; target?: string }
   | { type: 'stateChange'; id: string; key: string; value: boolean | number | string }
   | { type: 'scriptDone'; id: string }
+  | { type: 'sky'; time: string }
   | { type: 'warn'; msg: string };
 
 /**
@@ -56,7 +57,7 @@ export class Engine {
   collidePlayer(pos: Vec3 = this.world.player.pos): Bump[] {
     const bumps = resolvePlayerCollisions(this.world, pos);
     if (bumps.length) this.rules.bumps(bumps);
-    this.playerGround = resolvePlayerVsStructures(this.world, pos).support;
+    this.playerGround = resolvePlayerVsStructures(this.world, pos, this.world.ground(pos[0], pos[2])).support;
     return bumps;
   }
 
@@ -171,7 +172,9 @@ export class Engine {
     }
     const pos: Vec3 = [placement.pos[0], 0, placement.pos[2]];
     const yaw = Math.round(yawToward(pos, this.world.player.pos));
-    const e = structureEntity(id, action.word, s, pos, yaw, this.time, action.label);
+    const seated = seatOnTerrain(s, pos, yaw, (x, z) => this.world.ground(x, z));
+    pos[1] = seated.base;
+    const e = structureEntity(id, action.word, seated.structure, pos, yaw, this.time, action.label);
     if (!this.world.add(e)) {
       this.emit({ type: 'warn', msg: `world is full (${this.world.size})` });
       return null;

@@ -128,6 +128,9 @@ export const EffectSchema = z.object({
   delay,
 });
 export const WaitSchema = z.object({ op: z.literal('wait'), dur: num(0, 20, 1) });
+export const SKY_TIMES = ['dawn', 'day', 'sunset', 'night'] as const;
+/** Change the time of day. */
+export const SkySchema = z.object({ op: z.literal('sky'), time: z.enum(SKY_TIMES).catch('day'), delay });
 
 export const ActionSchema = z.discriminatedUnion('op', [
   SpawnSchema,
@@ -141,6 +144,7 @@ export const ActionSchema = z.discriminatedUnion('op', [
   SaySchema,
   EffectSchema,
   WaitSchema,
+  SkySchema,
 ]);
 export const ParSchema = z.object({ op: z.literal('par'), do: z.array(ActionSchema).min(1).max(MAX_PAR) });
 export const StepSchema = z.union([ActionSchema, ParSchema]);
@@ -157,6 +161,7 @@ export type RemoveAction = z.infer<typeof RemoveSchema>;
 export type SayAction = z.infer<typeof SaySchema>;
 export type EffectAction = z.infer<typeof EffectSchema>;
 export type WaitAction = z.infer<typeof WaitSchema>;
+export type SkyAction = z.infer<typeof SkySchema>;
 export type Action = z.infer<typeof ActionSchema>;
 export type ParStep = z.infer<typeof ParSchema>;
 export type Step = z.infer<typeof StepSchema>;
