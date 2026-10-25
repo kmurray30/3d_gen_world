@@ -6,7 +6,7 @@
  */
 import type { SpriteRef } from '../types';
 import { DEG, rotateY } from '../engine/math';
-import type { MaterialName, Part, PrismPart, RoofPart, StairsPart, Structure, WallPart } from './types';
+import type { MaterialName, Part, PrismPart, RibbonPart, RoofPart, StairsPart, Structure, WallPart } from './types';
 
 type V3 = [number, number, number];
 
@@ -141,6 +141,8 @@ function partSize(part: Part): number {
       return Math.max(part.w, part.h, part.d);
     case 'prism':
       return Math.max(part.r * 2, (part.rz ?? part.r) * 2, part.h);
+    case 'ribbon':
+      return Math.max(...part.path.map((q) => Math.hypot(q[0], q[1])));
     default:
       return 0;
   }
@@ -287,6 +289,8 @@ export function prismRing(part: Pick<PrismPart, 'sides' | 'r' | 'rz'>, radius: n
 }
 
 function prismFaces(part: PrismPart): V3[][] {
+  if (part.lie) return lyingFaces(part);
+  if (part.hole && part.hole > 0.01 && part.hole < part.r) return tubeFaces(part, part.hole);
   const rTop = part.rTop ?? part.r;
   const bottom = prismRing(part, part.r, 1, 0);
   const faces: V3[][] = [];
@@ -301,6 +305,85 @@ function prismFaces(part: PrismPart): V3[][] {
   }
   faces.push([...bottom].reverse());
   return faces;
+}
+
+/** A prism on its side: its cross-section in the x-y plane (resting on y = 0), extruded along z. */
+function lyingFaces(part: PrismPart): V3[][] {
+  const n = Math.max(3, Math.round(part.sides));
+  const rz = part.rz ?? part.r;
+  const cy = part.half ? 0 : rz;
+  const section: Array<[number, number]> = [];
+  if (part.half) {
+    const k = Math.max(2, Math.round(n / 2));
+    for (let i = 0; i <= k; i++) {
+      const a = (i / k) * Math.PI;
+      section.push([Math.cos(a) * part.r, Math.sin(a) * rz]);
+    }
+  } else {
+    for (let i = 0; i < n; i++) {
+      const a = Math.PI / n + (i / n) * Math.PI * 2;
+      section.push([Math.cos(a) * part.r, cy + Math.sin(a) * rz]);
+    }
+  }
+  const z0 = -part.h / 2;
+  const z1 = part.h / 2;
+  const faces: V3[][] = [];
+  const m = section.length;
+  for (let i = 0; i < m; i++) {
+    const [ax, ay] = section[i];
+    const [bx, by] = section[(i + 1) % m];
+    const out: V3 = [(ax + bx) / 2, (ay + by) / 2 - cy, 0];
+    faces.push(want([[ax, ay, z1], [bx, by, z1], [bx, by, z0], [ax, ay, z0]], out[0] === 0 && out[1] === 0 ? [0, -1, 0] : out));
+  }
+  faces.push(want(section.map(([x, y]): V3 => [x, y, z1]), [0, 0, 1]));
+  faces.push(want(section.map(([x, y]): V3 => [x, y, z0]), [0, 0, -1]));
+  return faces;
+}
+
+/** A hollow prism: outer sides facing out, inner sides facing the axis, and flat rings on top and bottom. */
+function tubeFaces(part: PrismPart, hole: number): V3[][] {
+  const rTop = Math.max(1e-3, part.rTop ?? part.r);
+  const k = rTop / part.r;
+  const ob = prismRing(part, part.r, 1, 0);
+  const ot = prismRing(part, rTop, k, part.h, part.lean);
+  const ib = prismRing(part, hole, hole / part.r, 0);
+  const it = prismRing(part, hole * k, (hole * k) / part.r, part.h, part.lean);
+  const faces: V3[][] = [];
+  const n = ob.length;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const mid = (a: V3, b: V3): V3 => [(a[0] + b[0]) / 2, 0, (a[2] + b[2]) / 2];
+    const out = mid(ob[i], ob[j]);
+    faces.push(want([ob[j], ob[i], ot[i], ot[j]], out));
+    faces.push(want([ib[i], ib[j], it[j], it[i]], [-out[0], 0, -out[2]]));
+    faces.push(want([ot[i], ot[j], it[j], it[i]], [0, 1, 0]));
+    faces.push(want([ob[j], ob[i], ib[i], ib[j]], [0, -1, 0]));
+  }
+  return faces;
+}
+
+/** Both sides of a paper strip along its path in the local x-y plane. */
+function ribbonFaces(part: RibbonPart): V3[][] {
+  const pts = part.path;
+  if (pts.length < 2) return [];
+  const left: V3[] = [];
+  const right: V3[] = [];
+  const wEnd = part.wEnd ?? part.w;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 1)];
+    const b = pts[Math.min(pts.length - 1, i + 1)];
+    const tx = b[0] - a[0];
+    const ty = b[1] - a[1];
+    const l = Math.hypot(tx, ty) || 1;
+    const half = (part.w + (wEnd - part.w) * (i / (pts.length - 1))) / 2;
+    // across the path, in its plane
+    const nx = -ty / l;
+    const ny = tx / l;
+    left.push([pts[i][0] + nx * half, pts[i][1] + ny * half, 0]);
+    right.push([pts[i][0] - nx * half, pts[i][1] - ny * half, 0]);
+  }
+  const outline = [...left, ...right.reverse()];
+  return [want(outline, [0, 0, 1]), want([...outline].reverse(), [0, 0, -1])];
 }
 
 function roofFaces(part: RoofPart): { main: V3[][]; ends: V3[][] } {
@@ -459,7 +542,13 @@ export function buildStructureMesh(s: Structure): StructureMesh {
       }
       case 'prism': {
         const c: V3 = [0, part.h / 2, 0];
-        for (const f of orientOut(prismFaces(part), c)) b.face(f.map(place), part.mat, part.color, ink, own, glow);
+        // a tube's faces are wound as built: its inner sides face the axis on purpose
+        const faces = part.hole || part.lie ? prismFaces(part) : orientOut(prismFaces(part), c);
+        for (const f of faces) b.face(f.map(place), part.mat, part.color, ink, own, glow);
+        break;
+      }
+      case 'ribbon': {
+        for (const f of ribbonFaces(part)) b.face(f.map(place), part.mat, part.color, ink, own, glow);
         break;
       }
       case 'roof': {
@@ -494,4 +583,4 @@ export function buildStructureMesh(s: Structure): StructureMesh {
   return b.finish();
 }
 
-export const _test = { triangulate, polygonNormal, stairsFaces, roofFaces, prismFaces, wallFaces };
+export const _test = { triangulate, polygonNormal, stairsFaces, roofFaces, prismFaces, wallFaces, ribbonFaces };

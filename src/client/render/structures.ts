@@ -24,6 +24,8 @@ const FADE_SPEED = 7;
 export interface StructureAssets {
   tiles: MaterialTiles;
   textures: TextureStore;
+  /** Soft glow sprite for lamps at night. */
+  halo?: THREE.Texture;
 }
 
 /** One drawable group with its own fade state. */
@@ -47,6 +49,8 @@ export class StructureView {
   private readonly bounds = new THREE.Box3();
   /** The lighthouse's sweeping beam, when this structure has a beacon. */
   private beam: THREE.Group | null = null;
+  /** Night halos round lamp parts. */
+  private readonly halos: THREE.Sprite[] = [];
 
   constructor(
     public readonly id: string,
@@ -92,6 +96,19 @@ export class StructureView {
       }
       this.beam.renderOrder = 3;
       this.root.add(this.beam);
+    }
+    if (this.assets.halo) {
+      for (const part of s.parts) {
+        if (!part.halo || !('h' in part)) continue;
+        const size = part.t === 'prism' ? Math.max(part.r * 2, part.h) : Math.max(part.w, part.h);
+        const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.assets.halo, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, fog: false }));
+        halo.position.set(part.pos[0], part.pos[1] + part.h / 2, part.pos[2]);
+        halo.scale.setScalar(Math.max(1.6, size * 4));
+        halo.renderOrder = 3;
+        halo.visible = false;
+        this.root.add(halo);
+        this.halos.push(halo);
+      }
     }
   }
 
@@ -217,6 +234,13 @@ export class StructureView {
       const mat = (this.beam.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
       mat.opacity = 0.16 * glow;
     }
+    if (this.halos.length) {
+      const glow = LIGHT.glow.value;
+      for (const h of this.halos) {
+        h.visible = glow > 0.03 && !e.hidden;
+        h.material.opacity = glow * 0.9 * base;
+      }
+    }
   }
 
   /**
@@ -258,6 +282,11 @@ export class StructureView {
       (cone.material as THREE.Material).dispose();
       this.beam = null;
     }
+    for (const h of this.halos) {
+      this.root.remove(h);
+      h.material.dispose();
+    }
+    this.halos.length = 0;
     if (this.lines) {
       this.root.remove(this.lines);
       this.lines.geometry.dispose();

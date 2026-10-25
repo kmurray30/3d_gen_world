@@ -4,7 +4,7 @@
  */
 import { DEG } from '../engine/math';
 import type { SpriteRef } from '../types';
-import type { BoxPart, DecalPart, DecalResolver, MaterialName, Opening, Part, PrismPart, RoofPart, StairsPart, Structure, WallPart } from './types';
+import type { BoxPart, DecalPart, DecalResolver, MaterialName, Opening, Part, PrismPart, RibbonPart, RoofPart, StairsPart, Structure, WallPart } from './types';
 
 export const INK = '#2b2b2b';
 export const WALL_T = 0.24;
@@ -43,11 +43,17 @@ export class Parts {
         this.track(x, y + p.h, z, p.w / 2, p.d / 2, p.rot);
         break;
       case 'prism':
-        this.track(x, y + p.h, z, Math.max(p.r, p.rTop ?? 0), Math.max(p.rz ?? p.r, p.rTop ?? 0), 0);
+        if (p.lie) this.track(x, y + (p.half ? 1 : 2) * (p.rz ?? p.r), z, p.r, p.h / 2, p.rot);
+        else this.track(x, y + p.h, z, Math.max(p.r, p.rTop ?? 0), Math.max(p.rz ?? p.r, p.rTop ?? 0), 0);
         break;
       case 'decal':
         this.track(x, y + p.h, z, p.w / 2, 0.02, p.rot);
         break;
+      case 'ribbon': {
+        const reach = Math.max(...p.path.map((q) => Math.abs(q[0]))) + Math.max(p.w, p.wEnd ?? p.w) / 2;
+        this.track(x, y + Math.max(...p.path.map((q) => q[1])) + p.w / 2, z, reach, reach, 0);
+        break;
+      }
     }
     return p;
   }
@@ -58,6 +64,10 @@ export class Parts {
 
   prism(x: number, y: number, z: number, sides: number, r: number, h: number, mat: MaterialName, color: string, extra: Partial<PrismPart> = {}): PrismPart {
     return this.add({ t: 'prism', pos: [x, y, z], sides, r, h, mat, color, ...extra });
+  }
+
+  ribbon(x: number, y: number, z: number, path: Array<[number, number]>, w: number, mat: MaterialName, color: string, extra: Partial<RibbonPart> = {}): RibbonPart {
+    return this.add({ t: 'ribbon', pos: [x, y, z], path, w, mat, color, ghost: true, ...extra });
   }
 
   roof(x: number, y: number, z: number, style: RoofPart['style'], w: number, h: number, d: number, mat: MaterialName, color: string, extra: Partial<RoofPart> = {}): RoofPart {
@@ -153,10 +163,11 @@ export function tidy(s: Structure): Structure {
   for (const p of s.parts) {
     p.pos = [round(p.pos[0]), round(p.pos[1]), round(p.pos[2])];
     if (p.rot !== undefined) p.rot = round(p.rot, 2);
-    for (const k of ['w', 'h', 'd', 'r', 'rz', 'rTop'] as const) {
+    for (const k of ['w', 'h', 'd', 'r', 'rz', 'rTop', 'hole', 'wEnd'] as const) {
       const v = (p as unknown as Record<string, unknown>)[k];
       if (typeof v === 'number') (p as unknown as Record<string, number>)[k] = round(v);
     }
+    if (p.t === 'ribbon') p.path = p.path.map(([a, b]) => [round(a), round(b)]);
   }
   return s;
 }

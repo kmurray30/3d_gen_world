@@ -1,6 +1,5 @@
 import type { Entity, Kind, SpriteRef } from '../types';
 import { defaultSprite, massClassFor } from './sizing';
-import { solidShapeOf } from '../shape';
 
 export interface PresetItem {
   id: string;
@@ -30,7 +29,6 @@ export function makeEntity(item: PresetItem, resolve: SpriteResolver, now: numbe
     kind: item.kind,
     solid: item.kind !== 'other',
     massClass: massClassFor(item.kind, item.heightM),
-    ...solidShapeOf(item.word, item.kind),
     huge: false,
     createdAt: now,
   };

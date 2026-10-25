@@ -69,6 +69,12 @@ function wallSegments(part: WallPart): Array<[number, number]> {
 
 /** Height of a part's solid in its own local column, relative to its base, given the local point is inside. */
 function localTop(part: Part, lx: number, lz: number): number {
+  if (part.t === 'prism' && part.lie) {
+    // the round top of a log on its side
+    const rz = part.rz ?? part.r;
+    const k = Math.sqrt(Math.max(0, 1 - (lx / part.r) ** 2));
+    return part.half ? rz * k : rz * (1 + k);
+  }
   switch (part.t) {
     case 'box':
       return part.h;
@@ -108,8 +114,15 @@ export function partSpan(part: Part, x: number, z: number): Span | null {
       return o ? { bottom: y0 + o.h, top: y0 + part.h } : { bottom: y0, top: y0 + part.h };
     }
     case 'prism': {
+      if (part.lie) {
+        if (Math.abs(lx) > part.r || Math.abs(lz) > part.h / 2) return null;
+        return { bottom: y0, top: y0 + localTop(part, lx, lz) };
+      }
       const { rx, rz } = prismRadius(part);
-      if (Math.hypot(lx / rx, lz / rz) > 1) return null;
+      const e = Math.hypot(lx / rx, lz / rz);
+      if (e > 1) return null;
+      // a hollow ring: the column through its opening misses it
+      if (part.hole && e < part.hole / part.r) return null;
       return { bottom: y0, top: y0 + localTop(part, lx, lz) };
     }
     default:
@@ -146,6 +159,12 @@ export function partContact(part: Part, x: number, z: number, r: number): Contac
   const eps = 1e-4;
   switch (part.t) {
     case 'prism': {
+      if (part.lie) {
+        const c = rectContact(lx, lz, r, -part.r, part.r, -part.h / 2, part.h / 2);
+        if (!c) return null;
+        const ix = clamp(c.cx, -part.r + eps, part.r - eps);
+        return { push: fromLocal(part, c.push), span: { bottom: y0, top: y0 + localTop(part, ix, 0) } };
+      }
       const { rx, rz } = prismRadius(part);
       const d = Math.hypot(lx, lz);
       const a = Math.atan2(lz, lx);
@@ -153,6 +172,15 @@ export function partContact(part: Part, x: number, z: number, r: number): Contac
       if (d >= rad + r) return null;
       const nx = d > 1e-6 ? lx / d : 1;
       const nz = d > 1e-6 ? lz / d : 0;
+      if (part.hole) {
+        // a ring wall: clear of it well inside the opening; otherwise out the nearer side (in, when a body fits)
+        const inner = rad * (part.hole / part.r);
+        if (d <= inner - r) return null;
+        const out = rad + r - d;
+        const into = inner > r ? d - (inner - r) : Infinity;
+        const k = into < out ? -into : out;
+        return { push: fromLocal(part, [nx * k, nz * k]), span: { bottom: y0, top: y0 + part.h } };
+      }
       const k = Math.min(1, d / Math.max(rad, 1e-6)) * (1 - eps);
       const top = localTop(part, nx * rad * k, nz * rad * k);
       return { push: fromLocal(part, [nx * (rad + r - d), nz * (rad + r - d)]), span: { bottom: y0, top: y0 + top } };

@@ -7,6 +7,7 @@ import { defaultSprite } from '../../src/shared/engine/sizing';
 import { polylineDist } from '../../src/shared/terrain/field';
 import { spawn, tick } from '../helpers';
 import { seatOnTerrain } from '../../src/shared/structure/entity';
+import { isPropGen } from '../../src/shared/structure/index';
 
 const noDecals = () => null;
 const resolve = (_w: string, kind: Parameters<typeof defaultSprite>[0]) => defaultSprite(kind);
@@ -69,7 +70,7 @@ describe('village generator', () => {
     it(`seed ${seed}: buildings on dry flat ground, facing a road or path, bridges where roads cross the river`, () => {
       const v = generateVillage(seed, resolve, noDecals, 0);
       const f = new TerrainField(v.terrain);
-      const buildings = v.entities.filter((e) => e.structure && e.structure.gen !== 'bridge');
+      const buildings = v.entities.filter((e) => e.structure && e.structure.gen !== 'bridge' && !isPropGen(e.structure.gen));
       expect(buildings.length).toBeGreaterThanOrEqual(8);
       for (const e of buildings) {
         const s = e.structure!;
@@ -99,6 +100,18 @@ describe('village generator', () => {
           const end = f.height(b.pos[0] + Math.sin(a) * half * s, b.pos[2] + Math.cos(a) * half * s);
           expect(b.pos[1] + 0.05 - end, `${b.id} end step`).toBeLessThan(0.55);
         }
+      }
+      // built props (fountain, lamp posts, mailboxes...) stand on dry ground, never floating above it
+      const props = v.entities.filter((e) => e.structure && isPropGen(e.structure.gen));
+      expect(props.some((e) => e.structure!.gen === 'fountain')).toBe(true);
+      expect(props.filter((e) => e.structure!.gen === 'lamppost').length).toBeGreaterThanOrEqual(4);
+      expect(props.some((e) => e.structure!.gen === 'birdbath')).toBe(true);
+      for (const e of props) {
+        expect(f.isWater(e.pos[0], e.pos[2]), `${e.id} in water`).toBe(false);
+        // the lowest part (a plinth on a slope) reaches the ground; nothing is buried deep
+        const lowest = e.pos[1] + Math.min(...e.structure!.parts.map((p) => p.pos[1]));
+        expect(lowest - f.height(e.pos[0], e.pos[2]), `${e.id} floats`).toBeLessThan(0.02);
+        expect(f.height(e.pos[0], e.pos[2]) - e.pos[1], `${e.id} sunk`).toBeLessThan(0.3);
       }
       // nothing but the boat and ducks stands in the water
       const floaters = new Set(['boat', 'duck']);

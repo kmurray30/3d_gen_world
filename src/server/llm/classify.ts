@@ -1,5 +1,3 @@
-import { isDecorShape, type DecorShape } from '../../shared/shape';
-
 /**
  * "Is this word a building?" for words the vocabulary and the structure list do not know. Jev (TypeSafe's
  * classifier) answers with a probability in a few hundred milliseconds when TYPESAFE_API_KEY is set; otherwise, or
@@ -10,8 +8,6 @@ export interface StructureClassifier {
   readonly name: string;
   /** true = build it, false = draw a card; null = no opinion. */
   isStructure(word: string, command?: string): Promise<boolean | null>;
-  /** How a drawn object should stand in 3D (round solid, crossed sheets, flat paper); null = no opinion. */
-  shapeOf?(word: string): Promise<DecorShape | null>;
 }
 
 const BUILDINGS = new Set([
@@ -69,29 +65,6 @@ export class JevClassifier implements StructureClassifier {
     this.timeoutMs = opts.timeoutMs ?? 2500;
     this.fetchFn = opts.fetchFn ?? fetch;
   }
-  /** One "choice" question: is the drawn thing round like a vase, a cross like a plant or a sign, or flat? */
-  async shapeOf(word: string): Promise<DecorShape | null> {
-    const body = {
-      model: this.model,
-      state: { word, game: 'a paper world where most things are flat drawn cutouts; some become simple 3D shapes so they look solid from every side' },
-      questions: {
-        shape: {
-          type: 'choice',
-          question: SHAPE_QUESTION,
-          options: ['round', 'cross', 'flat'],
-        },
-      },
-    };
-    const res = await this.fetchFn(this.url, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${this.opts.apiKey}` },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(this.timeoutMs),
-    });
-    if (!res.ok) throw new Error(`jev ${res.status}`);
-    return readChoice((await res.json()) as unknown, 'shape');
-  }
-
   async isStructure(word: string, command?: string): Promise<boolean | null> {
     const body = {
       model: this.model,
@@ -110,37 +83,6 @@ export class JevClassifier implements StructureClassifier {
     if (p === null) throw new Error('jev: no probability in response');
     return p >= 0.5;
   }
-}
-
-const SHAPE_QUESTION =
-  'How should this thing be shaped so it looks solid from every side? round = it is round when seen from above, like a fountain, barrel, vase, lamp post, well or pumpkin; cross = it is thin or branching, like a flower, sign, statue, mailbox or scarecrow; flat = neither, like a bench, car, table, letter or painting.';
-
-/** Finds the chosen option for a question key in whatever envelope the API used. */
-export function readChoice(json: unknown, key: string): DecorShape | null {
-  const pick = (v: unknown): DecorShape | null => {
-    if (isDecorShape(v)) return v;
-    if (v && typeof v === 'object') {
-      const o = v as Record<string, unknown>;
-      for (const k of ['choice', 'answer', 'value', 'option', 'label', 'selected']) {
-        const r = pick(o[k]);
-        if (r) return r;
-      }
-      // a probability per option: take the most likely
-      const probs = ['round', 'cross', 'flat'].map((opt) => [opt, typeof o[opt] === 'number' ? (o[opt] as number) : -1] as const);
-      const best = probs.reduce((a, b) => (b[1] > a[1] ? b : a));
-      if (best[1] >= 0) return best[0] as DecorShape;
-      if (o.probabilities) return pick(o.probabilities);
-    }
-    return null;
-  };
-  if (!json || typeof json !== 'object') return null;
-  const o = json as Record<string, unknown>;
-  for (const container of [o, o.answers, o.results, o.result, o.data, o.output, o.questions]) {
-    if (!container || typeof container !== 'object') continue;
-    const hit = pick((container as Record<string, unknown>)[key]);
-    if (hit) return hit;
-  }
-  return null;
 }
 
 /** Finds the probability for a question key in whatever envelope the API used. */
@@ -183,22 +125,6 @@ export class CachedClassifier implements StructureClassifier {
   ) {
     this.name = primary === fallback ? primary.name : `${primary.name}+${fallback.name}`;
   }
-  private readonly shapes = new Map<string, DecorShape | null>();
-
-  async shapeOf(word: string): Promise<DecorShape | null> {
-    const key = word.toLowerCase().trim();
-    if (this.shapes.has(key)) return this.shapes.get(key)!;
-    let shape: DecorShape | null = null;
-    try {
-      shape = (await this.primary.shapeOf?.(key)) ?? null;
-    } catch (e) {
-      this.log(`[classify] ${this.primary.name} shape failed for "${key}": ${(e as Error).message}`);
-    }
-    this.shapes.set(key, shape);
-    if (this.shapes.size > 2000) this.shapes.delete(this.shapes.keys().next().value!);
-    return shape;
-  }
-
   async isStructure(word: string, command?: string): Promise<boolean | null> {
     const key = word.toLowerCase().trim();
     if (this.cache.has(key)) return this.cache.get(key)!;

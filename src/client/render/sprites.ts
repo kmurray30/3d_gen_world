@@ -4,8 +4,6 @@ import { footprintRadius, renderHeight, renderWidth } from '../../shared/engine/
 import type { TextureStore } from './textures';
 import { DEFAULT_TREE_COLORS, OrigamiPlant, sampleTreeColors, type TreeColors } from './origami';
 import { LIGHT, tinted } from './tint';
-import { CrossDecor, RoundDecor, analyseSprite, canTurn } from './solid';
-import { shapeForWord } from '../../shared/shape';
 
 const PLANE = new THREE.PlaneGeometry(1, 1);
 const SHADOW = new THREE.CircleGeometry(0.5, 28).rotateX(-Math.PI / 2);
@@ -36,7 +34,7 @@ export function origamiKind(word: string): 'tree' | 'bush' | null {
 /**
  * One entity on screen: a shadow blob flat on the ground and an upright paper cutout with its own yaw in the world.
  * root sits at the feet; `pivot` carries the yaw; `body` is the textured plane centred at half height so tilts
- * rotate about the sprite centre. Trees and bushes become origami pieces, and round or plant-like decor a solid.
+ * rotate about the sprite centre. Trees and bushes become origami pieces instead.
  */
 export class SpriteView {
   readonly root = new THREE.Group();
@@ -50,10 +48,6 @@ export class SpriteView {
   private wantedFile: string | null = null;
   private hasRealTexture = false;
   private halo: THREE.Sprite | null = null;
-  /** A round thing turned into a ten-sided solid, or a crossed pair of sheets, once its drawing has loaded. */
-  private solid: RoundDecor | CrossDecor | null = null;
-  private solidKey = '';
-  private loadedTex: THREE.Texture | null = null;
 
   constructor(
     public readonly id: string,
@@ -100,10 +94,6 @@ export class SpriteView {
       const yaw = e.yaw === undefined ? camYaw : e.yaw * DEG;
       const tilt = (e.tilt * Math.PI) / 180;
       const mirror = flip && this.hasRealTexture;
-      this.updateSolid(e);
-      if (this.solid instanceof RoundDecor) this.solid.layout(ws, hs, mat.opacity, tilt);
-      else if (this.solid instanceof CrossDecor) this.solid.layout(ws, hs, mat.opacity, yaw, tilt, mirror);
-      this.pivot.visible = !this.solid;
       this.pivot.rotation.set(0, yaw, 0, 'YXZ');
       this.pivot.position.y = hs / 2;
       this.body.position.y = 0;
@@ -145,7 +135,6 @@ export class SpriteView {
       mat.map = textures.placeholder(e.label, e.kind, e.sprite.w / Math.max(1, e.sprite.h));
       mat.needsUpdate = true;
       this.hasRealTexture = false;
-      this.loadedTex = null;
       if (e.sprite.file) {
         const file = e.sprite.file;
         textures
@@ -153,7 +142,6 @@ export class SpriteView {
           .then((tex) => {
             if (this.wantedFile !== file) return;
             this.hasRealTexture = true;
-            this.loadedTex = tex;
             mat.map = tex;
             mat.needsUpdate = true;
             this.origamiColors = sampleTreeColors(tex);
@@ -178,41 +166,13 @@ export class SpriteView {
     }
   }
 
-  /**
-   * Stand round and plant-like things as solids once their drawing is here: round words become a turned solid
-   * when the drawing is symmetric enough, crossed sheets otherwise; cross words become crossed sheets.
-   */
-  private updateSolid(e: Entity): void {
-    const shape = e.shape ?? shapeForWord(e.word, e.kind);
-    const tex = this.loadedTex;
-    const want = tex && (shape === 'round' || shape === 'cross') ? `${shape}|${tex.uuid}` : '';
-    if (want === this.solidKey) return;
-    this.solidKey = want;
-    if (this.solid) {
-      this.root.remove(this.solid.group);
-      this.solid.dispose();
-      this.solid = null;
-    }
-    if (!tex || !want) return;
-    const profile = shape === 'round' ? analyseSprite(tex) : null;
-    if (shape === 'round' && profile && canTurn(profile)) this.solid = new RoundDecor(this.id, tex, profile);
-    else {
-      const cross = new CrossDecor(this.id);
-      cross.setMap(tex);
-      this.solid = cross;
-    }
-    this.root.add(this.solid.group);
-  }
-
   /** Meshes that count for picking. */
   get pickables(): THREE.Object3D[] {
-    if (this.origami) return this.origami.pickables;
-    return this.solid ? this.solid.pickables : [this.body];
+    return this.origami ? this.origami.pickables : [this.body];
   }
 
   dispose(): void {
     this.setOrigami(null, { id: this.id, word: '' } as Entity);
-    this.solid?.dispose();
     this.body.material.dispose();
     this.shadow.material.dispose();
     this.halo?.material.dispose();

@@ -4,7 +4,7 @@
  * drawing exists), then the classifier for anything novel ("fire station" builds, "doll house" stays a card).
  */
 import type { CustomPart } from '../shared/schema';
-import { coerceParams, generate, isGenName, structureWord, type GenName } from '../shared/structure/index';
+import { coerceParams, colorOf, generate, isGenName, isPropGen, structureWord, type GenName } from '../shared/structure/index';
 import type { DecalResolver, Structure } from '../shared/structure/types';
 import type { StructureClassifier } from './llm/classify';
 import { Vocab } from './vocab';
@@ -13,6 +13,9 @@ export interface Built {
   structure: Structure;
   label: string;
 }
+
+/** Words that make a prop word mean something else: a toy, a food, a drinking fountain. */
+const NOT_PROPS = /\b(toy|toys|mini|miniature|model|lego|paper|cardboard|chocolate|candy|cake|soda|drinking|ink|lava|gold|golden|fake)\b/;
 
 export class StructureResolver {
   private seed = (Date.now() & 0xffff) + 1;
@@ -40,6 +43,18 @@ export class StructureResolver {
       const sw = structureWord(c) ?? structureWord(c.replace(/s$/, ''));
       if (sw) return this.make(sw.gen, sw.params ?? {}, c);
     }
+    // a prop with a describing word in front ("red mailbox", "old stone well"): build it, in that colour
+    for (const c of candidates) {
+      if (NOT_PROPS.test(c)) continue;
+      const words = c.split(' ');
+      for (let k = Math.min(2, words.length - 1); k >= 1; k--) {
+        const tail = words.slice(-k).join(' ');
+        const sw = structureWord(tail) ?? structureWord(tail.replace(/s$/, ''));
+        if (!sw || !isPropGen(sw.gen)) continue;
+        const color = colorOf(words.slice(0, -k).join(' '));
+        return this.make(sw.gen, { ...(sw.params ?? {}), ...(color ? { color } : {}) }, c);
+      }
+    }
     const norm = candidates[0] ?? Vocab.normalize(word);
     // a real drawing wins over a guess; only tail/fuzzy matches count as "novel"
     const how = this.vocab.matchKind(norm);
@@ -51,12 +66,6 @@ export class StructureResolver {
     const verdict = await this.classifier.isStructure(norm, command);
     if (!verdict) return null;
     return this.make('house', { random: true, sign: norm.toUpperCase().slice(0, 24) }, norm);
-  }
-
-  /** How an object nobody listed should stand in 3D, when the classifier has an opinion (Jev); null = flat. */
-  async shapeOf(word: string): Promise<'cross' | 'round' | null> {
-    const shape = await this.classifier.shapeOf?.(word).catch(() => null);
-    return shape === 'cross' || shape === 'round' ? shape : null;
   }
 
   /** An explicit build action. */

@@ -7,7 +7,7 @@
 import type { SpriteRef } from '../types';
 
 /** Named crayon tiles; the client draws each one procedurally and tints it with the part's colour. */
-export const MATERIALS = ['plaster', 'brick', 'plank', 'shingle', 'stone', 'thatch', 'concrete', 'gingerbread', 'icing', 'stripe', 'glass', 'metal', 'flat'] as const;
+export const MATERIALS = ['plaster', 'brick', 'plank', 'shingle', 'stone', 'thatch', 'concrete', 'gingerbread', 'icing', 'stripe', 'glass', 'metal', 'water', 'flat'] as const;
 export type MaterialName = (typeof MATERIALS)[number];
 
 interface PartBase {
@@ -28,6 +28,8 @@ interface PartBase {
   glow?: boolean;
   /** The lighthouse lamp: sweeps a beam at night. */
   beacon?: boolean;
+  /** A lamp: a soft halo of light round it at night (lantern glass, a lamp post's head). */
+  halo?: boolean;
 }
 
 /** Axis-aligned box of w (x) by h (y) by d (z) before rotation. */
@@ -67,6 +69,14 @@ export interface PrismPart extends PartBase {
   rTop?: number;
   /** Offset of the top ring relative to the bottom one, for leaning cones (a bent hat tip). */
   lean?: [number, number];
+  /** Inner radius: a hollow ring open at the top and bottom (a basin wall, a well), tapering with the outside. */
+  hole?: number;
+  /**
+   * Laid on its side: the axis runs along local z (h long, centred on pos) and it rests on pos.y, r wide and rz
+   * tall each side of the axis. `half` keeps only the upper half, flat side down (a mailbox's domed top).
+   */
+  lie?: boolean;
+  half?: boolean;
 }
 
 /** Roof over a w by d rectangle: gable (ridge along x), hip (ridge along the longer axis), shed (slope down toward +z). */
@@ -102,7 +112,18 @@ export interface DecalPart extends PartBase {
   role?: 'door';
 }
 
-export type Part = BoxPart | WallPart | PrismPart | RoofPart | StairsPart | DecalPart;
+/**
+ * A flat paper strip following a path in the part's local x-y plane (x outward, y up), `w` wide across the path
+ * and narrowing or widening to `wEnd`: water arcs, banners. Never solid; both sides are drawn.
+ */
+export interface RibbonPart extends PartBase {
+  t: 'ribbon';
+  path: Array<[number, number]>;
+  w: number;
+  wEnd?: number;
+}
+
+export type Part = BoxPart | WallPart | PrismPart | RoofPart | StairsPart | DecalPart | RibbonPart;
 
 export interface Structure {
   /** Generator name ("house", "fence", ...) or "custom" for a parts list the model laid out. */

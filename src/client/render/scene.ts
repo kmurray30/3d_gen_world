@@ -174,7 +174,7 @@ export class SceneView {
         }
         let view = this.structures.get(e.id);
         if (!view) {
-          view = new StructureView(e.id, { tiles: this.tiles, textures: this.textures });
+          view = new StructureView(e.id, { tiles: this.tiles, textures: this.textures, halo: this.haloTex });
           this.structures.set(e.id, view);
           this.scene.add(view.root);
           view.setResolution(w * pr, h * pr);

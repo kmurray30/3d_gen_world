@@ -198,7 +198,6 @@ export class Engine {
       state: {},
       effects: [],
       kind: res.kind,
-      ...(res.shape && res.shape !== 'flat' ? { shape: res.shape } : {}),
       solid: res.solid,
       massClass: massClassFor(res.kind, res.heightM),
       huge: res.huge,

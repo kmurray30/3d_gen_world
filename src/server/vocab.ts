@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import type { Kind } from '../shared/types';
 import type { WordResolution } from '../shared/schema';
 import { DEFAULT_HEIGHT_M, defaultSprite } from '../shared/engine/sizing';
-import { solidShapeOf } from '../shared/shape';
 
 export interface ManifestWord {
   f: string | null;
@@ -159,7 +158,6 @@ export class Vocab {
       solid: m.solid,
       huge: m.huge,
       placeholder: false,
-      ...solidShapeOf(word, m.t),
     };
   }
 

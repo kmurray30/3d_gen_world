@@ -103,11 +103,6 @@ export class CommandValidator {
           return { op: 'build', ref: a.ref, id, word: a.word, label: built.label, at, delay: a.delay, structure: built.structure };
         }
         const res = this.vocab.resolve(a.word, a.alt);
-        // objects the word lists do not place get the classifier's verdict on round / cross / flat
-        if (!res.shape && res.kind === 'object' && !res.placeholder && this.structures) {
-          const shape = await this.structures.shapeOf(res.word);
-          if (shape) res.shape = shape;
-        }
         const id = this.allocate(a.ref, a.word);
         this.kinds.set(id, res.kind);
         return { ...a, at, id, res, face: this.face(a.face) };

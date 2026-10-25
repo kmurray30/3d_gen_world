@@ -83,21 +83,26 @@ XAI_API_KEY=... npx tsx scripts/eval-prompt.ts   # run 20 commands against Grok 
 
 ## Structures
 
-Decor is drawn (the 3,700 cutouts). Round decor (fountains, lamp posts, barrels, wells, pumpkins,
-vases...) stands as a ten-sided solid turned from the drawing's own outline, with the drawing mapped
-from your side so it reads the same from anywhere; thin or branching decor (flowers, signposts,
-mailboxes, statues, scarecrows) stands as two crossed sheets like the paper trees. A word list in
-`src/shared/shape.ts` decides for common words, and Jev answers a "round / cross / flat" choice for
-objects nobody listed; a round drawing that is not symmetric falls back to crossed sheets
-(`src/client/render/solid.ts`). `scripts/shots-decor.mjs` shows them up close. Structures are built: a handful of flat-faced shapes (box, wall
-with doorways, n-gon prism or cone, gable/hip/shed roof, stairs, a sticker for doors, windows and
-signs) with a tinted crayon tile and an ink outline. No image generation is involved.
+Decor is drawn (the 3,700 cutouts) and stands as flat paper; only trees and bushes become origami
+crosses. Structures are built: a handful of flat-faced shapes (box, wall with doorways, n-gon prism or
+cone, hollow ring, a prism laid on its side, gable/hip/shed roof, stairs, a paper strip, a sticker for
+doors, windows and signs) with a tinted crayon tile and an ink outline. No image generation is involved.
+
+Street props are built the same way, so they are solid from every side: a fountain (an octagonal
+basin you can wade into, a column, paper water arcs, one or two tiers), lamp posts whose lanterns glow
+with a halo at night, mailboxes with their door toward the road, signposts, wells, benches, birdbaths,
+bins and columns (`src/shared/structure/gen/props.ts`). Their words build them ("a red mailbox" builds
+a red one); detailed things (statues, scarecrows, people, animals) stay drawings, and the model can
+lay out parts for another simple fixture. On a slope a prop stands level on a round stone plinth.
+`scripts/shots-props.ts` shows each prop up close, `scripts/shots-village-props.mjs` the ones in a
+village.
 
 - `src/shared/structure/` is the kit: `types.ts` (parts), `geometry.ts` (parts -> mesh data with
   metre-based UVs, face shading and outline edges), `collide.ts` (walls push, patios and stairs
   support), and `gen/` with one generator per family: `house` (also `randomHouse` and the
-  gingerbread house), `fence`/`yard`, `tower`/`lighthouse`, `witchHut`, `bunker`, and `custom`,
-  which lays out parts the model describes by relation ("a cone on the base") so nothing floats.
+  gingerbread house), `fence`/`yard`, `tower`/`lighthouse`, `witchHut`, `bunker`, `props`, and
+  `custom`, which lays out parts the model describes by relation ("a cone on the base") so nothing
+  floats.
 - The LLM never places coordinates. Spawning a building word (`house`, `cottage`, `barn`, `tower`,
   `fence`, `yard`, `fire station`...) builds a structure; the `build` action adds a look
   (`params: {color: "blue", roof: "hip", stories: 2}`) or a parts list for one-offs. A word nobody

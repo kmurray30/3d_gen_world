@@ -12,8 +12,8 @@ import { DEG, makeRng, rotateY } from './engine/math';
 import { makeEntity, type PresetItem, type SpriteResolver } from './engine/make-entity';
 import { TerrainField, hillHeight, polylineDist, waterCeiling, type PathSpec, type TerrainSpec } from './terrain/field';
 import { fbm } from './terrain/noise';
-import { generate } from './structure/index';
-import { seatOnTerrain, structureEntity } from './structure/entity';
+import { generate, type PropGen } from './structure/index';
+import { seatOnTerrain, structureEntity, yawToward } from './structure/entity';
 import type { DecalResolver, Structure } from './structure/types';
 
 const WALK_R = 54;
@@ -102,6 +102,8 @@ class Planner {
   readonly spec: TerrainSpec;
   readonly lots: Lot[] = [];
   readonly decor: PresetItem[] = [];
+  /** Built props (fountain, lamp posts, mailboxes...): r is how much room each takes on the ground. */
+  readonly props: Array<{ id: string; word: string; gen: PropGen; params: Record<string, unknown>; x: number; z: number; yaw: number; r: number }> = [];
   readonly bridges: Array<{ x: number; z: number; yaw: number; len: number }> = [];
   private ids = new Map<string, number>();
   private structSeed: number;
@@ -270,13 +272,19 @@ class Planner {
     this.decor.push({ id: this.id(word.replace(/\s+/g, '_')), word, kind, heightM, pos: [round(x), 0, round(z)], flip });
   }
 
-  /** Decor spot test: dry, off roads, not inside a building, not on top of other decor. */
+  /** A built prop at (x, z), its front turned to `yaw` degrees. */
+  prop(word: string, gen: PropGen, x: number, z: number, yaw = 0, params: Record<string, unknown> = {}, r = 0.5): void {
+    this.props.push({ id: this.id(word.replace(/\s+/g, '_')), word, gen, params, x: round(x), z: round(z), yaw: Math.round(yaw * 10) / 10, r });
+  }
+
+  /** Decor spot test: dry, off roads, not inside a building, not on top of other decor or a prop. */
   free(x: number, z: number, r = 0.8, roadMargin = 0.3): boolean {
     if (Math.hypot(x, z) > WALK_R + 2) return false;
     if (this.waterGap(x, z) < 1) return false;
     if (this.roadGap(x, z) < roadMargin) return false;
     for (const l of this.lots) if (insideLot(l, x, z, r + 0.5)) return false;
     for (const d of this.decor) if (Math.hypot(d.pos[0] - x, d.pos[2] - z) < r + 0.6) return false;
+    for (const p of this.props) if (Math.hypot(p.x - x, p.z - z) < r + 0.1 + p.r) return false;
     return true;
   }
 }
@@ -593,7 +601,9 @@ function doorPaths(pl: Planner): void {
     const side: P2 = [-dir[1], dir[0]];
     const mx = road[0] + dir[0] * (ROAD_W / 2 + 0.9) + side[0] * 1.2;
     const mz = road[1] + dir[1] * (ROAD_W / 2 + 0.9) + side[1] * 1.2;
-    if ((l.word === 'house' || l.word === 'gingerbread house') && pl.rng() < 0.7 && pl.free(mx, mz, 0.4)) pl.place('mailbox', 'object', 1.1, mx, mz);
+    // its door toward the road, for the postman
+    if ((l.word === 'house' || l.word === 'gingerbread house') && pl.rng() < 0.7 && pl.free(mx, mz, 0.4))
+      pl.prop('mailbox', 'mailbox', mx, mz, yawToward([mx, 0, mz], [road[0], 0, road[1]]));
   }
 }
 
@@ -617,6 +627,7 @@ function forest(pl: Planner, hut: Lot | null, r0: number, r1: number, cap: numbe
     if (pl.roadGap(x, z) < 2.2 || pl.pathGap(x, z) < 1.4 || pl.waterGap(x, z) < 1.8) continue;
     if (pl.lots.some((l) => insideLot(l, x, z, 2.2))) continue;
     if (pl.decor.some((d) => Math.hypot(d.pos[0] - x, d.pos[2] - z) < (r > WALK_R ? 4.5 : 3.4))) continue;
+    if (pl.props.some((p) => Math.hypot(p.x - x, p.z - z) < (r > WALK_R ? 4.5 : 3.4) + p.r - 0.3)) continue;
     const roll = pl.rng();
     if (roll < 0.2) pl.place('bush', 'object', round(pl.range(0.9, 1.3)), x, z, pl.rng() < 0.5);
     else if (roll < 0.33 && !nearHut) pl.place('apple tree', 'object', round(pl.range(4, 5)), x, z, pl.rng() < 0.5);
@@ -627,23 +638,24 @@ function forest(pl: Planner, hut: Lot | null, r0: number, r1: number, cap: numbe
 
 /** Lamps along the roads, the plaza furniture, and the people who live here. */
 function dressing(pl: Planner, geo: ReturnType<typeof riverAndLake>, garden: Lot | null): void {
-  // plaza: a well, benches, lamps, the signpost where the river road leaves
-  pl.place('fountain', 'object', 2.2, 0, -3.2);
+  // plaza: the fountain, benches facing it, lamps round the edge, the signpost where the river road leaves
+  const fountainAt: Vec3 = [0, 0, -3.2];
+  pl.prop('fountain', 'fountain', fountainAt[0], fountainAt[2], 0, { r: 2.2 }, 2.8);
   for (const a of [0.6, 2.2, 3.8, 5.4]) {
     const x = Math.cos(a) * (PLAZA_R - 0.8);
     const z = Math.sin(a) * (PLAZA_R - 0.8);
-    if (pl.roadGap(x, z) > 0.4 && pl.free(x, z, 0.4, 0.4)) pl.place('lamppost', 'object', 3.2, x, z);
+    if (pl.roadGap(x, z) > 0.4 && pl.free(x, z, 0.4, 0.4)) pl.prop('lamppost', 'lamppost', x, z, yawToward([x, 0, z], [0, 0, 0]), {}, 0.3);
   }
   for (const a of [1.4, 4.6]) {
     const x = Math.cos(a) * (PLAZA_R - 2.2);
     const z = Math.sin(a) * (PLAZA_R - 2.2);
-    if (pl.roadGap(x, z) > 0.4 && pl.free(x, z, 0.6, 0.4)) pl.place('bench', 'object', 0.9, x, z);
+    if (pl.roadGap(x, z) > 0.4 && pl.free(x, z, 0.6, 0.4)) pl.prop('bench', 'bench', x, z, yawToward([x, 0, z], fountainAt), {}, 0.9);
   }
   const a0 = pl.spec.roads[0]?.pts[2];
   if (a0) {
     const x = a0[0] * 0.75 + 1.8;
     const z = a0[1] * 0.75 + 1.8;
-    if (pl.free(x, z, 0.5)) pl.place('signpost', 'object', 1.8, x, z);
+    if (pl.free(x, z, 0.5)) pl.prop('signpost', 'signpost', x, z, yawToward([x, 0, z], [0, 0, 0]), {}, 0.6);
   }
   // lamps every ~15 m down each road, alternating sides
   for (const rd of pl.spec.roads) {
@@ -659,7 +671,7 @@ function dressing(pl: Planner, geo: ReturnType<typeof riverAndLake>, garden: Lot
         const k = next - s;
         const x = a[0] + dir[0] * k - dir[1] * side * (ROAD_W / 2 + 0.8);
         const z = a[1] + dir[1] * k + dir[0] * side * (ROAD_W / 2 + 0.8);
-        if (pl.free(x, z, 0.5, 0.2) && pl.waterGap(x, z) > BANK + 0.5) pl.place('lamppost', 'object', 3.2, x, z);
+        if (pl.free(x, z, 0.5, 0.2) && pl.waterGap(x, z) > BANK + 0.5) pl.prop('lamppost', 'lamppost', x, z, yawToward([x, 0, z], [a[0] + dir[0] * k, 0, a[1] + dir[1] * k]), {}, 0.3);
         side = -side;
         next += 15;
       }
@@ -684,12 +696,27 @@ function dressing(pl: Planner, geo: ReturnType<typeof riverAndLake>, garden: Lot
   near(lot('gingerbread house'), 'candy cane', 'object', 0.9, 2.2, (lot('gingerbread house')?.hd ?? 0) + 1.2);
   near(lot('gingerbread house'), 'lollipop', 'object', 0.9, -2.2, (lot('gingerbread house')?.hd ?? 0) + 1.2);
   if (garden) {
+    // a birdbath at the back of the garden facing the gate, flowers round it
+    const [bx, bz] = toWorld(garden, 0, -garden.hd + 1.1);
+    pl.prop('birdbath', 'birdbath', bx, bz, garden.yaw, {}, 0.5);
     for (let i = 0; i < 6; i++) {
       const [x, z] = toWorld(garden, pl.range(-garden.hw + 1, garden.hw - 1), pl.range(-garden.hd + 1, garden.hd - 1.8));
-      pl.decor.push({ id: pl.id('flower'), word: pl.pick(['flower', 'rose', 'sunflower', 'daisy'] as const), kind: 'object', heightM: 0.6, pos: [round(x), 0, round(z)] });
+      const word = pl.pick(['flower', 'rose', 'sunflower', 'daisy'] as const);
+      if (Math.hypot(x - bx, z - bz) < 0.8) continue;
+      pl.decor.push({ id: pl.id('flower'), word, kind: 'object', heightM: 0.6, pos: [round(x), 0, round(z)] });
     }
     const [dx, dz] = toWorld(garden, 0.5, 0);
     pl.decor.push({ id: pl.id('dog'), word: 'dog', kind: 'animal', heightM: 0.6, pos: [round(dx), 0, round(dz)] });
+  }
+  // a wishing well in the side yard of the first house with room for one
+  for (const h of pl.lots.filter((l) => l.word === 'house')) {
+    const [wx, wz] = toWorld(h, -(h.hw + 2), -h.hd * 0.3);
+    const hs = [0, 1, 2, 3].map((k) => pl.hills(wx + Math.cos(k * 1.57) * 1.2, wz + Math.sin(k * 1.57) * 1.2));
+    if (Math.max(...hs) - Math.min(...hs) > 0.3) continue;
+    if (pl.free(wx, wz, 1.3, 0.8) && pl.waterGap(wx, wz) > BANK + 1) {
+      pl.prop('well', 'well', wx, wz, h.yaw, {}, 1.3);
+      break;
+    }
   }
   // a boat moored on the lake, a gull on its shore
   const lake = pl.spec.ponds[0];
@@ -768,6 +795,11 @@ export function generateVillage(seed: number, resolve: SpriteResolver, decals: D
     const deck = Math.max(field.height(b.x + dir[0] * half, b.z + dir[1] * half), field.height(b.x - dir[0] * half, b.z - dir[1] * half));
     const id = pl.id('bridge');
     entities.push(structureEntity(id, 'bridge', s, [round(b.x), round(deck), round(b.z)], Math.round(b.yaw), now));
+  }
+  for (const p of pl.props) {
+    const s = pl.nextStructure(p.gen, p.params);
+    const seated = seatOnTerrain(s, [p.x, 0, p.z], Math.round(p.yaw), (x, z) => field.height(x, z));
+    entities.push(structureEntity(p.id, p.word, seated.structure, [p.x, round(seated.base), p.z], Math.round(p.yaw), now));
   }
   for (const d of pl.decor) {
     // boats and ducks float; everything else stands on the ground

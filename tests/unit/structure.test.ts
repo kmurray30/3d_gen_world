@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildStructureMesh, _test as geo } from '../../src/shared/structure/geometry';
 import { partContact, partSpan, resolveBodyVsStructure, roofHeightAt, structureTopAt } from '../../src/shared/structure/collide';
-import { GENERATORS, coerceParams, colorOf, generate, materialOf, structureWord } from '../../src/shared/structure/index';
+import { GENERATORS, coerceParams, colorOf, generate, isPropGen, materialOf, structureWord } from '../../src/shared/structure/index';
 import { customStructure } from '../../src/shared/structure/gen/custom';
 import { Parts } from '../../src/shared/structure/build';
 import type { Part, Structure } from '../../src/shared/structure/types';
@@ -93,7 +93,8 @@ describe('geometry', () => {
       const s = generate(gen, gen === 'custom' ? { parts: [{ shape: 'cylinder', h: 3, r: 1, name: 'a' }, { shape: 'cone', on: 'a', h: 2 }] } : {}, 3, noDecals)!;
       expect(s, gen).toBeTruthy();
       expect(s.parts.length, gen).toBeGreaterThan(0);
-      expect(s.bounds.w, gen).toBeGreaterThan(0.5);
+      // props can be slim (a lamp post), buildings cannot
+      expect(s.bounds.w, gen).toBeGreaterThan(isPropGen(gen) ? 0.15 : 0.5);
       expect(s.bounds.h, gen).toBeGreaterThan(0.5);
       const m = buildStructureMesh(s);
       expect(m.groups.length, gen).toBeGreaterThan(0);
@@ -248,8 +249,12 @@ describe('generators', () => {
 
   it('the village has every structure and no two buildings overlap', () => {
     const w = villageWorld('v', (_w, kind) => defaultSprite(kind), noDecals, 5, 0);
-    const structures = w.entities.filter((e) => e.structure && e.structure.gen !== 'bridge');
+    const structures = w.entities.filter((e) => e.structure && e.structure.gen !== 'bridge' && !isPropGen(e.structure.gen));
     const gens = new Set(structures.map((e) => e.structure!.gen));
+    // props stand outside buildings (a birdbath may stand inside its garden's fence)
+    for (const p of w.entities.filter((e) => e.structure && isPropGen(e.structure.gen)))
+      for (const b of structures.filter((e) => e.structure!.gen !== 'yard'))
+        expect(Math.hypot(p.pos[0] - b.pos[0], p.pos[2] - b.pos[2]), `${p.id} in ${b.id}`).toBeGreaterThan(Math.min(b.structure!.bounds.w, b.structure!.bounds.d) / 2);
     for (const g of ['house', 'gingerbread', 'yard', 'lighthouse', 'witch_hut', 'bunker']) expect(gens.has(g), g).toBe(true);
     for (const a of structures)
       for (const b of structures) {
