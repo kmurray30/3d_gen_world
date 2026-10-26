@@ -10,6 +10,7 @@ const SHORT = 'public, max-age=60, must-revalidate';
  *    version segment changes whenever the manifest changes, so word-named files can still be cached forever)
  *  - /manifest.json                                  -> assets/manifest.json (short cache)
  *  - /rigs/<file>.json, /rigs/index.json               -> assets/rigs (how drawings come apart; short cache)
+ *  - /audio/manifest.json, /audio/<cue>/<n>.mp3        -> assets/audio (sounds and music; see words_and_images/audio)
  *  - everything else                                 -> dist/client (Vite output; hashed bundles are immutable)
  *  - /w/<slug>                                       -> dist/client/index.html (SPA)
  * Roots are relative to the process working directory (repo root locally, /app in the container).
@@ -34,6 +35,18 @@ export function mountStatic(app: Hono): void {
       },
     }),
   );
+  app.use(
+    '/audio/*',
+    serveStatic({
+      root: './assets',
+      onFound: (path, c) => {
+        // the cue list changes when sounds are fetched again; the sounds themselves can be kept a day
+        c.header('Cache-Control', /\.(mp3|ogg|wav|m4a)$/.test(path) ? 'public, max-age=86400' : SHORT);
+      },
+    }),
+  );
+  // no sounds fetched yet: a plain 404, not the app's page
+  app.get('/audio/*', (c) => c.notFound());
   app.get(
     '/manifest.json',
     serveStatic({

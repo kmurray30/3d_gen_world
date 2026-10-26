@@ -557,7 +557,11 @@ function animTask(action: AnimAction, engine: Engine): Task {
       (k) => {
         if (w.has(action.id)) w.trans(action.id).gesture = { name, t: k * dur, dur };
       },
-      () => w.has(action.id),
+      () => {
+        if (!w.has(action.id)) return false;
+        engine.emit({ type: 'anim', id: action.id, name, times });
+        return true;
+      },
       () => {
         if (w.has(action.id)) delete w.trans(action.id).gesture;
       },
@@ -610,6 +614,7 @@ function animTask(action: AnimAction, engine: Engine): Task {
       if (!e) return false;
       baseTilt = e.tilt;
       baseScale = e.scale;
+      engine.emit({ type: 'anim', id: action.id, name: action.name, times });
       return true;
     },
     () => {

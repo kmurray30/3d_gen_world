@@ -20,3 +20,6 @@ test-results/
 words_and_images/rig/pilot/
 words_and_images/rig/review/
 words_and_images/rig/auto_results.jsonl
+
+# Audio fetch downloads (the processed sounds in assets/audio are committed)
+words_and_images/audio/.cache/

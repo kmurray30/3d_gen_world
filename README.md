@@ -176,6 +176,26 @@ models on 40 drawings side by side, `run` does everything, resumably. See `words
 `node scripts/shots-puppets.mjs http://localhost:8787 OUT boy dog` shows rigs idling, gesturing,
 walking, making faces, talking and coming apart.
 
+## Sound and music
+
+`src/client/audio/` plays the world: your footsteps and those of people and animals nearby on whatever is
+underfoot (grass, the gravel of roads and paths, plaza stone, sand by the water, wading, wooden floors and
+bridges), doors, windows, shutters and the other moving pieces, animal calls by word, things landing by
+weight, effects (explosions, sparkles, splashes), things popping in and out, moves and gestures (claps, wing
+flaps, boings), and the command box. Music cross-fades with the time of day under ambience: birds by day,
+crickets at night, a stream or a lake shore when water is near, wind on the hills, and loops at fountains,
+fires and rain.
+
+People talk in babble: each syllable of a speech bubble is a short sung vowel in the character's own voice
+(children high, giants gruff, robots square), shaped by their expression (happy lifts, sad sinks, angry
+growls, a question rises), with laughs, sobs, gasps, grumbles and hums of their own. It is generated, so it
+needs no files. The Sound button (or `M`) switches between everything, no music, and off, remembered per
+device; sound starts with the first click or key, as browsers require.
+
+The recordings are all CC0 and come from `words_and_images/audio/` (Kenney's packs and Freesound): run
+`fetch_audio.py` there to download them into `assets/audio/`; see its README. Until then only the babble
+plays.
+
 ## Terrain, water and villages
 
 - `src/shared/terrain/field.ts`: a world's terrain is a saved recipe (`world.terrain`): seeded hills,

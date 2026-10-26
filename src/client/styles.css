@@ -92,7 +92,7 @@ body { background: linear-gradient(#6db3ff 0%, #9fd0ff 55%, #d9efff 100%); }
 .viewbar button:active { transform: translate(1px, 1px); box-shadow: 2px 3px 0 rgba(43,43,43,.25); }
 .viewbar .k { font-size: 10px; text-transform: uppercase; letter-spacing: .4px; color: #777; }
 .viewbar .v { font-size: 14px; font-weight: 800; }
-@media (max-width: 600px) { .viewbar { top: auto; bottom: 96px; } .viewbar button { min-width: 64px; padding: 4px 7px; } .viewbar .v { font-size: 12px; } }
+@media (max-width: 600px) { .viewbar { top: auto; bottom: 128px; gap: 5px; } .viewbar button { min-width: 64px; padding: 3px 7px; } .viewbar .v { font-size: 12px; } }
 .target-label {
   position: absolute; left: 50%; top: 56%; transform: translate(-50%, 0); padding: 4px 10px; font-weight: 700; font-size: 14px;
 }

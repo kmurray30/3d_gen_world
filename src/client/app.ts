@@ -16,10 +16,12 @@ import { ANGLES, CameraRig, loadViewSettings, saveViewSettings, type ViewMode } 
 import { Hud } from './ui/hud';
 import { WorldsPanel } from './ui/worlds-panel';
 import { createWorld, goToWorld, recordVisit, takeFreshFlag } from './app/worlds';
+import { GameSounds } from './audio/sounds';
+import { SOUND_MODES } from './audio/mixer';
 
 declare global {
   interface Window {
-    __game?: { world: World; engine: Engine; scene: SceneView; player: PlayerController; store: WorldStore; camera: CameraRig };
+    __game?: { world: World; engine: Engine; scene: SceneView; player: PlayerController; store: WorldStore; camera: CameraRig; sounds: GameSounds };
   }
 }
 
@@ -33,11 +35,14 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     onReset: () => void onReset(),
     onShare: () => void onShare(),
     onWorlds: () => worldsPanel?.open(),
-    onView: () => cycleView(),
-    onAngle: () => cycleAngle(),
-    onWalls: () => toggleWalls(),
-    onTime: () => cycleTime(),
+    onView: () => (click(), cycleView()),
+    onAngle: () => (click(), cycleAngle()),
+    onWalls: () => (click(), toggleWalls()),
+    onTime: () => (click(), cycleTime()),
+    onSound: () => cycleSound(),
   });
+  let sounds: GameSounds | undefined;
+  const click = () => sounds?.ui('click');
   let worldsPanel: WorldsPanel | undefined;
   const config: ClientConfig = await fetchConfig().catch(() => ({ spriteVersion: 'dev', llm: 'offline', needsPasscode: false, authed: true }));
   if (config.needsPasscode && !config.authed) {
@@ -58,6 +63,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   let targetId: string | undefined;
   let busy = false;
   const engine = new Engine(world, Date.now() & 0xffff);
+  sounds = new GameSounds(engine);
   const store = new WorldStore(engine, world, {
     onSaved: () => recordVisit(slug, engine.world.size),
     onConflict: () => hud.toast('This world changed somewhere else, so it was reloaded.', 'info', 5000),
@@ -101,7 +107,8 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   rig.setMode(settings.mode, engine.world.player);
   scene.fadeWalls = settings.fade;
   const refreshViewLabels = () => {
-    hud.setViewLabels({ view: VIEW_NAMES[rig.mode], angle: rig.mode === 'third' ? ANGLES[rig.angle].name : '-', walls: scene.fadeWalls ? 'fade' : 'solid', time: engine.world.sky });
+    const sound = sounds!.mixer.soundMode;
+    hud.setViewLabels({ view: VIEW_NAMES[rig.mode], angle: rig.mode === 'third' ? ANGLES[rig.angle].name : '-', walls: scene.fadeWalls ? 'fade' : 'solid', time: engine.world.sky, sound: sound === 'all' ? 'on' : sound === 'off' ? 'off' : 'no music' });
     saveViewSettings({ mode: rig.mode, angle: rig.angle, fade: scene.fadeWalls });
   };
   /** Time of day lives in the world (saved and shared with the link); the button and T cycle it. */
@@ -129,10 +136,20 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     hud.toast(scene.fadeWalls ? 'Walls in the way fade out.' : 'Walls stay solid.', 'info', 1500);
     refreshViewLabels();
   };
+  /** Sound: everything, effects without music, or off (remembered on this device); the button and M. */
+  const cycleSound = () => {
+    const m = sounds!.mixer;
+    m.unlock();
+    m.setSoundMode(SOUND_MODES[(SOUND_MODES.indexOf(m.soundMode) + 1) % SOUND_MODES.length]);
+    click();
+    hud.toast(m.soundMode === 'all' ? 'Sound and music on.' : m.soundMode === 'off' ? 'Sound off.' : 'Sound on, music off.', 'info', 1500);
+    refreshViewLabels();
+  };
   refreshViewLabels();
 
   const onCommand = (text: string) => {
     store.pushUndo();
+    sounds?.ui('send');
     return runStream(`/api/worlds/${slug}/command`, { command: text, context: compactWorld(engine.world, targetId, 40, rigOf) }, 'thinking...');
   };
   const onUndo = async () => {
@@ -174,10 +191,14 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
         } else if (ev.t === 'error') {
           console.warn('[command]', ev.msg);
         } else if (ev.t === 'done') {
-          if (ev.steps === 0) hud.toast(ev.reason === 'no json' ? 'The model did not answer with actions. Try again.' : 'Nothing happened. Try rephrasing.', 'error');
+          if (ev.steps === 0) {
+            sounds?.ui('error');
+            hud.toast(ev.reason === 'no json' ? 'The model did not answer with actions. Try again.' : 'Nothing happened. Try rephrasing.', 'error');
+          } else sounds?.ui('done');
         }
       });
     } catch (e) {
+      sounds?.ui('error');
       hud.toast(`Could not run that: ${(e as Error).message}`, 'error');
     } finally {
       engine.seal(script);
@@ -220,8 +241,8 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     const hint = (locked: boolean) =>
       hud.setHint(
         locked
-          ? 'WASD walk, Shift run, Space jump, click to poke, / type, Tab frees the mouse. V view, R angle, B walls, T time'
-          : 'Click the scene to look around. WASD walk, / type, V view, R angle, B walls, T time',
+          ? 'WASD walk, Shift run, Space jump, click to poke, / type, Tab frees the mouse. V view, R angle, B walls, T time, M sound'
+          : 'Click the scene to look around. WASD walk, / type, V view, R angle, B walls, T time, M sound',
       );
     hint(false);
     desktop.onLockChange = hint;
@@ -232,6 +253,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       else if (code === 'KeyR') cycleAngle();
       else if (code === 'KeyB') toggleWalls();
       else if (code === 'KeyT') cycleTime();
+      else if (code === 'KeyM') cycleSound();
     };
   } else {
     hud.setHint('Left thumb: walk, push further to run. Right thumb: look. Tap a thing to name it.');
@@ -301,9 +323,22 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     scene.updateAvatar(p, rig.showsAvatar, moving, faceDir, cam, dt);
     scene.updateFades(cam, p, rig.mode !== 'first');
     scene.render(cam, dt);
+    sounds!.update({
+      dt,
+      ears: cam.pos,
+      yaw: cam.yaw,
+      feet: p.pos,
+      grounded: player.onGround,
+      jumped: player.jumped,
+      landed: player.landed,
+      standing: player.ground,
+      walking: rig.drivesPlayer,
+      glow: scene.sky.glow,
+    });
   };
   requestAnimationFrame(loop);
-  window.__game = { world, engine, scene, player, store, camera: rig };
+  void sounds.mixer.load().then(refreshViewLabels);
+  window.__game = { world, engine, scene, player, store, camera: rig, sounds };
 }
 
 /** Phones and tablets: coarse pointer, or touch points without hover. Touch laptops keep desktop controls. */

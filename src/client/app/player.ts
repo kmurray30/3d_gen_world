@@ -16,6 +16,11 @@ export class PlayerController {
   /** Height of whatever the player stands on (0 = the meadow). */
   ground = 0;
   private grounded = true;
+  /** This frame's jump off the ground and landing back on it (for their sounds). */
+  jumped = false;
+  landed = false;
+  /** Seconds in the air before the last landing. */
+  airTime = 0;
   /** Pitch range in radians; the camera rig widens it for the overhead views. */
   pitchLimits: [number, number] = [-PITCH_LIMIT, PITCH_LIMIT];
 
@@ -54,7 +59,8 @@ export class PlayerController {
     // walking down a slope or off a low step: keep the feet on the ground instead of hopping
     if (wasGrounded && this.vy <= 0 && s.pos[1] > this.ground && s.pos[1] - this.ground < 0.6) s.pos[1] = this.ground;
     const onGround = s.pos[1] <= this.ground + 0.001 && this.vy <= 0;
-    if (jump && onGround) this.vy = JUMP;
+    this.jumped = jump && onGround;
+    if (this.jumped) this.vy = JUMP;
     if (s.pos[1] < this.ground && this.vy <= 0) {
       // stepped onto something higher: climb up to it
       s.pos[1] = Math.min(this.ground, s.pos[1] + STEP_CLIMB * dt);
@@ -65,9 +71,12 @@ export class PlayerController {
       if (s.pos[1] === this.ground) this.vy = 0;
     }
     this.grounded = s.pos[1] <= this.ground + 0.001 && this.vy <= 0;
+    this.landed = this.grounded && !wasGrounded && this.airTime > 0.25;
+    this.airTime = this.grounded ? (this.landed ? this.airTime : 0) : this.airTime + dt;
   }
 
-  get moving(): boolean {
-    return false;
+  /** On the ground (not jumping or falling). */
+  get onGround(): boolean {
+    return this.grounded;
   }
 }

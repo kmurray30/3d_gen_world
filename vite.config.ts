@@ -18,6 +18,7 @@ export default defineConfig({
       '/api': { target: 'http://localhost:8787', changeOrigin: false },
       '/sprites': { target: 'http://localhost:8787', changeOrigin: false },
       '/rigs': { target: 'http://localhost:8787', changeOrigin: false },
+      '/audio': { target: 'http://localhost:8787', changeOrigin: false },
     },
   },
 });

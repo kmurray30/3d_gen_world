@@ -34,6 +34,8 @@ export type EngineEvent =
   | { type: 'scriptDone'; id: string }
   | { type: 'sky'; time: string }
   | { type: 'poke'; id: string; part?: string }
+  /** A whole-body move or gesture starting (for its sound). */
+  | { type: 'anim'; id: string; name: string; times: number }
   | { type: 'warn'; msg: string };
 
 /**
