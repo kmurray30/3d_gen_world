@@ -4,7 +4,7 @@ import { worldPos } from '../../shared/engine/transform';
 import type { WorldModel } from '../../shared/engine/world';
 import { SpriteView, origamiKind, type GroundView } from './sprites';
 import { applyCrayon, crayonTexture, CRAYON_METRES } from './crayon';
-import { flipFor, lerpAngle, visibleYaw, yawAlong, yawFacing } from '../../shared/engine/facing';
+import { flipFor } from '../../shared/engine/facing';
 import { StructureView } from './structures';
 import { MaterialTiles } from './materials';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
@@ -44,6 +44,8 @@ export class SceneView {
   private avatar: SpriteView | null = null;
   private avatarEntity: Entity | null = null;
   private avatarPhase = 0;
+  /** The avatar's paper turn: 1 facing left as drawn, -1 mirrored to face right, in between mid-turn. */
+  private avatarTurn = 1;
   private lastCam: CameraPose = { pos: [0, 1.6, 0], yaw: 0, pitch: 0 };
   readonly sky: SkyView;
   private readonly haloTex = haloTexture();
@@ -235,12 +237,20 @@ export class SceneView {
       return;
     }
     const pos: Vec3 = [player.pos[0], player.pos[1], player.pos[2]];
-    if (faceDir) {
+    // Like Paper Mario, the player's paper always lies flat to the camera. Walking across the screen flips it to
+    // face that way with a quick paper turn; walking toward or away from the camera, standing still or turning
+    // the camera keeps the way it last faced.
+    e.yaw = undefined;
+    if (moving && faceDir) {
       e.faceDir = faceDir;
-      const want = visibleYaw(yawAlong(faceDir[0], faceDir[1]), pos, cam.pos, 0.6);
-      e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
-      e.flip = flipFor(e.yaw, faceDir[0], faceDir[1]);
-    } else if (e.yaw === undefined) e.yaw = yawFacing(pos, cam.pos);
+      const across = (faceDir[0] * Math.cos(cam.yaw) - faceDir[1] * Math.sin(cam.yaw)) / Math.max(1e-6, Math.hypot(faceDir[0], faceDir[1]));
+      if (Math.abs(across) > 0.3) e.flip = across > 0;
+    }
+    const want = e.flip ? -1 : 1;
+    const step = dt * 9;
+    this.avatarTurn = Math.abs(want - this.avatarTurn) <= step ? want : this.avatarTurn + Math.sign(want - this.avatarTurn) * step;
+    // never quite edge-on, so the paper does not vanish mid-turn
+    this.avatar.turn = Math.abs(this.avatarTurn) < 0.08 ? Math.sign(want) * 0.08 : this.avatarTurn;
     let sq = 1;
     if (moving) {
       this.avatarPhase += dt;

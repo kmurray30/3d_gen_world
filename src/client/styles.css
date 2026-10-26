@@ -101,9 +101,17 @@ body { background: linear-gradient(#6db3ff 0%, #9fd0ff 55%, #d9efff 100%); }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.error { background: #ffd9d9; }
 .toast.say { background: #fff8d6; font-style: italic; }
-.lock-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(43,43,43,.15); cursor: pointer; pointer-events: none; }
-.lock-overlay .card { padding: 14px 22px; font-weight: 800; font-size: 18px; text-align: center; }
-.lock-overlay .card small { font-weight: 500; font-size: 13px; }
+.crosshair {
+  position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 0 1.5px rgba(43,43,43,.85); pointer-events: none; transition: background .12s;
+}
+.crosshair::after {
+  content: ''; position: absolute; inset: -7px; border-radius: 50%; border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(43,43,43,.6), inset 0 0 0 1px rgba(43,43,43,.6);
+  opacity: 0; transform: scale(.6); transition: opacity .12s, transform .12s;
+}
+.crosshair.on { background: var(--accent); }
+.crosshair.on::after { opacity: 1; transform: scale(1); }
 .joy {
   position: absolute; width: 220px; height: 220px; border-radius: 50%; border: 3px dashed rgba(255,255,255,.55);
   background: rgba(255,255,255,.08); pointer-events: none; transition: border-color .15s;
@@ -129,7 +137,6 @@ body { background: linear-gradient(#6db3ff 0%, #9fd0ff 55%, #d9efff 100%); }
 .passform input { font: inherit; font-size: 16px; padding: 10px 12px; border: 3px solid var(--ink); border-radius: 10px; }
 .passform button { font: inherit; font-weight: 800; padding: 10px; border: 3px solid var(--ink); border-radius: 10px; background: var(--accent); cursor: pointer; }
 .passerr { color: #b00020; font-size: 13px; min-height: 1em; }
-#hud > .lock-overlay { pointer-events: none; }
 .bubble {
   position: absolute; left: 0; top: 0; max-width: 240px; padding: 6px 12px; font-weight: 700; font-size: 15px; line-height: 1.25;
   background: var(--paper); border: 3px solid var(--ink); border-radius: 16px; pointer-events: none; white-space: pre-wrap;

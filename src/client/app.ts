@@ -211,21 +211,23 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   };
   const touch = coarse ? new TouchInput(canvas, hudRoot) : null;
   if (!coarse) {
-    hud.showLockOverlay(true);
-    hud.setHint('WASD walk, Shift run, Space jump, click to poke, / type, Tab frees the mouse. V view, R angle, B walls, T time');
-    desktop.onLockChange = (locked) => hud.showLockOverlay(!locked && !document.activeElement?.matches('input'));
+    // no overlay over the scene: the hint line says what a click does while the mouse is free
+    const hint = (locked: boolean) =>
+      hud.setHint(
+        locked
+          ? 'WASD walk, Shift run, Space jump, click to poke, / type, Tab frees the mouse. V view, R angle, B walls, T time'
+          : 'Click the scene to look around. WASD walk, / type, V view, R angle, B walls, T time',
+      );
+    hint(false);
+    desktop.onLockChange = hint;
     desktop.onLockError = () => hud.toast('Could not capture the mouse. Click the scene again.', 'error');
-    desktop.onRequestCommand = () => {
-      hud.showLockOverlay(false);
-      hud.focusInput();
-    };
+    desktop.onRequestCommand = () => hud.focusInput();
     desktop.onHotkey = (code) => {
       if (code === 'KeyV') cycleView();
       else if (code === 'KeyR') cycleAngle();
       else if (code === 'KeyB') toggleWalls();
       else if (code === 'KeyT') cycleTime();
     };
-    hud.input.addEventListener('blur', () => hud.showLockOverlay(!desktop.locked));
   } else {
     hud.setHint('Left thumb: walk, push further to run. Right thumb: look. Tap a thing to name it.');
   }
@@ -280,6 +282,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       const e = id ? engine.world.get(id) : undefined;
       targetId = e?.id;
       hud.setTarget(e ? e.label : null);
+      hud.setCrosshair(desktop.locked, !!e);
     }
     engine.update(dt);
     store.tick();

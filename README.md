@@ -23,12 +23,16 @@ angle (behind, high, bird, top: the last one is an overhead 2.5D view); turn wal
 and change the time of day (dawn, day, sunset, night). With fading on, any wall or roof between the
 camera and your character goes see-through, so you can follow yourself into a house. At night the
 lamps, windows and the lighthouse light up. `Tab` (or `Alt`) frees the mouse without `Esc`; click
-the scene to look around again.
+the scene to look around again (the hint line says so; nothing covers the scene). While looking
+around, a dot in the middle of the screen shows what a click will poke, ringed when it rests on
+something.
 
 **Paper in the world.** Cutouts no longer turn to face the camera: each has a yaw in the world, so
 you can walk around one and see its edge. They always stand upright: looking up or down never tips
-them (or your own character); only scripted moves like pouring or falling over lean them. Things spawn facing you, walkers turn their paper along
-their path, and anything living turns, wanders a few steps around home, or fidgets on its own when
+them (or your own character); only scripted moves like pouring or falling over lean them. Your own
+character is the exception to the yaw: like Paper Mario, it always lies flat to the camera and
+flips, with a quick paper turn, to face the way you walk across the screen. Things spawn facing
+you, walkers turn their paper along their path, and anything living turns, wanders a few steps around home, or fidgets on its own when
 no command is using it, favouring orientations you can see. Buildings can be changed in place
 ("add a story to the house", "paint the cottage blue"): the model sets new generator parameters
 and the structure regenerates with the rest kept.

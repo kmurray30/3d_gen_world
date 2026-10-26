@@ -11,7 +11,7 @@ async function enterVillage(page: Page): Promise<void> {
 
 test('village preset: structures load, views cycle, walls fade, the player walks into a house', async ({ page, isMobile }) => {
   // a whole generated village under a software GPU: slow frames, so this long walk-through gets more time
-  test.setTimeout(150_000);
+  test.setTimeout(210_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await enterVillage(page);
@@ -103,8 +103,9 @@ test('village preset: structures load, views cycle, walls fade, the player walks
   // a mock command that builds a custom structure streams a build step and the scene shows it
   await page.fill('.cmd input', 'build a wizard tower with a crooked hat');
   await page.press('.cmd input', 'Enter');
-  await page.waitForFunction((n) => (window as any).__game.scene.structures.size === n + 1, nStructures, { timeout: 20000 });
-  await page.waitForFunction(() => !(window as any).__game.engine.busy, null, { timeout: 20000 });
+  // script time only advances as fast as frames come, and two software-rendered browsers make frames slow
+  await page.waitForFunction((n) => (window as any).__game.scene.structures.size === n + 1, nStructures, { timeout: 45000 });
+  await page.waitForFunction(() => !(window as any).__game.engine.busy, null, { timeout: 45000 });
   const tower = await page.evaluate(() => (window as any).__game.engine.world.list().find((e: any) => e.structure?.gen === 'custom'));
   expect(tower.scale).toBeCloseTo(1, 2);
 
@@ -113,7 +114,7 @@ test('village preset: structures load, views cycle, walls fade, the player walks
   await expect(page.locator('button[data-view=time] .v')).toHaveText('sunset');
   await page.fill('.cmd input', 'it gets dark');
   await page.press('.cmd input', 'Enter');
-  await page.waitForFunction(() => (window as any).__game.engine.world.sky === 'night', null, { timeout: 20000 });
+  await page.waitForFunction(() => (window as any).__game.engine.world.sky === 'night', null, { timeout: 45000 });
   await expect(page.locator('button[data-view=time] .v')).toHaveText('night');
   // wait for the save to reach the server before reloading
   await expect

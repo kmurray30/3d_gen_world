@@ -48,6 +48,8 @@ export class SpriteView {
   private wantedFile: string | null = null;
   private hasRealTexture = false;
   private halo: THREE.Sprite | null = null;
+  /** When set, the paper's horizontal scale (-1..1) instead of the plain mirror: a paper turn in progress. */
+  turn: number | null = null;
 
   constructor(
     public readonly id: string,
@@ -98,7 +100,7 @@ export class SpriteView {
       this.pivot.position.y = hs / 2;
       this.body.position.y = 0;
       this.body.rotation.set(0, 0, tilt, 'YXZ');
-      this.body.scale.set(mirror ? -ws : ws, hs, 1);
+      this.body.scale.set(this.turn !== null && this.hasRealTexture ? ws * this.turn : mirror ? -ws : ws, hs, 1);
     }
     // Shadow lies on the ground under the entity, tilted with the slope; shrinks and fades as the entity rises.
     const g = ground ? ground.height(pos[0], pos[2]) : 0;
