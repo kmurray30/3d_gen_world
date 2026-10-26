@@ -15,7 +15,8 @@ import type { Entity, Vec3 } from '../../shared/types';
 import { DEG, clamp } from '../../shared/engine/math';
 import type { Transient } from '../../shared/engine/world';
 import { buildStructureMesh, type MeshGroup } from '../../shared/structure/geometry';
-import { jointOn, windowParts } from '../../shared/structure/joints';
+import { doorMover, doorParts, jointOn, windowParts } from '../../shared/structure/joints';
+import { WINDOW_SASH } from '../../shared/structure/openings';
 import type { Joint, Structure } from '../../shared/structure/types';
 import { MaterialTiles } from './materials';
 import { applyCrayon } from './crayon';
@@ -26,8 +27,7 @@ const INK = '#2b2b2b';
 const INK_WIDTH_M = 0.045;
 const FADE_ALPHA = 0.22;
 const FADE_SPEED = 7;
-/** Where the two sashes sit in the window drawing, as fractions from its top left: across, middle, and down. */
-const SASH = { x0: 0.15, xm: 0.5, x1: 0.848, y0: 0.119, y1: 0.82 };
+const SASH = WINDOW_SASH;
 const SASH_OPEN = 1.75;
 const ROOM = '#2c2621';
 const LAMP_OFF = new THREE.Color('#b8b6aa');
@@ -78,8 +78,8 @@ interface Piece {
   box: THREE.Box3;
   alpha: number;
   target: number;
-  /** Doors: swing amount 0..1 and the rotation sign that opens inward. */
-  door?: { k: number; sign: number };
+  /** Doors: swing amount 0..1, the rotation sign that opens inward, and the state key that opens it. */
+  door?: { k: number; sign: number; key: string };
 }
 
 /** A moving piece: its parts' meshes and outline under a group placed at the joint. */
@@ -119,7 +119,7 @@ export class StructureView {
   private readonly joints = new Map<string, JointView>();
   private readonly windows: WindowView[] = [];
   /** Windows not cut yet: a window stays one quad until it first opens. */
-  private readonly uncut = new Map<string, { g: MeshGroup; geo: THREE.BufferGeometry; n: number; mat: THREE.MeshBasicMaterial }>();
+  private readonly uncut = new Map<string, { g: MeshGroup; geo: THREE.BufferGeometry; n: number; mat: THREE.MeshBasicMaterial; hole: boolean }>();
   /** The exploded view while the "apart" gesture plays: every part on its own, floating out from the middle. */
   private apart: { group: THREE.Group; parts: Array<{ obj: THREE.Object3D; home: THREE.Vector3; dir: THREE.Vector3; spin: THREE.Vector3 }>; lines: LineSegments2[] } | null = null;
 
@@ -141,7 +141,9 @@ export class StructureView {
     const data = buildStructureMesh(s);
     for (const j of s.joints ?? []) this.addJoint(j);
     const windowOf = new Map(windowParts(s).map((part, n) => [part, n]));
-    for (const g of data.groups) this.addGroup(g, windowOf);
+    const doors = doorParts(s);
+    const doorOf = new Map(doors.map((part, n) => [part, doorMover(n, doors.length)]));
+    for (const g of data.groups) this.addGroup(g, windowOf, doorOf);
     // small props (a mailbox, a lamp post) get a finer line, so the ink does not swallow them
     const ink = clamp(0.012 + Math.max(s.bounds.w, s.bounds.d) * 0.03, 0.02, INK_WIDTH_M);
     this.lineMat = new LineMaterial({ color: new THREE.Color(s.ink ?? INK).getHex(), linewidth: ink, worldUnits: true, transparent: true, depthWrite: false });
@@ -248,7 +250,7 @@ export class StructureView {
     return geo;
   }
 
-  private addGroup(g: MeshGroup, windowOf: Map<number, number>): void {
+  private addGroup(g: MeshGroup, windowOf: Map<number, number>, doorOf: Map<number, { name: string; key: string }>): void {
     const jv = g.joint ? this.joints.get(g.joint) : undefined;
     const at = jv?.joint.at;
     const geo = this.geometry(g, at);
@@ -265,11 +267,15 @@ export class StructureView {
       jv.mats.push(mat);
       jv.colors?.push(mat.color.clone());
     }
-    if (g.decal?.role === 'door') this.hingeDoor(piece, geo);
+    const door = g.decal?.role === 'door' && !g.joint ? doorOf.get(g.decal.part) : undefined;
+    if (door) {
+      mesh.userData.piece = door.name;
+      this.hingeDoor(piece, geo, door.key);
+    }
     this.pieces.push(piece);
     if (n !== undefined) {
       mesh.userData.piece = `window_${n}`;
-      this.uncut.set(`open_window_${n}`, { g, geo, n, mat });
+      this.uncut.set(`open_window_${n}`, { g, geo, n, mat, hole: !!g.decal?.hole });
     }
   }
 
@@ -277,7 +283,7 @@ export class StructureView {
    * Put a window's two sashes over its frame, each on a hinge at its outer edge so it swings out, and a dark room
    * behind them that lights up at night.
    */
-  private cutWindow(g: MeshGroup, geo: THREE.BufferGeometry, n: number, frameMat: THREE.MeshBasicMaterial): void {
+  private cutWindow(g: MeshGroup, geo: THREE.BufferGeometry, n: number, frameMat: THREE.MeshBasicMaterial, hole: boolean): void {
     const p = geo.attributes.position as THREE.BufferAttribute;
     const nr = geo.attributes.normal as THREE.BufferAttribute;
     if (!p || p.count < 4 || !g.decal?.sprite.file) return;
@@ -313,8 +319,11 @@ export class StructureView {
       parent.add(mesh);
       this.pieces.push({ mesh, mat, box: mesh.geometry.boundingBox!.clone().translate(offset), alpha: 1, target: 1 });
     };
-    const roomMat = tinted(new THREE.MeshBasicMaterial({ color: ROOM, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }), true);
-    add(new THREE.Mesh(quad(SASH.x0, SASH.x1, new THREE.Vector3(), 0.005), roomMat), roomMat, this.root, new THREE.Vector3());
+    if (!hole) {
+      // nothing cut behind this one (a window on something solid): a dark room painted behind the sashes
+      const roomMat = tinted(new THREE.MeshBasicMaterial({ color: ROOM, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }), true);
+      add(new THREE.Mesh(quad(SASH.x0, SASH.x1, new THREE.Vector3(), 0.005), roomMat), roomMat, this.root, new THREE.Vector3());
+    }
     const sashes: WindowView['sashes'] = [];
     for (const [u0, u1, hingeU] of [
       [SASH.x0, SASH.xm, SASH.x0],
@@ -335,7 +344,7 @@ export class StructureView {
   }
 
   /** Move a door quad's origin to its hinge edge so it can swing open about it. */
-  private hingeDoor(piece: Piece, geo: THREE.BufferGeometry): void {
+  private hingeDoor(piece: Piece, geo: THREE.BufferGeometry, key: string): void {
     const p = geo.attributes.position as THREE.BufferAttribute;
     const n = geo.attributes.normal as THREE.BufferAttribute;
     if (!p || !n || p.count < 3) return;
@@ -360,14 +369,14 @@ export class StructureView {
     piece.box = geo.boundingBox!.clone().translate(new THREE.Vector3(hinge.x, 0, hinge.z));
     // swing inward (away from the outward normal): pick the rotation sign that moves the free edge that way
     const swung = right.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), 1);
-    piece.door = { k: 0, sign: swung.dot(normal) < 0 ? 1 : -1 };
+    piece.door = { k: 0, sign: swung.dot(normal) < 0 ? 1 : -1, key };
   }
 
   update(e: Entity, pos: Vec3, dt: number, gesture?: Transient['gesture']): void {
     if (e.structure && e.structure !== this.built) this.build(e.structure);
-    const open = e.state.door_open === true ? 1 : 0;
     for (const p of this.pieces) {
       if (!p.door) continue;
+      const open = e.state[p.door.key] === true ? 1 : 0;
       p.door.k += (open - p.door.k) * Math.min(1, dt * 6);
       if (Math.abs(p.door.k - open) < 0.005) p.door.k = open;
       p.mesh.rotation.y = p.door.sign * p.door.k * 1.8;
@@ -377,7 +386,7 @@ export class StructureView {
       for (const [key, w] of this.uncut)
         if (e.state[key] === true) {
           this.uncut.delete(key);
-          this.cutWindow(w.g, w.geo, w.n, w.mat);
+          this.cutWindow(w.g, w.geo, w.n, w.mat, w.hole);
         }
     for (const w of this.windows) {
       const want = e.state[w.key] === true ? 1 : 0;

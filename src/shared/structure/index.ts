@@ -2,6 +2,7 @@
  * The generator registry: a name plus loose parameters (from a preset, a vocabulary word or the model) becomes a
  * Structure. Parameters are coerced here so generators can trust their numbers.
  */
+import { cutOpenings } from './openings';
 import { makeRng } from '../engine/math';
 import type { DecalResolver, GenContext, MaterialName, Structure } from './types';
 import { MATERIALS } from './types';
@@ -203,6 +204,12 @@ export function coerceParams(gen: GenName, raw: Params): Params {
 
 /** Build a structure. Params are expected to be coerced already. Returns null for an unknown generator. */
 export function generate(gen: string, params: Params, seed: number, decals: DecalResolver): Structure | null {
+  const s = generateParts(gen, params, seed, decals);
+  // holes behind its doors and windows, so they open onto the inside (and tower doorways can be walked through)
+  return s ? cutOpenings(s) : null;
+}
+
+function generateParts(gen: string, params: Params, seed: number, decals: DecalResolver): Structure | null {
   const ctx: GenContext = { rng: makeRng(seed), decal: decals };
   switch (gen as GenName) {
     case 'house': {

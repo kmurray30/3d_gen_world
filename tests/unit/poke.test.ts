@@ -15,13 +15,30 @@ describe('poking things', () => {
     expect(s.parts.some((p) => p.t === 'decal' && p.role === 'door')).toBe(true);
     const e = structureEntity('hut_1', 'hut', s, [0, 0, 6], 180, 0);
     engine.world.add(e);
+    // a click on a wall does nothing; a click on the door works it
     expect(engine.poke('hut_1')).toBe(true);
+    expect(engine.world.get('hut_1')!.state.door_open).toBeUndefined();
+    tick(engine, 1);
+    expect(engine.poke('hut_1', 'door')).toBe(true);
     expect(engine.world.get('hut_1')!.state.door_open).toBe(true);
     expect(events.some((ev) => ev.type === 'stateChange' && ev.id === 'hut_1' && ev.key === 'door_open' && ev.value === true)).toBe(true);
-    expect(engine.poke('hut_1')).toBe(false); // cooldown
+    expect(engine.poke('hut_1', 'door')).toBe(false); // cooldown
     tick(engine, 1);
-    expect(engine.poke('hut_1')).toBe(true);
+    expect(engine.poke('hut_1', 'door')).toBe(true);
     expect(engine.world.get('hut_1')!.state.door_open).toBe(false);
+  });
+
+  it('a lighthouse has two doors that open one at a time', () => {
+    const engine = makeEngine(meadowWorld());
+    const s = generate('lighthouse', { cottage: true }, 3, decals)!;
+    engine.world.add(structureEntity('lh_1', 'lighthouse', s, [0, 0, 12], 0, 0));
+    engine.poke('lh_1', 'door_1');
+    const e = engine.world.get('lh_1')!;
+    expect(e.state.open_door_1).toBe(true);
+    expect(e.state.door_open).toBeUndefined();
+    tick(engine, 1);
+    expect(engine.operate('lh_1', 'doors', 'open')).toBe(true);
+    expect(e.state.door_open).toBe(true);
   });
 
   it('animals turn to you and yelp; people greet; objects wobble', () => {

@@ -7,6 +7,7 @@
 import type { SpriteRef } from '../types';
 import { DEG, rotateY } from '../engine/math';
 import type { MaterialName, Part, PrismPart, RibbonPart, RoofPart, StairsPart, Structure, WallPart } from './types';
+import { cutOpenings } from './openings';
 
 type V3 = [number, number, number];
 
@@ -26,7 +27,7 @@ export interface MeshGroup {
   /** Lit at night (windows, lamps). */
   glow?: boolean;
   /** Set for decal quads: draw the sprite (or a text card) instead of a material tile. */
-  decal?: { sprite: SpriteRef; text?: string; role?: 'door' | 'window'; part: number };
+  decal?: { sprite: SpriteRef; text?: string; role?: 'door' | 'window'; part: number; hole?: boolean };
   /** Moves with this joint. */
   joint?: string;
 }
@@ -222,7 +223,7 @@ class StructureBuilder {
     else set.set(key, { a, b, normals: [n] });
   }
 
-  decal(pts: V3[], sprite: SpriteRef, color: string, part: number, text?: string, role?: 'door' | 'window', glow = false): void {
+  decal(pts: V3[], sprite: SpriteRef, color: string, part: number, text?: string, role?: 'door' | 'window', glow = false, hole = false): void {
     const n = polygonNormal(pts);
     const b = new SlotBuilder();
     b.polygon(
@@ -236,7 +237,7 @@ class StructureBuilder {
         [0, 1],
       ],
     );
-    this.decals.push({ mat: 'flat', color, mesh: b.mesh, decal: { sprite, text, role, part }, ...(glow ? { glow } : {}), ...(this.joint ? { joint: this.joint } : {}) });
+    this.decals.push({ mat: 'flat', color, mesh: b.mesh, decal: { sprite, text, role, part, ...(hole ? { hole } : {}) }, ...(glow ? { glow } : {}), ...(this.joint ? { joint: this.joint } : {}) });
   }
 
   finish(): StructureMesh {
@@ -365,14 +366,63 @@ function tubeFaces(part: PrismPart, hole: number): V3[][] {
   const it = prismRing(part, hole * k, (hole * k) / part.r, part.h, part.lean);
   const faces: V3[][] = [];
   const n = ob.length;
+  const lerp = (a: V3, b: V3, k: number): V3 => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n;
     const mid = (a: V3, b: V3): V3 => [(a[0] + b[0]) / 2, 0, (a[2] + b[2]) / 2];
     const out = mid(ob[i], ob[j]);
-    faces.push(want([ob[j], ob[i], ot[i], ot[j]], out));
-    faces.push(want([ib[i], ib[j], it[j], it[i]], [-out[0], 0, -out[2]]));
-    faces.push(want([ot[i], ot[j], it[j], it[i]], [0, 1, 0]));
-    faces.push(want([ob[j], ob[i], ib[i], ib[j]], [0, -1, 0]));
+    const inn: V3 = [-out[0], 0, -out[2]];
+    const holes = (part.openings ?? []).filter((o) => ((Math.round(o.side) % n) + n) % n === i);
+    if (!holes.length) {
+      faces.push(want([ot[i], ot[j], it[j], it[i]], [0, 1, 0]));
+      faces.push(want([ob[j], ob[i], ib[i], ib[j]], [0, -1, 0]));
+      faces.push(want([ob[j], ob[i], ot[i], ot[j]], out));
+      faces.push(want([ib[i], ib[j], it[j], it[i]], inn));
+      continue;
+    }
+    // the side cut round its doors and windows: a grid over (across from corner i to j, height), outside and
+    // inside alike, with the hole's sides joining the two
+    const H = part.h;
+    const P = (o0: V3, o1: V3, t0: V3, t1: V3) => (u: number, y: number): V3 => lerp(lerp(o0, o1, u), lerp(t0, t1, u), y / H);
+    const po = P(ob[i], ob[j], ot[i], ot[j]);
+    const pi = P(ib[i], ib[j], it[i], it[j]);
+    const rect = holes.map((o) => {
+      const y0 = o.y ?? 0;
+      const ym = y0 + o.h / 2;
+      const len = Math.hypot(po(1, ym)[0] - po(0, ym)[0], po(1, ym)[2] - po(0, ym)[2]);
+      const half = o.w / 2 / Math.max(1e-6, len);
+      const uc = 0.5 + o.at / Math.max(1e-6, len);
+      return { l: Math.max(0.01, uc - half), r: Math.min(0.99, uc + half), b: y0, t: Math.min(H, y0 + o.h) };
+    });
+    const us = breaks([0, 1, ...rect.flatMap((o) => [o.l, o.r])], 0, 1);
+    const ys = breaks([0, H, ...rect.flatMap((o) => [o.b, o.t])], 0, H);
+    for (let a = 0; a + 1 < us.length; a++)
+      for (let b = 0; b + 1 < ys.length; b++) {
+        const cu = (us[a] + us[a + 1]) / 2;
+        const cy = (ys[b] + ys[b + 1]) / 2;
+        if (rect.some((o) => cu > o.l && cu < o.r && cy > o.b && cy < o.t)) continue;
+        const [u0, u1, y0, y1] = [us[a], us[a + 1], ys[b], ys[b + 1]];
+        faces.push(want([po(u0, y0), po(u1, y0), po(u1, y1), po(u0, y1)], out));
+        faces.push(want([pi(u0, y0), pi(u1, y0), pi(u1, y1), pi(u0, y1)], inn));
+      }
+    // the flat rims on top and bottom, round any hole that reaches them
+    for (const [y, rim, up] of [
+      [0, (o: { b: number }) => o.b <= 1e-4, -1],
+      [H, (o: { t: number }) => o.t >= H - 1e-4, 1],
+    ] as const) {
+      for (let a = 0; a + 1 < us.length; a++) {
+        const cu = (us[a] + us[a + 1]) / 2;
+        if (rect.some((o) => rim(o) && cu > o.l && cu < o.r)) continue;
+        faces.push(want([po(us[a], y), po(us[a + 1], y), pi(us[a + 1], y), pi(us[a], y)], [0, up, 0]));
+      }
+    }
+    const along: V3 = [ob[j][0] - ob[i][0], 0, ob[j][2] - ob[i][2]];
+    for (const o of rect) {
+      faces.push(want([po(o.l, o.b), po(o.l, o.t), pi(o.l, o.t), pi(o.l, o.b)], along));
+      faces.push(want([po(o.r, o.b), po(o.r, o.t), pi(o.r, o.t), pi(o.r, o.b)], [-along[0], 0, -along[2]]));
+      if (o.t < H - 1e-4) faces.push(want([po(o.l, o.t), po(o.r, o.t), pi(o.r, o.t), pi(o.l, o.t)], [0, -1, 0]));
+      if (o.b > 1e-4) faces.push(want([po(o.l, o.b), po(o.r, o.b), pi(o.r, o.b), pi(o.l, o.b)], [0, 1, 0]));
+    }
   }
   return faces;
 }
@@ -500,25 +550,38 @@ function wallFaces(part: WallPart): V3[][] {
   const z = part.d / 2;
   const h = part.h;
   const p = (a: number, b: number, c: number): V3 => [a, b, c];
-  const openings = [...(part.openings ?? [])].sort((a, b) => a.at - b.at);
-  // outline in the xy plane, counter-clockwise seen from +z
-  const outline: Array<[number, number]> = [[-x, 0]];
-  for (const o of openings) outline.push([o.at - o.w / 2, 0], [o.at - o.w / 2, o.h], [o.at + o.w / 2, o.h], [o.at + o.w / 2, 0]);
-  outline.push([x, 0], [x, h], [-x, h]);
+  const holes = (part.openings ?? []).map((o) => ({ l: o.at - o.w / 2, r: o.at + o.w / 2, b: o.y ?? 0, t: (o.y ?? 0) + o.h }));
   const faces: V3[][] = [];
-  faces.push(want(outline.map(([a, b]) => p(a, b, z)), [0, 0, 1]));
-  faces.push(want(outline.map(([a, b]) => p(a, b, -z)), [0, 0, -1]));
+  // both big faces as a grid of cells round the holes: every cell edge meets its neighbour's whole, so only
+  // the real outline (and the rims of the holes) gets ink
+  const xs = breaks([-x, x, ...holes.flatMap((o) => [o.l, o.r])], -x, x);
+  const ys = breaks([0, h, ...holes.flatMap((o) => [o.b, o.t])], 0, h);
+  for (let i = 0; i + 1 < xs.length; i++)
+    for (let j = 0; j + 1 < ys.length; j++) {
+      const cx = (xs[i] + xs[i + 1]) / 2;
+      const cy = (ys[j] + ys[j + 1]) / 2;
+      if (holes.some((o) => cx > o.l && cx < o.r && cy > o.b && cy < o.t)) continue;
+      const [x0, x1, y0, y1] = [xs[i], xs[i + 1], ys[j], ys[j + 1]];
+      faces.push(want([p(x0, y0, z), p(x1, y0, z), p(x1, y1, z), p(x0, y1, z)], [0, 0, 1]));
+      faces.push(want([p(x0, y0, -z), p(x1, y0, -z), p(x1, y1, -z), p(x0, y1, -z)], [0, 0, -1]));
+    }
   faces.push(want([p(-x, h, z), p(x, h, z), p(x, h, -z), p(-x, h, -z)], [0, 1, 0]));
   faces.push(want([p(x, 0, z), p(x, 0, -z), p(x, h, -z), p(x, h, z)], [1, 0, 0]));
   faces.push(want([p(-x, 0, -z), p(-x, 0, z), p(-x, h, z), p(-x, h, -z)], [-1, 0, 0]));
-  for (const o of openings) {
-    const l = o.at - o.w / 2;
-    const r = o.at + o.w / 2;
-    faces.push(want([p(l, 0, z), p(l, 0, -z), p(l, o.h, -z), p(l, o.h, z)], [1, 0, 0])); // left jamb faces into the doorway
-    faces.push(want([p(r, 0, -z), p(r, 0, z), p(r, o.h, z), p(r, o.h, -z)], [-1, 0, 0]));
-    faces.push(want([p(l, o.h, z), p(r, o.h, z), p(r, o.h, -z), p(l, o.h, -z)], [0, -1, 0])); // lintel underside
+  for (const o of holes) {
+    faces.push(want([p(o.l, o.b, z), p(o.l, o.b, -z), p(o.l, o.t, -z), p(o.l, o.t, z)], [1, 0, 0])); // left jamb faces into the hole
+    faces.push(want([p(o.r, o.b, -z), p(o.r, o.b, z), p(o.r, o.t, z), p(o.r, o.t, -z)], [-1, 0, 0]));
+    if (o.t < h - 1e-4) faces.push(want([p(o.l, o.t, z), p(o.r, o.t, z), p(o.r, o.t, -z), p(o.l, o.t, -z)], [0, -1, 0])); // lintel underside
+    if (o.b > 1e-4) faces.push(want([p(o.l, o.b, z), p(o.r, o.b, z), p(o.r, o.b, -z), p(o.l, o.b, -z)], [0, 1, 0])); // sill
   }
   return faces;
+}
+
+/** Sorted distinct values clamped to [lo, hi]. */
+function breaks(vals: number[], lo: number, hi: number): number[] {
+  const out: number[] = [];
+  for (const v of vals.map((q) => Math.max(lo, Math.min(hi, q))).sort((a, b) => a - b)) if (!out.length || v - out[out.length - 1] > 1e-4) out.push(v);
+  return out;
 }
 
 /** Wind a face so its normal points the intended way. */
@@ -545,7 +608,9 @@ function orientOut(faces: V3[][], centre: V3): V3[][] {
  * Mesh data for a structure. `only` builds just those parts (the exploded view builds each part on its own);
  * parts on a joint get groups and outlines of their own, so they can move.
  */
-export function buildStructureMesh(s: Structure, only?: ReadonlySet<number>): StructureMesh {
+export function buildStructureMesh(structure: Structure, only?: ReadonlySet<number>): StructureMesh {
+  // holes behind doors and windows (already cut for new structures; older saved ones get them here)
+  const s = cutOpenings(structure);
   const b = new StructureBuilder();
   const joints = new Set((s.joints ?? []).map((j) => j.id));
   s.parts.forEach((part, i) => {
@@ -597,7 +662,7 @@ export function buildStructureMesh(s: Structure, only?: ReadonlySet<number>): St
           [-x, part.h, e],
         ];
         const role = part.role ?? (/(^|\/)window\.webp$/.test(part.sprite.file ?? '') ? 'window' : undefined);
-        b.decal(pts.map(place), part.sprite, part.color, i, part.text, role, glow || /window/.test(part.sprite.file ?? ''));
+        b.decal(pts.map(place), part.sprite, part.color, i, part.text, role, glow || /window/.test(part.sprite.file ?? ''), !!part.hole);
         break;
       }
     }

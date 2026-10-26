@@ -73,11 +73,20 @@ export interface BoxPart extends PartBase {
   d: number;
 }
 
-/** A doorway cut out of a wall: centred `at` metres from the wall's centre, reaching from the floor to `h`. */
+/** A hole cut through a wall: centred `at` metres from the wall's centre, `y` up from its base (0, a doorway). */
 export interface Opening {
   at: number;
   w: number;
   h: number;
+  y?: number;
+}
+
+/**
+ * A hole through one side face of a hollow prism (a tower's door or window): side `side` (the face between
+ * corners side and side + 1), centred `at` metres from the face's middle toward corner side + 1, `y` up.
+ */
+export interface PrismOpening extends Opening {
+  side: number;
 }
 
 /**
@@ -110,6 +119,8 @@ export interface PrismPart extends PartBase {
    */
   lie?: boolean;
   half?: boolean;
+  /** Doors and windows through a hollow prism's sides. */
+  openings?: PrismOpening[];
 }
 
 /** Roof over a w by d rectangle: gable (ridge along x), hip (ridge along the longer axis), shed (slope down toward +z). */
@@ -143,6 +154,8 @@ export interface DecalPart extends PartBase {
   text?: string;
   /** Doors swing open on a hinge when the player interacts with the building; windows open their two sashes. */
   role?: 'door' | 'window';
+  /** The wall behind it has a hole cut where it opens, so an open door or window shows the inside. */
+  hole?: boolean;
 }
 
 /**

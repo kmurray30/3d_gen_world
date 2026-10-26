@@ -1,6 +1,6 @@
 /** The witch's hut: an octagonal cabin wearing a crooked witch hat for a roof. */
 import type { GenContext, Structure } from '../types';
-import { Parts, tidy } from '../build';
+import { Parts, WALL_T, tidy } from '../build';
 import { DEG } from '../../engine/math';
 
 export interface WitchHutParams {
@@ -35,8 +35,9 @@ export function witchHut(params: Partial<WitchHutParams>, _ctx: GenContext, deca
   // round-ish windows on the front-left and front-right faces
   for (const i of [0, 2]) {
     const a = ((i + 1) / sides) * Math.PI * 2;
-    const x = Math.cos(a) * (apothem + 0.01);
-    const z = Math.sin(a) * (apothem + 0.01);
+    // on the board's outer face
+    const x = Math.cos(a) * (apothem + WALL_T / 2 + 0.01);
+    const z = Math.sin(a) * (apothem + WALL_T / 2 + 0.01);
     const rot = Math.atan2(Math.cos(a), Math.sin(a)) / DEG;
     if (!b.sticker('window', x, 1.15, z, 0.85, rot)) b.box(x, 1.15, z, 0.7, 0.85, 0.06, 'glass', '#cfe3ff', { rot, ghost: true, noInk: true });
   }

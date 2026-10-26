@@ -57,8 +57,10 @@ test('village preset: structures load, views cycle, walls fade, the player walks
         const s = Math.sin((deg * Math.PI) / 180);
         return [v[0] * c + v[2] * s, v[1], -v[0] * s + v[2] * c];
       };
-      const wall = h.structure.parts.find((q: any) => q.t === 'wall' && q.openings?.length);
-      const door = rot([wall.openings[0].at, 0, 0], wall.rot ?? 0).map((v, i) => v + wall.pos[i]);
+      // the doorway is the opening from the floor (windows have holes too, higher up)
+      const isDoorway = (o: any) => !o.y;
+      const wall = h.structure.parts.find((q: any) => q.t === 'wall' && q.openings?.some(isDoorway));
+      const door = rot([wall.openings.find(isDoorway).at, 0, 0], wall.rot ?? 0).map((v, i) => v + wall.pos[i]);
       const out = rot([0, 0, 1], wall.rot ?? 0);
       const start = door.map((v, i) => v + out[i] * 1.6);
       const w = rot(start, h.yaw).map((v, i) => v + h.pos[i]);

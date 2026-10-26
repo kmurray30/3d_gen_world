@@ -15,6 +15,7 @@ import { YawTask } from './tasks';
 import { resolvePlayerCollisions, resolvePlayerVsStructures, type Bump } from './collide';
 import { structureRadius } from '../structure/collide';
 import { seatOnTerrain, structureEntity, yawToward } from '../structure/entity';
+import { isPropGen } from '../structure/index';
 import { Parts, round } from '../structure/build';
 import { findMovers, findPieceName, moverState, movers, pieceParts, wantedState, type Mover } from '../structure/joints';
 import type { Structure } from '../structure/types';
@@ -102,14 +103,13 @@ export class Engine {
       return true;
     }
     if (e.structure) {
-      // the moving piece clicked (a joint that follows another moves that one), else the main one: the door,
-      // or the first thing that moves
+      // the moving piece clicked works (a joint that follows another moves that one); a click on a small prop's
+      // body works its main piece (the mailbox door, the lamp, the bin lid); a building's walls do nothing
       const s = e.structure;
       const all = movers(s);
       const lead = part ? (s.joints?.find((j) => j.id === part)?.follow ?? part) : undefined;
-      const m = (lead && all.find((x) => x.name === lead)) || all.find((x) => x.name === 'door') || all[0];
+      const m = (lead ? all.find((x) => x.name === lead) : undefined) ?? (isPropGen(s.gen) ? all[0] : undefined);
       if (m) this.operate(id, m.name, 'toggle');
-      else this.run([{ op: 'anim', id, name: 'shake', times: 1 }], sid);
       this.emit({ type: 'poke', id, ...(m ? { part: m.name } : {}) });
       return true;
     } else if (e.kind === 'animal') {

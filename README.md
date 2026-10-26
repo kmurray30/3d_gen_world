@@ -12,8 +12,9 @@ happen in the box ("water the flower", "a dragon flies in and breathes fire at t
 it huge" while looking at something). Desktop: click to look, WASD to walk, Shift to run, `/` to
 type. Phone: left thumb walks, right thumb looks, tap a thing to name it. Clicking or tapping a
 thing also pokes it: objects jiggle, animals and people turn to you and answer, and built things
-work the piece you clicked: a house's door or one of its windows, a mailbox's door or flag, a bin's
-lid, a well's bucket, a lamp's light, a fountain's water. The menu has Worlds (tap
+work the piece you clicked: one of a house's doors or windows (its walls do nothing), a mailbox's door
+or flag, a bin's lid, a well's bucket, a lamp's light, a fountain's water (a click anywhere on a small
+prop works its main piece). The menu has Worlds (tap
 the title too), Undo, Reset and Copy link. Worlds lists every world you have opened on this device,
 starts a new one, and opens any world from its link or name; the bare site address reopens the
 world you used last. `?dev=1` opens a console that runs hand-written scripts.
@@ -110,8 +111,12 @@ the entity's state as `open_<piece>`; the model moves them with
 ("door (closed), flag (up), windows (2 of 12 open), roof, chimney"). Mailboxes open their door and
 raise their flag, bins flip their lid, wells lower the bucket as the crank turns, lamp posts and the
 lighthouse switch off, fountains stop. House windows are cut into a frame and two sashes that swing
-out over a dark room (lit at night); some houses have plank shutters that swing shut over them (a
-window opening opens its shutters). Named parts (`roof`, `chimney`, `door`, `lantern`, `lid`,
+out over a real hole in the wall, so you see into the room; some houses have plank shutters that
+swing shut over them (a window opening opens its shutters). Every door opens on its own (a
+lighthouse's tower door and its cottage door are `door` and `door_1`; "doors" reaches both). Holes are
+cut from where doors and windows sit (`src/shared/structure/openings.ts`): through walls and wall
+boards, and through towers and the lighthouse, which are hollow so you can walk in through their
+doors. Older saved worlds get the holes when they are drawn. Named parts (`roof`, `chimney`, `door`, `lantern`, `lid`,
 `bucket`, `hat`, `sign`) come off with `detach` as structures of their own, slide off and land, and
 go back with `reattach`; anim `apart` floats every part out from the middle and back.
 `cd scripts && npx tsx shots-parts.ts http://localhost:8787 OUT` shows all of it.

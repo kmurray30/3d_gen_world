@@ -1,7 +1,7 @@
 /**
  * The moving pieces of a structure as the world talks about them: its joints (a mailbox door, a bin lid, a
  * well's bucket), a house's door, its windows and shutters. Each has two states and the entity's state says
- * which one it is in: `open_<name>` is true in the second one (a house door keeps its old `door_open`).
+ * which one it is in: `open_<name>` is true in the second one (a building's first door keeps its old `door_open`).
  */
 import type { Entity } from '../types';
 import type { Joint, Part, Structure } from './types';
@@ -25,10 +25,29 @@ export function windowParts(s: Structure): number[] {
   return out;
 }
 
+/** Doors drawn on a structure (a house's, a tower's), as part indices in part order. */
+export function doorParts(s: Structure): number[] {
+  const out: number[] = [];
+  s.parts.forEach((p, i) => {
+    if (p.t === 'decal' && p.role === 'door') out.push(i);
+  });
+  return out;
+}
+
+/** A drawn door's name and state key: the first is "door" (with the old `door_open`), then door_1, door_2... */
+export function doorMover(n: number, count: number): Mover {
+  const name = n === 0 ? 'door' : `door_${n}`;
+  return { name, key: n === 0 ? 'door_open' : stateKey(name), states: ['closed', 'open'], ...(count > 1 ? { group: 'doors' } : {}) };
+}
+
 export function movers(s: Structure): Mover[] {
   const out: Mover[] = [];
   for (const j of s.joints ?? []) if (!j.follow) out.push({ name: j.id, key: stateKey(j.id), states: j.states, ...(j.group ? { group: j.group } : {}) });
-  if (!out.some((m) => m.name === 'door') && s.parts.some((p) => p.t === 'decal' && p.role === 'door')) out.push({ name: 'door', key: 'door_open', states: ['closed', 'open'] });
+  // each drawn door opens on its own (a lighthouse's tower door and its cottage door are two)
+  if (!out.some((m) => m.name === 'door')) {
+    const doors = doorParts(s);
+    doors.forEach((_, n) => out.push(doorMover(n, doors.length)));
+  }
   windowParts(s).forEach((_, n) => out.push({ name: `window_${n}`, key: stateKey(`window_${n}`), states: ['closed', 'open'], group: 'windows' }));
   return out;
 }
