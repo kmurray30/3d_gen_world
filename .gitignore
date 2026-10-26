@@ -15,3 +15,8 @@ test-results/
 # Generated/raw images from the pipeline stay out of git; only assets/sprites/*.webp is committed
 **/generated_images/
 **/processed_images/
+
+# Rig pipeline scratch output (labels in words_and_images/rig/auto_labels and rigs in assets/rigs are committed)
+words_and_images/rig/pilot/
+words_and_images/rig/review/
+words_and_images/rig/auto_results.jsonl

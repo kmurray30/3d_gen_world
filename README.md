@@ -164,6 +164,8 @@ Rigs are made offline (`words_and_images/rig/`, Python with numpy, scipy and Pil
 with rulers; a label file (`labels/<word>.json`) names the regions per piece in 0-1000 coordinates,
 with cut lines, automatic wrist, leg and sleeve splits, outline polygons and face marks; and
 `build_rig.py labels/*.json --review DIR` writes the rigs plus a review sheet per drawing.
+`auto_rig.py` labels the whole set with a vision model running locally (Ollama or LM Studio): `pilot` tries two
+models on 40 drawings side by side, `run` does everything, resumably. See `words_and_images/rig/README.md`.
 `node scripts/shots-puppets.mjs http://localhost:8787 OUT boy dog` shows rigs idling, gesturing,
 walking, making faces, talking and coming apart.
 

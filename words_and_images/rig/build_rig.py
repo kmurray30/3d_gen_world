@@ -189,7 +189,7 @@ def ring_colour(rgba: np.ndarray, m: np.ndarray, owner_mask: np.ndarray, ink: np
     return "#%02x%02x%02x" % tuple(col)
 
 
-def build(spec: dict, review: Path | None = None) -> dict:
+def build(spec: dict, review: Path | None = None, out: Path = RIGS) -> dict:
     word = spec["word"]
     rgba = load(word)
     h, w = rgba.shape[:2]
@@ -331,10 +331,10 @@ def build(spec: dict, review: Path | None = None) -> dict:
     if "mouth_at" in face:
         mx, my = to_px(face["mouth_at"], w, h)
         rig["mouth_at"] = [round(mx / (w - 1), 4), round(my / (h - 1), 4), face.get("mouth_w", 60) / 1000]
-    RIGS.mkdir(parents=True, exist_ok=True)
+    out.mkdir(parents=True, exist_ok=True)
     stem = file[:-5]
-    Image.fromarray(owner.astype(np.uint8), "L").save(RIGS / f"{stem}.png", optimize=True)
-    (RIGS / f"{stem}.json").write_text(json.dumps(rig, separators=(",", ":")))
+    Image.fromarray(owner.astype(np.uint8), "L").save(out / f"{stem}.png", optimize=True)
+    (out / f"{stem}.json").write_text(json.dumps(rig, separators=(",", ":")))
     if review:
         review.mkdir(parents=True, exist_ok=True)
         cuts = [c for p in pieces for c in p.get("_cuts_px", [])]
@@ -418,10 +418,10 @@ def main() -> None:
     write_index()
 
 
-def write_index() -> None:
+def write_index(out: Path = RIGS) -> None:
     """assets/rigs/index.json: which sprite files have a rig, so the game only asks for those."""
-    files = sorted(p.name[:-5] + ".webp" for p in RIGS.glob("*.json") if p.name != "index.json")
-    (RIGS / "index.json").write_text(json.dumps({"v": 1, "files": files}))
+    files = sorted(p.name[:-5] + ".webp" for p in out.glob("*.json") if p.name != "index.json")
+    (out / "index.json").write_text(json.dumps({"v": 1, "files": files}))
 
 
 if __name__ == "__main__":
