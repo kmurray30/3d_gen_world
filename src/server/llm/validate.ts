@@ -174,6 +174,14 @@ export class CommandValidator {
         this.words.set(newId, part);
         return { ...a, id, part, newId };
       }
+      case 'operate': {
+        const id = this.mapId(a.id);
+        if (!id || id === 'player') {
+          errors.push(`operate: unknown id "${a.id}"`);
+          return null;
+        }
+        return { ...a, id };
+      }
       case 'reattach': {
         const id = this.mapId(a.id);
         if (!id || id === 'player') {

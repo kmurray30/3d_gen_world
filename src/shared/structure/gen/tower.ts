@@ -45,7 +45,7 @@ export function tower(params: Partial<TowerParams>, ctx: GenContext, decals: Par
     }
   }
   if (p.cap === 'cone') {
-    b.prism(0, p.h - 0.05, 0, p.sides, p.r + 0.45, (p.r + 0.45) * 1.5, 'shingle', p.capColor, { rTop: 0 });
+    b.prism(0, p.h - 0.05, 0, p.sides, p.r + 0.45, (p.r + 0.45) * 1.5, 'shingle', p.capColor, { rTop: 0, name: 'roof' });
     if (p.flag) flag(b, 0, p.h - 0.05 + (p.r + 0.45) * 1.5 - 0.1, 0, ctx);
   } else if (p.cap === 'battlements') {
     b.prism(0, p.h - 0.05, 0, p.sides, p.r + 0.35, 0.4, p.mat, p.color);
@@ -53,18 +53,18 @@ export function tower(params: Partial<TowerParams>, ctx: GenContext, decals: Par
     const rr = p.r + 0.2;
     for (let i = 0; i < n; i += 2) {
       const a = Math.PI / n + (i / n) * Math.PI * 2 + Math.PI / n;
-      b.box(Math.cos(a) * rr, p.h + 0.35, Math.sin(a) * rr, 0.6, 0.6, 0.3, p.mat, p.color, { rot: facing(a) });
+      b.box(Math.cos(a) * rr, p.h + 0.35, Math.sin(a) * rr, 0.6, 0.6, 0.3, p.mat, p.color, { rot: facing(a), name: 'battlements' });
     }
     if (p.flag) flag(b, 0, p.h + 0.35, 0, ctx);
   } else {
-    b.prism(0, p.h - 0.05, 0, p.sides, p.r + 0.3, 0.35, p.mat, p.color);
+    b.prism(0, p.h - 0.05, 0, p.sides, p.r + 0.3, 0.35, p.mat, p.color, { name: 'roof' });
   }
   return tidy(b.finish('tower', { ...p }));
 }
 
 function flag(b: Parts, x: number, y: number, z: number, ctx: GenContext): void {
-  b.prism(x, y, z, 6, 0.05, 1.6, 'flat', '#5a4632', { noInk: true });
-  b.box(x + 0.38, y + 1.1, z, 0.72, 0.42, 0.03, 'flat', pick(ctx.rng, ROOF_COLORS), { ghost: true });
+  b.prism(x, y, z, 6, 0.05, 1.6, 'flat', '#5a4632', { noInk: true, name: 'flag' });
+  b.box(x + 0.38, y + 1.1, z, 0.72, 0.42, 0.03, 'flat', pick(ctx.rng, ROOF_COLORS), { ghost: true, name: 'flag' });
 }
 
 export interface LighthouseParams {
@@ -110,9 +110,11 @@ export function lighthouse(params: Partial<LighthouseParams>, ctx: GenContext, d
   // lantern room, lamp, cap
   const lr = rTop + 0.15;
   b.prism(0, gy + 0.3, 0, 8, lr, 2.3, 'glass', '#d6f0ff');
-  b.prism(0, gy + 0.5, 0, 8, lr * 0.4, 1.3, 'flat', '#ffe066', { noInk: true, glow: true, beacon: true });
-  b.prism(0, gy + 2.6, 0, 8, lr + 0.35, 1.5, 'metal', p.bandColor, { rTop: 0 });
-  b.prism(0, gy + 4.05, 0, 6, 0.08, 0.7, 'flat', '#3a3a3a', { noInk: true });
+  // the lamp can be switched off (the beam goes with it)
+  b.joint({ id: 'lamp', kind: 'light', at: [0, gy + 1.15, 0], axis: [0, 1, 0], amount: 1, states: ['on', 'off'], secs: 0.4 });
+  b.prism(0, gy + 0.5, 0, 8, lr * 0.4, 1.3, 'flat', '#ffe066', { noInk: true, glow: true, beacon: true, joint: 'lamp' });
+  b.prism(0, gy + 2.6, 0, 8, lr + 0.35, 1.5, 'metal', p.bandColor, { rTop: 0, name: 'roof' });
+  b.prism(0, gy + 4.05, 0, 6, 0.08, 0.7, 'flat', '#3a3a3a', { noInk: true, name: 'roof' });
   if (p.cottage) {
     const hp = { ...DEFAULT_HOUSE, w: 4.2, d: 3.4, stories: 1, wallMat: 'plaster' as const, wallColor: '#fafafa', roof: 'gable' as const, roofMat: 'shingle' as const, roofColor: p.bandColor, pitch: 0.8, chimney: true, doorAt: -0.6, trimColor: '#3a3a3a' };
     houseBody(b, hp, p.r + hp.w / 2 - 0.3, 0.2);

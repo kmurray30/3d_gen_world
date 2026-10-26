@@ -3,7 +3,7 @@ import type { ResolvedBuild, ResolvedSpawn, ResolvedStep } from '../schema';
 import { makeRng } from './math';
 import { footprintRadius, massClassFor, renderHeight } from './sizing';
 import { findPiece, type Rig } from '../rig';
-import { DEG } from './math';
+import { DEG, rotateY } from './math';
 import { resolvePlace } from './place';
 import { Scheduler, type Script } from './scheduler';
 import { FallTask, makeTasks } from './tasks';
@@ -15,6 +15,9 @@ import { YawTask } from './tasks';
 import { resolvePlayerCollisions, resolvePlayerVsStructures, type Bump } from './collide';
 import { structureRadius } from '../structure/collide';
 import { seatOnTerrain, structureEntity, yawToward } from '../structure/entity';
+import { Parts, round } from '../structure/build';
+import { findMovers, findPieceName, moverState, movers, pieceParts, wantedState, type Mover } from '../structure/joints';
+import type { Structure } from '../structure/types';
 
 export type EngineEvent =
   | { type: 'spawn'; id: string }
@@ -99,14 +102,16 @@ export class Engine {
       return true;
     }
     if (e.structure) {
-      const hasDoor = e.structure.parts.some((p) => p.t === 'decal' && p.role === 'door');
-      if (hasDoor) {
-        const open = e.state.door_open !== true;
-        e.state.door_open = open;
-        this.emit({ type: 'stateChange', id, key: 'door_open', value: open });
-      } else {
-        this.run([{ op: 'anim', id, name: 'shake', times: 1 }], sid);
-      }
+      // the moving piece clicked (a joint that follows another moves that one), else the main one: the door,
+      // or the first thing that moves
+      const s = e.structure;
+      const all = movers(s);
+      const lead = part ? (s.joints?.find((j) => j.id === part)?.follow ?? part) : undefined;
+      const m = (lead && all.find((x) => x.name === lead)) || all.find((x) => x.name === 'door') || all[0];
+      if (m) this.operate(id, m.name, 'toggle');
+      else this.run([{ op: 'anim', id, name: 'shake', times: 1 }], sid);
+      this.emit({ type: 'poke', id, ...(m ? { part: m.name } : {}) });
+      return true;
     } else if (e.kind === 'animal') {
       this.turn(id, toward, undefined, undefined, `${sid}_t`);
       this.run([{ op: 'par', do: [{ op: 'anim', id, name: 'hop', times: 1 }, { op: 'say', id, text: pick(['!', '?', '!!']), dur: 1 }] }], sid);
@@ -179,11 +184,48 @@ export class Engine {
   }
 
   /**
-   * Take a piece off a rigged drawing: it becomes its own entity (drawn from the same picture) at the spot it was,
-   * and its owner shows without it. Returns the new id, or null when the drawing has no such piece.
+   * Move a structure's moving pieces to a state: "open" a door, "up" a flag, "off" a lamp, "down" a bucket, or
+   * "toggle" (or nothing) for the other state. A name can reach several ("windows", "shutters"). Opening a window
+   * opens its shutters too, and closing shutters closes the window behind them. False when nothing matched.
+   */
+  operate(id: string, part: string, to?: string): boolean {
+    const e = this.world.get(id);
+    const s = e?.structure;
+    if (!e || !s) return false;
+    const found = findMovers(s, part);
+    if (!found.length) return false;
+    const current = found.every((m) => moverState(e, m) === 1) ? 1 : 0;
+    const all = movers(s);
+    const set = (m: Mover, v: 0 | 1) => {
+      if (moverState(e, m) === v) return;
+      e.state[m.key] = v === 1;
+      this.emit({ type: 'stateChange', id, key: m.key, value: v === 1 });
+    };
+    let any = false;
+    for (const m of found) {
+      const want = wantedState(m, to, found.length > 1 ? current : moverState(e, m));
+      if (want === null) continue;
+      any = true;
+      const n = /^(window|shutters)_(\d+)$/.exec(m.name);
+      if (n) {
+        // a window and its shutters can't both be shut over each other
+        const other = all.find((x) => x.name === (n[1] === 'window' ? `shutters_${n[2]}` : `window_${n[2]}`));
+        if (other && n[1] === 'window' && want === 1) set(other, 0);
+        if (other && n[1] === 'shutters' && want === 1) set(other, 0);
+      }
+      set(m, want);
+    }
+    return any;
+  }
+
+  /**
+   * Take a piece off a rigged drawing or a structure: it becomes its own entity (drawn from the same picture, or
+   * built from the same parts) at the spot it was, and its owner shows without it. Returns the new id, or null
+   * when there is no such piece.
    */
   detachPiece(id: string, part: string, newId = `${id}_${part}`): string | null {
     const e = this.world.get(id);
+    if (e?.structure) return this.detachStructurePiece(e, e.structure, part, newId);
     if (!e?.sprite.file) return null;
     const rig = this.rigs(e.sprite.file);
     const piece = rig ? findPiece(rig, part) : undefined;
@@ -225,18 +267,58 @@ export class Engine {
     return pieceEntity.id;
   }
 
+  /** A structure's named piece (roof, chimney, door, lantern) comes off as a structure of its own. */
+  private detachStructurePiece(e: Entity, s: Structure, part: string, newId: string): string | null {
+    const name = findPieceName(s, part);
+    const idx = name ? pieceParts(s, name) : [];
+    if (!name || !idx.length || idx.length === s.parts.length) return null;
+    const take = new Set(idx);
+    const moved = idx.map((i) => structuredClone(s.parts[i]));
+    // the piece's own frame: centred on its footprint, standing on its lowest point
+    const ext = new Parts();
+    for (const p of moved) ext.add(structuredClone(p));
+    const { minX, maxX, minZ, maxZ, maxY } = ext.extent;
+    const cx = round((minX + maxX) / 2);
+    const cz = round((minZ + maxZ) / 2);
+    const cy = round(Math.min(...moved.map((p) => p.pos[1])));
+    for (const p of moved) p.pos = [round(p.pos[0] - cx), round(p.pos[1] - cy), round(p.pos[2] - cz)];
+    const piece: Structure = { gen: 'piece', params: { of: e.id, name }, parts: moved, bounds: { w: round(maxX - minX), h: round(Math.max(0.05, maxY - cy)), d: round(Math.max(0.05, maxZ - minZ)) }, ...(s.ink ? { ink: s.ink } : {}) };
+    const yaw = e.yaw ?? 0;
+    const at = this.world.worldPos(e);
+    const off = rotateY([cx * e.scale, cy * e.scale, cz * e.scale], yaw * DEG);
+    const pe = structureEntity(this.world.has(newId) ? this.uniqueId(newId) : newId, name, piece, [at[0] + off[0], at[1] + off[1], at[2] + off[2]], yaw, this.time, name);
+    pe.scale = e.scale;
+    pe.massClass = massClassFor('object', piece.bounds.h);
+    pe.solid = Math.max(piece.bounds.w, piece.bounds.d) > 0.6;
+    pe.state = { piece_of: e.id, piece: name, piece_x: cx, piece_y: cy, piece_z: cz };
+    if (!this.world.add(pe)) return null;
+    e.structure = { ...s, parts: s.parts.filter((_, i) => !take.has(i)) };
+    e.state[`off_${name}`] = true;
+    this.emit({ type: 'stateChange', id: e.id, key: `off_${name}`, value: true });
+    this.emit({ type: 'spawn', id: pe.id });
+    return pe.id;
+  }
+
   /** Put a piece back on its owner (id is the piece, or its owner with a part name). */
   reattachPiece(id: string, part?: string): boolean {
     let piece = this.world.get(id);
     if (piece && typeof piece.state.piece_of !== 'string' && part) {
       const owner = piece;
       const rig = owner.sprite.file ? this.rigs(owner.sprite.file) : undefined;
-      const want = rig ? findPiece(rig, part)?.id : part;
-      piece = this.world.list().find((x) => x.state.piece_of === owner.id && (!want || x.state.piece === want));
+      const words = part.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+      const want = rig ? findPiece(rig, part)?.id : owner.structure ? undefined : part;
+      piece = this.world
+        .list()
+        .find((x) => x.state.piece_of === owner.id && (want ? x.state.piece === want : !owner.structure || words.some((w) => w === x.state.piece || `${w}`.replace(/s$/, '') === x.state.piece)));
     }
     if (!piece || typeof piece.state.piece_of !== 'string') return false;
     const owner = this.world.get(piece.state.piece_of);
     const pid = String(piece.state.piece);
+    if (owner?.structure && piece.structure) {
+      const [ox, oy, oz] = [Number(piece.state.piece_x) || 0, Number(piece.state.piece_y) || 0, Number(piece.state.piece_z) || 0];
+      const back = piece.structure.parts.map((p) => ({ ...structuredClone(p), pos: [round(p.pos[0] + ox), round(p.pos[1] + oy), round(p.pos[2] + oz)] as [number, number, number] }));
+      owner.structure = { ...owner.structure, parts: [...owner.structure.parts, ...back] };
+    }
     this.removeEntity(piece.id, 'pop');
     if (owner) {
       delete owner.state[`off_${pid}`];

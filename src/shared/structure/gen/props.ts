@@ -97,8 +97,10 @@ export function fountain(params: Partial<FountainParams>, ctx: GenContext): Stru
     b.prism(0, y + 0.42, 0, S, cr * 0.75, 0.08, 'stone', cap);
     const spout = y + 0.5;
     b.prism(0, spout, 0, S, cr * 0.4, 0.18, 'stone', cap, { rTop: cr * 0.12 });
-    for (let i = 0; i < 4; i++) b.ribbon(0, 0, 0, jet(0.05, spout + 0.1, br - 0.25, bowlWater - 0.04, 0.32), 0.14, 'water', SPRAY, { rot: 45 + i * 90, wEnd: 0.22 });
-    for (let i = 0; i < 8; i++) b.ribbon(0, 0, 0, jet(br - 0.04, y + 0.14, (br + basinIn) / 2 + 0.15, level - 0.05, 0.1, 16), 0.2, 'water', SPRAY, { rot: 22.5 + i * 45, wEnd: 0.3 });
+    waterJoint(b, spout + 0.1);
+    for (let i = 0; i < 4; i++) b.ribbon(0, 0, 0, jet(0.05, spout + 0.1, br - 0.25, bowlWater - 0.04, 0.32), 0.14, 'water', SPRAY, { rot: 45 + i * 90, wEnd: 0.22, joint: 'water' });
+    b.joint({ id: 'spill', kind: 'shrink', at: [0, y + 0.14, 0], axis: [0, 1, 0], amount: 1, states: ['on', 'off'], follow: 'water', secs: 0.9 });
+    for (let i = 0; i < 8; i++) b.ribbon(0, 0, 0, jet(br - 0.04, y + 0.14, (br + basinIn) / 2 + 0.15, level - 0.05, 0.1, 16), 0.2, 'water', SPRAY, { rot: 22.5 + i * 45, wEnd: 0.3, joint: 'spill' });
   } else {
     // a spout block on the column throwing four big arcs into the basin
     b.prism(0, y, 0, S, cr * 0.7, 0.28, 'stone', stone);
@@ -106,9 +108,15 @@ export function fountain(params: Partial<FountainParams>, ctx: GenContext): Stru
     const spout = y + 0.36;
     b.prism(0, spout, 0, S, cr * 0.35, 0.16, 'stone', cap, { rTop: cr * 0.1 });
     const lift = clamp(R * 0.2, 0.35, 0.8);
-    for (let i = 0; i < 4; i++) b.ribbon(0, 0, 0, jet(0.06, spout + 0.08, basinIn * 0.78, level - 0.05, lift), 0.24, 'water', SPRAY, { rot: 45 + i * 90, wEnd: 0.42 });
+    waterJoint(b, spout + 0.08);
+    for (let i = 0; i < 4; i++) b.ribbon(0, 0, 0, jet(0.06, spout + 0.08, basinIn * 0.78, level - 0.05, lift), 0.24, 'water', SPRAY, { rot: 45 + i * 90, wEnd: 0.42, joint: 'water' });
   }
   return tidy(b.finish('fountain', { r: R, tiers, color: stone, water }));
+}
+
+/** The jets draw back into the spout when the water is turned off. */
+function waterJoint(b: Parts, y: number): void {
+  b.joint({ id: 'water', kind: 'shrink', at: [0, y, 0], axis: [0, 1, 0], amount: 1, states: ['on', 'off'], secs: 0.9 });
 }
 
 export interface LamppostParams {
@@ -134,17 +142,20 @@ export function lamppost(params: Partial<LamppostParams>, _ctx: GenContext): Str
   y += 0.09;
   const g = 0.3;
   const gh = 0.36;
-  b.box(0, y, 0, g, gh, g, 'flat', light, { glow: true, halo: true });
+  // the glass lights at night unless the lamp is switched off; the lantern comes off as one piece
+  b.joint({ id: 'lamp', kind: 'light', at: [0, y + gh / 2, 0], axis: [0, 1, 0], amount: 1, states: ['on', 'off'], secs: 0.25 });
+  const lantern = { name: 'lantern' };
+  b.box(0, y, 0, g, gh, g, 'flat', light, { glow: true, halo: true, joint: 'lamp', ...lantern });
   for (const [sx, sz] of [
     [-1, -1],
     [1, -1],
     [1, 1],
     [-1, 1],
   ])
-    b.box((sx * g) / 2, y, (sz * g) / 2, 0.04, gh, 0.04, 'metal', iron);
+    b.box((sx * g) / 2, y, (sz * g) / 2, 0.04, gh, 0.04, 'metal', iron, lantern);
   y += gh;
-  b.prism(0, y, 0, 4, 0.27, 0.2, 'metal', iron, { rTop: 0.03 });
-  b.prism(0, y + 0.2, 0, 8, 0.045, 0.12, 'metal', iron, { rTop: 0 });
+  b.prism(0, y, 0, 4, 0.27, 0.2, 'metal', iron, { rTop: 0.03, ...lantern });
+  b.prism(0, y + 0.2, 0, 8, 0.045, 0.12, 'metal', iron, { rTop: 0, ...lantern });
   return tidy(b.finish('lamppost', { h: H, color: iron, light }));
 }
 
@@ -165,14 +176,30 @@ export function mailbox(params: Partial<MailboxParams>, ctx: GenContext): Struct
   const w = 0.24;
   const L = 0.46;
   const body = 0.13;
-  b.box(0, y, 0, w, body, L, 'flat', color);
-  b.prism(0, y + body, 0, 12, w / 2, L, 'flat', color, { lie: true, half: true, rz: 0.11 });
-  // the door handle on the front, the flag on the right
-  b.box(0, y + body + 0.02, L / 2, 0.05, 0.03, 0.03, 'metal', IRON);
+  const dome = 0.11;
+  const t = 0.025;
+  // the box stops short of the front: its door closes the gap, and a dark mouth shows behind it when open
+  const box = L - t;
+  b.box(0, y, -t / 2, w, body, box, 'flat', color);
+  b.prism(0, y + body, -t / 2, 12, w / 2, box, 'flat', color, { lie: true, half: true, rz: dome });
+  const mouth = L / 2 - t + 0.003;
+  b.box(0, y + 0.018, mouth, w - 0.04, body - 0.018, 0.004, 'flat', '#26221f', { noInk: true, ghost: true });
+  b.prism(0, y + body, mouth, 12, w / 2 - 0.02, 0.004, 'flat', '#26221f', { lie: true, half: true, rz: dome - 0.02, noInk: true, ghost: true });
+  // the door: hinged along its bottom front edge, it falls open toward the road
+  b.joint({ id: 'door', kind: 'hinge', at: [0, y, L / 2], axis: [1, 0, 0], amount: 1.65, states: ['closed', 'open'], secs: 0.45 });
+  const door = { joint: 'door', name: 'door' };
+  b.box(0, y, L / 2 - t / 2, w, body, t, 'flat', color, door);
+  b.prism(0, y + body, L / 2 - t / 2, 12, w / 2, t, 'flat', color, { lie: true, half: true, rz: dome, ...door });
+  b.box(0, y + body + 0.02, L / 2, 0.05, 0.03, 0.03, 'metal', IRON, door);
   if (params.flag !== false) {
+    // the flag lies along the side pointing back; raised, it stands straight up
     const flag = color === '#e8493b' ? '#f6e27a' : '#e8493b';
-    b.box(w / 2 + 0.015, y + 0.03, 0.02, 0.02, 0.26, 0.03, 'metal', flag);
-    b.box(w / 2 + 0.015, y + 0.2, 0.09, 0.02, 0.09, 0.12, 'metal', flag);
+    const fx = w / 2 + 0.015;
+    const fy = y + 0.06;
+    const fz = 0.12;
+    b.joint({ id: 'flag', kind: 'hinge', at: [fx, fy, fz], axis: [1, 0, 0], amount: Math.PI / 2, states: ['down', 'up'], secs: 0.5 });
+    b.box(fx, fy - 0.015, fz - 0.13, 0.02, 0.03, 0.26, 'metal', flag, { joint: 'flag', name: 'flag' });
+    b.box(fx, fy - 0.015, fz - 0.26 + 0.045, 0.02, 0.12, 0.09, 'metal', flag, { joint: 'flag', name: 'flag' });
   }
   return tidy(b.finish('mailbox', { color, flag: params.flag !== false }));
 }
@@ -202,11 +229,11 @@ export function signpost(params: Partial<SignpostParams>, ctx: GenContext): Stru
       return [p[0], p[2]];
     };
     const [bx, bz] = at(0.06 + len / 2);
-    b.box(bx, y, bz, len, bh, 0.045, 'plank', boards[i], { rot: yaw });
+    b.box(bx, y, bz, len, bh, 0.045, 'plank', boards[i], { rot: yaw, name: 'sign' });
     // the arrow's tip: a flat triangle at the board's end, pointing away from the post
     const r = bh / (2 * Math.sin(Math.PI / 3));
     const [tx, tz] = at(0.06 + len + r * 0.5);
-    b.prism(tx, y - (r - (bh / 2)), tz, 3, r, 0.045, 'plank', boards[i], { lie: true, rot: yaw + 180 });
+    b.prism(tx, y - (r - (bh / 2)), tz, 3, r, 0.045, 'plank', boards[i], { lie: true, rot: yaw + 180, name: 'sign' });
   }
   return tidy(b.finish('signpost', { arms, color: wood }));
 }
@@ -230,13 +257,19 @@ export function well(params: Partial<WellParams>, ctx: GenContext): Structure {
   const top = wallH + 0.1;
   const postH = 1.35;
   for (const sx of [-1, 1]) b.box(sx * (R - 0.12), top, 0, 0.12, postH, 0.12, 'plank', wood);
-  b.roof(0, top + postH, 0, 'gable', R * 2 + 0.5, 0.6, 1.4, 'shingle', roof, { endMat: 'plank', endColor: shade(wood, 1.2) });
+  b.roof(0, top + postH, 0, 'gable', R * 2 + 0.5, 0.6, 1.4, 'shingle', roof, { endMat: 'plank', endColor: shade(wood, 1.2), name: 'roof' });
   // the winch: an axle between the posts with a crank, a rope and a bucket
   const axle = top + postH - 0.32;
   b.prism(0, axle - 0.045, 0, 8, 0.045, R * 2 + 0.1, 'plank', shade(wood, 0.8), { lie: true, rot: 90 });
-  b.box(R + 0.02, axle - 0.2, 0, 0.04, 0.24, 0.04, 'plank', shade(wood, 0.8));
-  b.box(0, axle - 0.5, 0, 0.02, 0.48, 0.02, 'flat', '#d9c08a', { noInk: true, ghost: true });
-  b.prism(0, axle - 0.76, 0, 8, 0.13, 0.24, 'plank', wood, { rTop: 0.16, ghost: true });
+  const drop = 0.62;
+  b.joint({ id: 'bucket', kind: 'slide', at: [0, axle - 0.76, 0], axis: [0, -1, 0], amount: drop, states: ['up', 'down'], secs: 1.6 });
+  b.joint({ id: 'rope', kind: 'stretch', at: [0, axle - 0.02, 0], axis: [0, -1, 0], amount: drop / 0.48, states: ['up', 'down'], follow: 'bucket', secs: 1.6 });
+  b.joint({ id: 'crank', kind: 'hinge', at: [0, axle, 0], axis: [1, 0, 0], amount: -Math.PI * 4, states: ['up', 'down'], follow: 'bucket', secs: 1.6 });
+  b.box(R + 0.02, axle - 0.2, 0, 0.04, 0.24, 0.04, 'plank', shade(wood, 0.8), { joint: 'crank' });
+  b.box(R + 0.06, axle - 0.22, 0, 0.1, 0.04, 0.04, 'plank', shade(wood, 0.7), { joint: 'crank' });
+  b.box(0, axle - 0.5, 0, 0.02, 0.48, 0.02, 'flat', '#d9c08a', { noInk: true, ghost: true, joint: 'rope' });
+  b.prism(0, axle - 0.76, 0, 8, 0.13, 0.24, 'plank', wood, { rTop: 0.16, ghost: true, joint: 'bucket', name: 'bucket' });
+  b.box(0, axle - 0.53, 0, 0.3, 0.02, 0.02, 'metal', IRON, { ghost: true, noInk: true, joint: 'bucket', name: 'bucket' });
   return tidy(b.finish('well', { color: stone, roofColor: roof }));
 }
 
@@ -297,10 +330,16 @@ export interface BinParams {
 export function trashCan(params: Partial<BinParams>, ctx: GenContext): Structure {
   const b = new Parts();
   const color = params.color ?? pick(ctx.rng, ['#9da3a8', '#5aa553', '#4e8fd6'] as const);
-  b.prism(0, 0, 0, 12, 0.28, 0.72, 'metal', color, { rTop: 0.31 });
-  b.prism(0, 0.72, 0, 12, 0.34, 0.06, 'metal', shade(color, 0.85));
-  b.prism(0, 0.78, 0, 12, 0.3, 0.08, 'metal', shade(color, 1.15), { rTop: 0.14 });
-  b.box(0, 0.86, 0, 0.18, 0.05, 0.05, 'metal', shade(color, 0.7));
+  // a hollow can with rubbish inside, so things dropped in land in it and an open lid shows the dark
+  b.prism(0, 0, 0, 12, 0.28, 0.72, 'metal', color, { rTop: 0.31, hole: 0.25 });
+  b.prism(0, 0, 0, 12, 0.27, 0.05, 'metal', shade(color, 0.7));
+  b.prism(0, 0.05, 0, 12, 0.26, 0.55, 'flat', '#3a3330', { noInk: true });
+  // the lid flips up and back on a hinge at the rear
+  b.joint({ id: 'lid', kind: 'hinge', at: [0, 0.72, -0.34], axis: [1, 0, 0], amount: -1.95, states: ['closed', 'open'], secs: 0.4 });
+  const lid = { joint: 'lid', name: 'lid' };
+  b.prism(0, 0.72, 0, 12, 0.34, 0.06, 'metal', shade(color, 0.85), lid);
+  b.prism(0, 0.78, 0, 12, 0.3, 0.08, 'metal', shade(color, 1.15), { rTop: 0.14, ...lid });
+  b.box(0, 0.86, 0, 0.18, 0.05, 0.05, 'metal', shade(color, 0.7), lid);
   return tidy(b.finish('trash_can', { color }));
 }
 

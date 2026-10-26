@@ -126,6 +126,8 @@ export const DropSchema = z.object({ op: z.literal('drop'), id, delay });
 export const DetachSchema = z.object({ op: z.literal('detach'), id, part: z.string().trim().min(1).max(32), ref: z.string().trim().min(1).max(32).optional(), delay });
 /** A piece that came off goes back (id is the piece, or its owner with part). */
 export const ReattachSchema = z.object({ op: z.literal('reattach'), id, part: z.string().trim().max(32).optional(), delay });
+/** A built thing's moving piece to a state: open a mailbox door, raise its flag, switch a lamp off, close the shutters. */
+export const OperateSchema = z.object({ op: z.literal('operate'), id, part: z.string().trim().min(1).max(40), to: z.string().trim().max(20).optional(), delay });
 export const RemoveSchema = z.object({ op: z.literal('remove'), id, how: z.enum(REMOVE_HOW).optional().catch(undefined), delay });
 export const SaySchema = z.object({ op: z.literal('say'), text, id: id.optional(), dur, delay });
 export const EffectSchema = z.object({
@@ -152,6 +154,7 @@ export const ActionSchema = z.discriminatedUnion('op', [
   DropSchema,
   DetachSchema,
   ReattachSchema,
+  OperateSchema,
   RemoveSchema,
   SaySchema,
   EffectSchema,
@@ -169,6 +172,7 @@ export type SetAction = z.infer<typeof SetSchema>;
 export type AnimAction = z.infer<typeof AnimSchema>;
 export type DetachAction = z.infer<typeof DetachSchema>;
 export type ReattachAction = z.infer<typeof ReattachSchema>;
+export type OperateAction = z.infer<typeof OperateSchema>;
 export type AttachAction = z.infer<typeof AttachSchema>;
 export type DropAction = z.infer<typeof DropSchema>;
 export type RemoveAction = z.infer<typeof RemoveSchema>;

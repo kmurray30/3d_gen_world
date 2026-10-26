@@ -30,6 +30,39 @@ interface PartBase {
   beacon?: boolean;
   /** A lamp: a soft halo of light round it at night (lantern glass, a lamp post's head). */
   halo?: boolean;
+  /** Moves with this joint (a mailbox door, a bin lid, a bucket). */
+  joint?: string;
+  /** What this piece is called when it comes off on its own ("roof", "chimney", "lantern"). */
+  name?: string;
+}
+
+/**
+ * How a moving piece moves between its two states: turns on a hinge, slides, stretches (a rope paying out),
+ * spins while on, shrinks away (water turned off), or lights up at night (a lamp switched off goes dark).
+ */
+export type JointKind = 'hinge' | 'slide' | 'stretch' | 'spin' | 'shrink' | 'light';
+
+export interface Joint {
+  /** What the piece is called: door, flag, lid, bucket, crank, lamp, water, shutters_2. */
+  id: string;
+  kind: JointKind;
+  /** Pivot: the hinge line passes through it, stretching and shrinking happen about it. Structure-local. */
+  at: [number, number, number];
+  /** Unit axis: what a hinge or spin turns about, the way a slide or stretch goes. */
+  axis: [number, number, number];
+  /**
+   * Full travel: radians (hinge, positive turns counter-clockwise about the axis), metres (slide), extra length
+   * as a fraction (stretch), radians a second (spin).
+   */
+  amount: number;
+  /** Its two states, the built one first: ["closed", "open"], ["down", "up"], ["on", "off"]. */
+  states: [string, string];
+  /** Moves with another joint's state rather than its own (the crank turns as the bucket goes down). */
+  follow?: string;
+  /** Several joints answering to one name ("shutters" for every window's pair). */
+  group?: string;
+  /** Seconds a full move takes (default 0.6). */
+  secs?: number;
 }
 
 /** Axis-aligned box of w (x) by h (y) by d (z) before rotation. */
@@ -108,8 +141,8 @@ export interface DecalPart extends PartBase {
   h: number;
   /** Sign text drawn on a paper card instead of the sprite (sprite.file is null then). */
   text?: string;
-  /** Doors swing open on a hinge when the player interacts with the building. */
-  role?: 'door';
+  /** Doors swing open on a hinge when the player interacts with the building; windows open their two sashes. */
+  role?: 'door' | 'window';
 }
 
 /**
@@ -134,6 +167,8 @@ export interface Structure {
   bounds: { w: number; h: number; d: number };
   /** Outline ink colour (default near-black; icing white for gingerbread). */
   ink?: string;
+  /** Pieces that move: parts with a matching `joint` move with each. */
+  joints?: Joint[];
 }
 
 /** What a generator needs from the outside world: how to find a sprite for a decal word (door, window, sign). */

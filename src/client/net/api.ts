@@ -2,6 +2,8 @@ import { FACE_KINDS, type Rig } from '../../shared/rig';
 import type { CompactWorld, StreamEvent } from '../../shared/schema';
 import type { WorldModel } from '../../shared/engine/world';
 import { renderHeight } from '../../shared/engine/sizing';
+import { describeParts } from '../../shared/structure/joints';
+import type { Entity } from '../../shared/types';
 
 export interface ClientConfig {
   spriteVersion: string;
@@ -67,6 +69,12 @@ function partsOf(rig: Rig | undefined): string[] | undefined {
   return parts.length ? parts.slice(0, 32) : undefined;
 }
 
+/** A built thing's moving pieces with their states, and what can come off it: "door (closed)", "roof". */
+function structureParts(e: Entity): string[] | undefined {
+  const parts = describeParts(e).map((p) => p.slice(0, 32));
+  return parts.length ? parts.slice(0, 32) : undefined;
+}
+
 /** What the model gets to see: the nearest entities with rounded positions, no coordinates for the model to copy. */
 export function compactWorld(model: WorldModel, target?: string, limit = 40, rigOf: (file: string) => Rig | undefined = () => undefined): CompactWorld {
   const p = model.player.pos;
@@ -87,7 +95,7 @@ export function compactWorld(model: WorldModel, target?: string, limit = 40, rig
       state: Object.keys(e.state).length ? e.state : undefined,
       effects: e.effects.length ? e.effects : undefined,
       structure: e.structure ? { gen: e.structure.gen, params: e.structure.params } : undefined,
-      parts: partsOf(e.sprite.file ? rigOf(e.sprite.file) : undefined),
+      parts: e.structure ? structureParts(e) : partsOf(e.sprite.file ? rigOf(e.sprite.file) : undefined),
     }));
   return { player: { pos: [r1(p[0]), r1(p[1] - model.ground(p[0], p[2])), r1(p[2])], yaw: Math.round(model.player.yaw * 100) / 100 }, target, entities };
 }

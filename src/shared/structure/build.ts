@@ -4,13 +4,14 @@
  */
 import { DEG } from '../engine/math';
 import type { SpriteRef } from '../types';
-import type { BoxPart, DecalPart, DecalResolver, MaterialName, Opening, Part, PrismPart, RibbonPart, RoofPart, StairsPart, Structure, WallPart } from './types';
+import type { BoxPart, DecalPart, DecalResolver, Joint, MaterialName, Opening, Part, PrismPart, RibbonPart, RoofPart, StairsPart, Structure, WallPart } from './types';
 
 export const INK = '#2b2b2b';
 export const WALL_T = 0.24;
 
 export class Parts {
   readonly parts: Part[] = [];
+  readonly joints: Joint[] = [];
   private minX = Infinity;
   private maxX = -Infinity;
   private minZ = Infinity;
@@ -58,6 +59,12 @@ export class Parts {
     return p;
   }
 
+  /** A moving piece; parts added with `joint: j.id` move with it. */
+  joint(j: Joint): Joint {
+    this.joints.push(j);
+    return j;
+  }
+
   box(x: number, y: number, z: number, w: number, h: number, d: number, mat: MaterialName, color: string, extra: Partial<BoxPart> = {}): BoxPart {
     return this.add({ t: 'box', pos: [x, y, z], w, h, d, mat, color, ...extra });
   }
@@ -87,7 +94,8 @@ export class Parts {
     const sprite = this.decals(word);
     if (!sprite?.file) return null;
     const w = h * (sprite.w / Math.max(1, sprite.h));
-    return this.decal(x, y, z, sprite, w, h, rot, word === 'door' ? { role: 'door', ...extra } : extra);
+    const role = word === 'door' ? { role: 'door' as const, name: 'door' } : word === 'window' ? { role: 'window' as const } : {};
+    return this.decal(x, y, z, sprite, w, h, rot, { ...role, ...extra });
   }
 
   /** A paper sign with text. */
@@ -121,6 +129,11 @@ export class Parts {
     }
   }
 
+  /** The footprint rectangle and top so far. */
+  get extent(): { minX: number; maxX: number; minZ: number; maxZ: number; maxY: number } {
+    return { minX: this.minX, maxX: this.maxX, minZ: this.minZ, maxZ: this.maxZ, maxY: this.maxY };
+  }
+
   get bounds(): Structure['bounds'] {
     if (!this.parts.length) return { w: 1, h: 1, d: 1 };
     return { w: this.maxX - this.minX, h: this.maxY, d: this.maxZ - this.minZ };
@@ -134,13 +147,14 @@ export class Parts {
       for (const p of this.parts) {
         p.pos = [p.pos[0] - cx, p.pos[1], p.pos[2] - cz];
       }
+      for (const j of this.joints) j.at = [j.at[0] - cx, j.at[1], j.at[2] - cz];
       this.minX -= cx;
       this.maxX -= cx;
       this.minZ -= cz;
       this.maxZ -= cz;
     }
     const b = this.bounds;
-    return { gen, params, parts: this.parts, bounds: { w: round(b.w), h: round(b.h), d: round(b.d) }, ...(ink ? { ink } : {}) };
+    return { gen, params, parts: this.parts, bounds: { w: round(b.w), h: round(b.h), d: round(b.d) }, ...(ink ? { ink } : {}), ...(this.joints.length ? { joints: this.joints } : {}) };
   }
 }
 
@@ -168,6 +182,11 @@ export function tidy(s: Structure): Structure {
       if (typeof v === 'number') (p as unknown as Record<string, number>)[k] = round(v);
     }
     if (p.t === 'ribbon') p.path = p.path.map(([a, b]) => [round(a), round(b)]);
+  }
+  for (const j of s.joints ?? []) {
+    j.at = [round(j.at[0]), round(j.at[1]), round(j.at[2])];
+    j.axis = [round(j.axis[0], 4), round(j.axis[1], 4), round(j.axis[2], 4)];
+    j.amount = round(j.amount);
   }
   return s;
 }

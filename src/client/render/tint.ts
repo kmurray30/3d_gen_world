@@ -15,11 +15,11 @@ export const LIGHT = {
 type Shader = THREE.WebGLProgramParametersWithUniforms;
 
 /** Inject the tint (and glow) into a compiled shader; call from an onBeforeCompile. */
-export function injectTint(shader: Shader, glow = false): void {
+export function injectTint(shader: Shader, glow = false, glowLevel: { value: number } = LIGHT.glow): void {
   shader.uniforms.uTint = LIGHT.tint;
   if (glow) {
     shader.uniforms.uGlowColor = LIGHT.glowColor;
-    shader.uniforms.uGlow = LIGHT.glow;
+    shader.uniforms.uGlow = glowLevel;
   }
   const head = glow ? 'uniform vec3 uTint;\nuniform vec3 uGlowColor;\nuniform float uGlow;\n' : 'uniform vec3 uTint;\n';
   const body = glow
@@ -28,9 +28,12 @@ export function injectTint(shader: Shader, glow = false): void {
   shader.fragmentShader = head + shader.fragmentShader.replace('#include <fog_fragment>', body + '#include <fog_fragment>');
 }
 
-/** Make a material follow the time of day. `glow` = lit from inside at night. Chains onto other shader hooks. */
-export function tinted<T extends THREE.Material>(m: T, glow = false): T {
-  chainShaderHook(m, glow ? 'tint-glow' : 'tint', (shader) => injectTint(shader, glow));
+/**
+ * Make a material follow the time of day. `glow` = lit from inside at night; `glowLevel` gives it a level of its
+ * own instead of the shared night one (a lamp that can be switched off). Chains onto other shader hooks.
+ */
+export function tinted<T extends THREE.Material>(m: T, glow = false, glowLevel?: { value: number }): T {
+  chainShaderHook(m, glow ? 'tint-glow' : 'tint', (shader) => injectTint(shader, glow, glowLevel));
   return m;
 }
 

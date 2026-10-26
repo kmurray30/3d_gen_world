@@ -26,13 +26,17 @@ export interface MeshGroup {
   /** Lit at night (windows, lamps). */
   glow?: boolean;
   /** Set for decal quads: draw the sprite (or a text card) instead of a material tile. */
-  decal?: { sprite: SpriteRef; text?: string; role?: 'door' };
+  decal?: { sprite: SpriteRef; text?: string; role?: 'door' | 'window'; part: number };
+  /** Moves with this joint. */
+  joint?: string;
 }
 
 export interface StructureMesh {
   groups: MeshGroup[];
-  /** Flat xyz pairs: outline segments in structure-local space. */
+  /** Flat xyz pairs: outline segments in structure-local space, of the parts that stay put. */
   edges: number[];
+  /** Outline segments of each joint's parts, which move with it. */
+  jointEdges: Record<string, number[]>;
 }
 
 /** Key light for the fake shading, in structure-local space. */
@@ -177,16 +181,19 @@ interface EdgeRec {
 /** One structure's faces across all material slots, plus candidate outline edges. */
 class StructureBuilder {
   readonly slots = new Map<string, { group: MeshGroup; builder: SlotBuilder }>();
-  readonly edges = new Map<string, EdgeRec>();
+  /** Outline candidates per joint ('' for the parts that stay put). */
+  readonly edges = new Map<string, Map<string, EdgeRec>>();
   readonly decals: MeshGroup[] = [];
+  /** The joint the faces being added move with. */
+  joint = '';
 
-  /** Small parts share a slot per material; big ones (`own` set) get a slot of their own. */
+  /** Small parts share a slot per material; big ones (`own` set) get a slot of their own; moving ones one per joint. */
   slot(mat: MaterialName, color: string, own?: string, glow = false): SlotBuilder {
-    const key = `${mat}|${color}|${own ?? ''}|${glow ? 'g' : ''}`;
+    const key = `${mat}|${color}|${own ?? ''}|${glow ? 'g' : ''}|${this.joint}`;
     let s = this.slots.get(key);
     if (!s) {
       const builder = new SlotBuilder();
-      s = { group: { mat, color, mesh: builder.mesh, ...(glow ? { glow } : {}) }, builder };
+      s = { group: { mat, color, mesh: builder.mesh, ...(glow ? { glow } : {}), ...(this.joint ? { joint: this.joint } : {}) }, builder };
       this.slots.set(key, s);
     }
     return s.builder;
@@ -208,12 +215,14 @@ class StructureBuilder {
     const kb = key3(b);
     if (ka === kb) return;
     const key = ka < kb ? `${ka}>${kb}` : `${kb}>${ka}`;
-    const rec = this.edges.get(key);
+    let set = this.edges.get(this.joint);
+    if (!set) this.edges.set(this.joint, (set = new Map()));
+    const rec = set.get(key);
     if (rec) rec.normals.push(n);
-    else this.edges.set(key, { a, b, normals: [n] });
+    else set.set(key, { a, b, normals: [n] });
   }
 
-  decal(pts: V3[], sprite: SpriteRef, color: string, text?: string, role?: 'door', glow = false): void {
+  decal(pts: V3[], sprite: SpriteRef, color: string, part: number, text?: string, role?: 'door' | 'window', glow = false): void {
     const n = polygonNormal(pts);
     const b = new SlotBuilder();
     b.polygon(
@@ -227,25 +236,31 @@ class StructureBuilder {
         [0, 1],
       ],
     );
-    this.decals.push({ mat: 'flat', color, mesh: b.mesh, decal: { sprite, text, role }, ...(glow ? { glow } : {}) });
+    this.decals.push({ mat: 'flat', color, mesh: b.mesh, decal: { sprite, text, role, part }, ...(glow ? { glow } : {}), ...(this.joint ? { joint: this.joint } : {}) });
   }
 
   finish(): StructureMesh {
-    const edges: number[] = [];
     const cosCrease = Math.cos(CREASE_DEG * DEG);
-    for (const rec of this.edges.values()) {
-      let crease = rec.normals.length === 1;
-      if (!crease) {
-        for (let i = 0; i < rec.normals.length && !crease; i++)
-          for (let j = i + 1; j < rec.normals.length; j++)
-            if (dot(rec.normals[i], rec.normals[j]) < cosCrease) {
-              crease = true;
-              break;
-            }
+    const jointEdges: Record<string, number[]> = {};
+    let edges: number[] = [];
+    for (const [joint, set] of this.edges) {
+      const out: number[] = [];
+      for (const rec of set.values()) {
+        let crease = rec.normals.length === 1;
+        if (!crease) {
+          for (let i = 0; i < rec.normals.length && !crease; i++)
+            for (let j = i + 1; j < rec.normals.length; j++)
+              if (dot(rec.normals[i], rec.normals[j]) < cosCrease) {
+                crease = true;
+                break;
+              }
+        }
+        if (crease) out.push(rec.a[0], rec.a[1], rec.a[2], rec.b[0], rec.b[1], rec.b[2]);
       }
-      if (crease) edges.push(rec.a[0], rec.a[1], rec.a[2], rec.b[0], rec.b[1], rec.b[2]);
+      if (joint) jointEdges[joint] = out;
+      else edges = out;
     }
-    return { groups: [...[...this.slots.values()].map((s) => s.group), ...this.decals], edges };
+    return { groups: [...[...this.slots.values()].map((s) => s.group), ...this.decals], edges, jointEdges };
   }
 }
 
@@ -526,10 +541,16 @@ function orientOut(faces: V3[][], centre: V3): V3[][] {
   });
 }
 
-export function buildStructureMesh(s: Structure): StructureMesh {
+/**
+ * Mesh data for a structure. `only` builds just those parts (the exploded view builds each part on its own);
+ * parts on a joint get groups and outlines of their own, so they can move.
+ */
+export function buildStructureMesh(s: Structure, only?: ReadonlySet<number>): StructureMesh {
   const b = new StructureBuilder();
+  const joints = new Set((s.joints ?? []).map((j) => j.id));
   s.parts.forEach((part, i) => {
-    if (part.hidden) return;
+    if (part.hidden || (only && !only.has(i))) return;
+    b.joint = part.joint && joints.has(part.joint) ? part.joint : '';
     const place = placer(part);
     const ink = !part.noInk;
     const own = partSize(part) >= SPLIT_FROM_M ? `p${i}` : undefined;
@@ -575,7 +596,8 @@ export function buildStructureMesh(s: Structure): StructureMesh {
           [x, part.h, e],
           [-x, part.h, e],
         ];
-        b.decal(pts.map(place), part.sprite, part.color, part.text, part.role, glow || /window/.test(part.sprite.file ?? ''));
+        const role = part.role ?? (/(^|\/)window\.webp$/.test(part.sprite.file ?? '') ? 'window' : undefined);
+        b.decal(pts.map(place), part.sprite, part.color, i, part.text, role, glow || /window/.test(part.sprite.file ?? ''));
         break;
       }
     }

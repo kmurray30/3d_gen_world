@@ -142,6 +142,8 @@ export function coerceParams(gen: GenName, raw: Params): Params {
         doorColor: colorOf(p.doorColor),
         chimney: bool(p.chimney),
         windows: bool(p.windows),
+        shutters: bool(p.shutters),
+        shutterColor: colorOf(p.shutterColor),
         doorAt: num(p.doorAt),
         sign: typeof p.sign === 'string' ? p.sign.slice(0, 24) : undefined,
         random: bool(p.random),

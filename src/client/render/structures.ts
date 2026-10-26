@@ -2,15 +2,21 @@
  * One structure entity on screen: a mesh per material slot (crayon tile times tint times face shade), decal quads
  * for doors, windows and signs, and ink outlines drawn as fat lines with a width in metres so near and far edges
  * match the sprites' outlines. Parts can fade when they stand between the camera and the player.
+ *
+ * Moving pieces each get a group of their own about their joint (a mailbox door on its hinge, a bucket on its
+ * rope, a lamp that switches off). Window drawings are cut into a frame and two sashes that swing out with a
+ * dark room behind them. The "apart" gesture builds every part on its own for a moment and floats them out.
  */
 import * as THREE from 'three';
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import type { Entity, Vec3 } from '../../shared/types';
-import { DEG } from '../../shared/engine/math';
+import { DEG, clamp } from '../../shared/engine/math';
+import type { Transient } from '../../shared/engine/world';
 import { buildStructureMesh, type MeshGroup } from '../../shared/structure/geometry';
-import type { Structure } from '../../shared/structure/types';
+import { jointOn, windowParts } from '../../shared/structure/joints';
+import type { Joint, Structure } from '../../shared/structure/types';
 import { MaterialTiles } from './materials';
 import { applyCrayon } from './crayon';
 import type { TextureStore } from './textures';
@@ -20,6 +26,43 @@ const INK = '#2b2b2b';
 const INK_WIDTH_M = 0.045;
 const FADE_ALPHA = 0.22;
 const FADE_SPEED = 7;
+/** Where the two sashes sit in the window drawing, as fractions from its top left: across, middle, and down. */
+const SASH = { x0: 0.15, xm: 0.5, x1: 0.848, y0: 0.119, y1: 0.82 };
+const SASH_OPEN = 1.75;
+const ROOM = '#2c2621';
+const LAMP_OFF = new THREE.Color('#b8b6aa');
+
+const ease = (k: number) => k * k * (3 - 2 * k);
+
+/** A window drawing with the sashes' rectangle cut out of it and a line of ink round the hole. */
+const frames = new Map<string, Promise<THREE.Texture>>();
+function windowFrame(textures: TextureStore, file: string): Promise<THREE.Texture> {
+  let p = frames.get(file);
+  if (!p) {
+    p = textures.load(file).then((tex) => {
+      const img = tex.image as CanvasImageSource & { width: number; height: number };
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const x = SASH.x0 * img.width;
+      const y = SASH.y0 * img.height;
+      const w = (SASH.x1 - SASH.x0) * img.width;
+      const h = (SASH.y1 - SASH.y0) * img.height;
+      ctx.clearRect(x, y, w, h);
+      ctx.strokeStyle = '#1f1d1b';
+      ctx.lineWidth = Math.max(2, img.width * 0.012);
+      ctx.strokeRect(x, y, w, h);
+      const out = new THREE.CanvasTexture(canvas);
+      out.colorSpace = tex.colorSpace;
+      out.anisotropy = tex.anisotropy;
+      return out;
+    });
+    frames.set(file, p);
+  }
+  return p;
+}
 
 export interface StructureAssets {
   tiles: MaterialTiles;
@@ -39,18 +82,46 @@ interface Piece {
   door?: { k: number; sign: number };
 }
 
+/** A moving piece: its parts' meshes and outline under a group placed at the joint. */
+interface JointView {
+  joint: Joint;
+  group: THREE.Group;
+  /** Where the move is, 0 (built) to 1. */
+  k: number;
+  spin: number;
+  axis: THREE.Vector3;
+  mats: THREE.MeshBasicMaterial[];
+  /** A lamp's own night glow level, so it can be switched off. */
+  glow?: { value: number };
+  colors?: THREE.Color[];
+}
+
+/** A window cut into its frame and two sashes that swing out about their outer edges. */
+interface WindowView {
+  key: string;
+  sashes: Array<{ group: THREE.Group; sign: number }>;
+  k: number;
+}
+
 export class StructureView {
   readonly root = new THREE.Group();
   private readonly pieces: Piece[] = [];
-  private lines: LineSegments2 | null = null;
+  private readonly lineSets: LineSegments2[] = [];
   private lineMat: LineMaterial | null = null;
   private built: Structure | null = null;
   private fadeAll = 1;
   private readonly bounds = new THREE.Box3();
-  /** The lighthouse's sweeping beam, when this structure has a beacon. */
+  /** The lighthouse's sweeping beam, when this structure has a beacon, and the lamp joint that switches it. */
   private beam: THREE.Group | null = null;
-  /** Night halos round lamp parts. */
-  private readonly halos: THREE.Sprite[] = [];
+  private beamJoint: JointView | undefined;
+  /** Night halos round lamp parts, and the lamp joint each belongs to. */
+  private readonly halos: Array<{ sprite: THREE.Sprite; joint?: JointView }> = [];
+  private readonly joints = new Map<string, JointView>();
+  private readonly windows: WindowView[] = [];
+  /** Windows not cut yet: a window stays one quad until it first opens. */
+  private readonly uncut = new Map<string, { g: MeshGroup; geo: THREE.BufferGeometry; n: number; mat: THREE.MeshBasicMaterial }>();
+  /** The exploded view while the "apart" gesture plays: every part on its own, floating out from the middle. */
+  private apart: { group: THREE.Group; parts: Array<{ obj: THREE.Object3D; home: THREE.Vector3; dir: THREE.Vector3; spin: THREE.Vector3 }>; lines: LineSegments2[] } | null = null;
 
   constructor(
     public readonly id: string,
@@ -68,18 +139,19 @@ export class StructureView {
     this.clear();
     this.built = s;
     const data = buildStructureMesh(s);
-    for (const g of data.groups) this.addGroup(g);
-    if (data.edges.length) {
-      const geo = new LineSegmentsGeometry();
-      geo.setPositions(data.edges);
-      this.lineMat = new LineMaterial({ color: new THREE.Color(s.ink ?? INK).getHex(), linewidth: INK_WIDTH_M, worldUnits: true, transparent: true, depthWrite: false });
-      this.lineMat.polygonOffset = true;
-      this.lineMat.polygonOffsetFactor = -2;
-      this.lineMat.polygonOffsetUnits = -2;
-      this.lines = new LineSegments2(geo, this.lineMat);
-      this.lines.renderOrder = 1;
-      this.lines.frustumCulled = false;
-      this.root.add(this.lines);
+    for (const j of s.joints ?? []) this.addJoint(j);
+    const windowOf = new Map(windowParts(s).map((part, n) => [part, n]));
+    for (const g of data.groups) this.addGroup(g, windowOf);
+    // small props (a mailbox, a lamp post) get a finer line, so the ink does not swallow them
+    const ink = clamp(0.012 + Math.max(s.bounds.w, s.bounds.d) * 0.03, 0.02, INK_WIDTH_M);
+    this.lineMat = new LineMaterial({ color: new THREE.Color(s.ink ?? INK).getHex(), linewidth: ink, worldUnits: true, transparent: true, depthWrite: false });
+    this.lineMat.polygonOffset = true;
+    this.lineMat.polygonOffsetFactor = -2;
+    this.lineMat.polygonOffsetUnits = -2;
+    if (data.edges.length) this.lineSets.push(this.makeLines(data.edges, this.root));
+    for (const [id, edges] of Object.entries(data.jointEdges)) {
+      const jv = this.joints.get(id);
+      if (jv && edges.length) this.lineSets.push(this.makeLines(edges, jv.group, jv.joint.at));
     }
     this.bounds.makeEmpty();
     for (const p of this.pieces) this.bounds.union(p.box);
@@ -96,6 +168,7 @@ export class StructureView {
       }
       this.beam.renderOrder = 3;
       this.root.add(this.beam);
+      this.beamJoint = lamp.joint ? this.joints.get(lamp.joint) : undefined;
     }
     if (this.assets.halo) {
       for (const part of s.parts) {
@@ -107,22 +180,33 @@ export class StructureView {
         halo.renderOrder = 3;
         halo.visible = false;
         this.root.add(halo);
-        this.halos.push(halo);
+        const joint = part.joint ? this.joints.get(part.joint) : undefined;
+        this.halos.push({ sprite: halo, ...(joint?.joint.kind === 'light' ? { joint } : {}) });
       }
     }
   }
 
-  private addGroup(g: MeshGroup): void {
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(g.mesh.pos, 3));
-    geo.setAttribute('normal', new THREE.Float32BufferAttribute(g.mesh.nrm, 3));
-    geo.setAttribute('uv', new THREE.Float32BufferAttribute(g.mesh.uv, 2));
-    const colors: number[] = [];
-    for (const s of g.mesh.shade) colors.push(s, s, s);
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    geo.setIndex(g.mesh.idx);
-    geo.computeBoundingBox();
-    const mat = tinted(new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.FrontSide }), !!g.glow);
+  private makeLines(edges: number[], parent: THREE.Object3D, at?: [number, number, number]): LineSegments2 {
+    const pts = at ? edges.map((v, i) => v - at[i % 3]) : edges;
+    const geo = new LineSegmentsGeometry();
+    geo.setPositions(pts);
+    const lines = new LineSegments2(geo, this.lineMat!);
+    lines.renderOrder = 1;
+    lines.frustumCulled = false;
+    parent.add(lines);
+    return lines;
+  }
+
+  private addJoint(j: Joint): void {
+    const group = new THREE.Group();
+    group.position.set(j.at[0], j.at[1], j.at[2]);
+    this.root.add(group);
+    this.joints.set(j.id, { joint: j, group, k: -1, spin: 0, axis: new THREE.Vector3(...j.axis).normalize(), mats: [], ...(j.kind === 'light' ? { glow: { value: 0 }, colors: [] } : {}) });
+  }
+
+  /** A material for a mesh group: a tinted crayon tile, or a decal's sprite (a window's frame when it is cut). */
+  private material(g: MeshGroup, glowLevel?: { value: number }, frame = false): THREE.MeshBasicMaterial {
+    const mat = tinted(new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.FrontSide }), !!g.glow, glowLevel);
     if (g.decal) {
       mat.transparent = true;
       mat.alphaTest = 0.4;
@@ -135,8 +219,7 @@ export class StructureView {
       else if (g.decal.sprite.file) {
         const file = g.decal.sprite.file;
         mat.map = this.assets.textures.placeholder('', 'object', g.decal.sprite.w / Math.max(1, g.decal.sprite.h));
-        this.assets.textures
-          .load(file)
+        (frame ? windowFrame(this.assets.textures, file) : this.assets.textures.load(file))
           .then((tex) => {
             mat.map = tex;
             mat.needsUpdate = true;
@@ -148,12 +231,107 @@ export class StructureView {
       mat.color.set(g.color);
       applyCrayon(mat, () => this.root.scale.x);
     }
+    return mat;
+  }
+
+  private geometry(g: MeshGroup, at?: [number, number, number]): THREE.BufferGeometry {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(g.mesh.pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(g.mesh.nrm, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(g.mesh.uv, 2));
+    const colors: number[] = [];
+    for (const s of g.mesh.shade) colors.push(s, s, s);
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    geo.setIndex(g.mesh.idx);
+    if (at) geo.translate(-at[0], -at[1], -at[2]);
+    geo.computeBoundingBox();
+    return geo;
+  }
+
+  private addGroup(g: MeshGroup, windowOf: Map<number, number>): void {
+    const jv = g.joint ? this.joints.get(g.joint) : undefined;
+    const at = jv?.joint.at;
+    const geo = this.geometry(g, at);
+    const n = g.decal?.role === 'window' && g.decal.sprite.file ? windowOf.get(g.decal.part) : undefined;
+    const mat = this.material(g, jv?.glow);
     const mesh = new THREE.Mesh(geo, mat);
     mesh.userData.entityId = this.id;
-    this.root.add(mesh);
-    const piece: Piece = { mesh, mat, box: geo.boundingBox!.clone(), alpha: 1, target: 1 };
+    if (jv) mesh.userData.piece = jv.joint.id;
+    (jv ? jv.group : this.root).add(mesh);
+    const box = geo.boundingBox!.clone();
+    if (at) box.translate(new THREE.Vector3(...at));
+    const piece: Piece = { mesh, mat, box, alpha: 1, target: 1 };
+    if (jv) {
+      jv.mats.push(mat);
+      jv.colors?.push(mat.color.clone());
+    }
     if (g.decal?.role === 'door') this.hingeDoor(piece, geo);
     this.pieces.push(piece);
+    if (n !== undefined) {
+      mesh.userData.piece = `window_${n}`;
+      this.uncut.set(`open_window_${n}`, { g, geo, n, mat });
+    }
+  }
+
+  /**
+   * Put a window's two sashes over its frame, each on a hinge at its outer edge so it swings out, and a dark room
+   * behind them that lights up at night.
+   */
+  private cutWindow(g: MeshGroup, geo: THREE.BufferGeometry, n: number, frameMat: THREE.MeshBasicMaterial): void {
+    const p = geo.attributes.position as THREE.BufferAttribute;
+    const nr = geo.attributes.normal as THREE.BufferAttribute;
+    if (!p || p.count < 4 || !g.decal?.sprite.file) return;
+    windowFrame(this.assets.textures, g.decal.sprite.file)
+      .then((tex) => {
+        frameMat.map = tex;
+        frameMat.needsUpdate = true;
+      })
+      .catch(() => undefined);
+    const v = (i: number) => new THREE.Vector3(p.getX(i), p.getY(i), p.getZ(i));
+    const bl = v(0);
+    const ax = v(1).sub(bl);
+    const ay = v(3).sub(bl);
+    const normal = new THREE.Vector3(nr.getX(0), nr.getY(0), nr.getZ(0)).normalize();
+    const at = (u: number, w: number) => bl.clone().addScaledVector(ax, u).addScaledVector(ay, w);
+    const v0 = 1 - SASH.y1;
+    const v1 = 1 - SASH.y0;
+    const quad = (u0: number, u1: number, origin: THREE.Vector3, back: number): THREE.BufferGeometry => {
+      const corners = [at(u0, v0), at(u1, v0), at(u1, v1), at(u0, v1)].map((c) => c.sub(origin).addScaledVector(normal, -back));
+      const q = new THREE.BufferGeometry();
+      q.setAttribute('position', new THREE.Float32BufferAttribute(corners.flatMap((c) => [c.x, c.y, c.z]), 3));
+      q.setAttribute('normal', new THREE.Float32BufferAttribute([0, 1, 2, 3].flatMap(() => [normal.x, normal.y, normal.z]), 3));
+      q.setAttribute('uv', new THREE.Float32BufferAttribute([u0, v0, u1, v0, u1, v1, u0, v1], 2));
+      q.setAttribute('color', new THREE.Float32BufferAttribute(new Array(12).fill(1), 3));
+      q.setIndex([0, 1, 2, 0, 2, 3]);
+      q.computeBoundingBox();
+      return q;
+    };
+    const name = `window_${n}`;
+    const add = (mesh: THREE.Mesh, mat: THREE.MeshBasicMaterial, parent: THREE.Object3D, offset: THREE.Vector3) => {
+      mesh.userData.entityId = this.id;
+      mesh.userData.piece = name;
+      parent.add(mesh);
+      this.pieces.push({ mesh, mat, box: mesh.geometry.boundingBox!.clone().translate(offset), alpha: 1, target: 1 });
+    };
+    const roomMat = tinted(new THREE.MeshBasicMaterial({ color: ROOM, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }), true);
+    add(new THREE.Mesh(quad(SASH.x0, SASH.x1, new THREE.Vector3(), 0.005), roomMat), roomMat, this.root, new THREE.Vector3());
+    const sashes: WindowView['sashes'] = [];
+    for (const [u0, u1, hingeU] of [
+      [SASH.x0, SASH.xm, SASH.x0],
+      [SASH.xm, SASH.x1, SASH.x1],
+    ] as const) {
+      const hinge = at(hingeU, v0);
+      const group = new THREE.Group();
+      group.position.copy(hinge);
+      this.root.add(group);
+      const mat = this.material({ ...g, decal: { ...g.decal, role: undefined } });
+      add(new THREE.Mesh(quad(u0, u1, hinge, -0.002), mat), mat, group, hinge);
+      // swing the free edge out of the wall
+      const free = ax.clone().multiplyScalar(hingeU === u0 ? 1 : -1);
+      const swung = free.applyAxisAngle(new THREE.Vector3(0, 1, 0), 1);
+      sashes.push({ group, sign: swung.dot(normal) > 0 ? 1 : -1 });
+    }
+    this.windows.push({ key: `open_window_${n}`, sashes, k: 0 });
   }
 
   /** Move a door quad's origin to its hinge edge so it can swing open about it. */
@@ -185,7 +363,7 @@ export class StructureView {
     piece.door = { k: 0, sign: swung.dot(normal) < 0 ? 1 : -1 };
   }
 
-  update(e: Entity, pos: Vec3, dt: number): void {
+  update(e: Entity, pos: Vec3, dt: number, gesture?: Transient['gesture']): void {
     if (e.structure && e.structure !== this.built) this.build(e.structure);
     const open = e.state.door_open === true ? 1 : 0;
     for (const p of this.pieces) {
@@ -193,6 +371,29 @@ export class StructureView {
       p.door.k += (open - p.door.k) * Math.min(1, dt * 6);
       if (Math.abs(p.door.k - open) < 0.005) p.door.k = open;
       p.mesh.rotation.y = p.door.sign * p.door.k * 1.8;
+    }
+    this.moveJoints(e, dt);
+    if (this.uncut.size)
+      for (const [key, w] of this.uncut)
+        if (e.state[key] === true) {
+          this.uncut.delete(key);
+          this.cutWindow(w.g, w.geo, w.n, w.mat);
+        }
+    for (const w of this.windows) {
+      const want = e.state[w.key] === true ? 1 : 0;
+      w.k = w.k < 0 ? want : w.k < want ? Math.min(want, w.k + dt / 0.5) : Math.max(want, w.k - dt / 0.5);
+      for (const sash of w.sashes) sash.group.rotation.y = sash.sign * ease(w.k) * SASH_OPEN;
+    }
+    const apart = gesture?.name === 'apart' && this.built ? gesture : undefined;
+    if (apart && !this.apart) this.explode(this.built!);
+    else if (!apart && this.apart) this.unexplode();
+    if (apart && this.apart) {
+      const p = clamp(apart.t / Math.max(0.01, apart.dur), 0, 1);
+      const amt = p < 0.3 ? ease(p / 0.3) : p > 0.72 ? ease((1 - p) / 0.28) : 1;
+      for (const q of this.apart.parts) {
+        q.obj.position.copy(q.home).addScaledVector(q.dir, amt);
+        q.obj.rotation.set(q.spin.x * amt, q.spin.y * amt, q.spin.z * amt);
+      }
     }
     this.root.position.set(pos[0], pos[1], pos[2]);
     this.root.rotation.set(0, (e.yaw ?? 0) * DEG, 0);
@@ -229,18 +430,114 @@ export class StructureView {
     this.fadeAll = base;
     if (this.beam) {
       const glow = LIGHT.glow.value;
-      this.beam.visible = glow > 0.05 && !e.hidden;
+      const on = this.beamJoint ? 1 - ease(Math.max(0, this.beamJoint.k)) : 1;
+      this.beam.visible = glow * on > 0.05 && !e.hidden && !this.apart;
       this.beam.rotation.y += dt * 0.7;
       const mat = (this.beam.children[0] as THREE.Mesh).material as THREE.MeshBasicMaterial;
-      mat.opacity = 0.16 * glow;
+      mat.opacity = 0.16 * glow * on;
     }
     if (this.halos.length) {
       const glow = LIGHT.glow.value;
-      for (const h of this.halos) {
-        h.visible = glow > 0.03 && !e.hidden;
-        h.material.opacity = glow * 0.9 * base;
+      for (const { sprite, joint } of this.halos) {
+        const on = joint ? 1 - ease(Math.max(0, joint.k)) : 1;
+        sprite.visible = glow * on > 0.03 && !e.hidden && !this.apart;
+        sprite.material.opacity = glow * 0.9 * base * on;
       }
     }
+  }
+
+  /** Move each joint toward its state: hinges turn, slides slide, ropes stretch, water shrinks away, lamps go dark. */
+  private moveJoints(e: Entity, dt: number): void {
+    for (const jv of this.joints.values()) {
+      const j = jv.joint;
+      const want = jointOn(e, j) ? 1 : 0;
+      const step = dt / Math.max(0.05, j.secs ?? 0.6);
+      jv.k = jv.k < 0 ? want : jv.k < want ? Math.min(want, jv.k + step) : Math.max(want, jv.k - step);
+      const k = ease(jv.k);
+      const g = jv.group;
+      switch (j.kind) {
+        case 'hinge':
+          g.quaternion.setFromAxisAngle(jv.axis, k * j.amount);
+          break;
+        case 'slide':
+          g.position.set(j.at[0], j.at[1], j.at[2]).addScaledVector(jv.axis, k * j.amount);
+          break;
+        case 'stretch': {
+          const f = k * j.amount;
+          g.scale.set(1 + f * Math.abs(jv.axis.x), 1 + f * Math.abs(jv.axis.y), 1 + f * Math.abs(jv.axis.z));
+          break;
+        }
+        case 'spin':
+          jv.spin += dt * j.amount * k;
+          g.quaternion.setFromAxisAngle(jv.axis, jv.spin);
+          break;
+        case 'shrink': {
+          const f = Math.max(0.001, 1 - k);
+          g.scale.setScalar(f);
+          g.visible = f > 0.01 && !this.apart;
+          break;
+        }
+        case 'light':
+          if (jv.glow) jv.glow.value = LIGHT.glow.value * (1 - k);
+          jv.mats.forEach((m, i) => {
+            const c = jv.colors?.[i];
+            if (c) m.color.copy(c).lerp(LAMP_OFF, k * 0.75);
+          });
+          break;
+      }
+    }
+  }
+
+  /** Build every part on its own, floating out from the middle by a little more than its size. */
+  private explode(s: Structure): void {
+    const group = new THREE.Group();
+    const parts: NonNullable<StructureView['apart']>['parts'] = [];
+    const lines: LineSegments2[] = [];
+    for (const child of this.root.children) child.visible = false;
+    this.root.add(group);
+    const centre = this.bounds.getCenter(new THREE.Vector3());
+    const size = this.bounds.getSize(new THREE.Vector3());
+    const reach = Math.max(size.x, size.y, size.z) * 0.22 + 0.2;
+    const bare = { ...s, joints: [] };
+    s.parts.forEach((part, i) => {
+      if (part.hidden) return;
+      const data = buildStructureMesh(bare, new Set([i]));
+      if (!data.groups.length) return;
+      const box = new THREE.Box3();
+      for (const g of data.groups) for (let k = 0; k < g.mesh.pos.length; k += 3) box.expandByPoint(new THREE.Vector3(g.mesh.pos[k], g.mesh.pos[k + 1], g.mesh.pos[k + 2]));
+      const home = box.getCenter(new THREE.Vector3());
+      const holder = new THREE.Group();
+      holder.position.copy(home);
+      for (const g of data.groups) {
+        const mesh = new THREE.Mesh(this.geometry(g, [home.x, home.y, home.z]), this.material(g));
+        mesh.userData.entityId = this.id;
+        holder.add(mesh);
+      }
+      if (data.edges.length && this.lineMat) lines.push(this.makeLines(data.edges, holder, [home.x, home.y, home.z]));
+      const out = home.clone().sub(centre);
+      out.y = out.y * 0.6 + size.y * 0.12;
+      if (out.lengthSq() < 1e-4) out.set(0, 1, 0);
+      const r = (q: number) => ((Math.sin(i * 12.9898 + q * 78.233) * 43758.5453) % 1) * 0.35;
+      parts.push({ obj: holder, home, dir: out.normalize().multiplyScalar(reach * (0.8 + Math.abs(r(3)))), spin: new THREE.Vector3(r(1), r(2), r(4)) });
+      group.add(holder);
+    });
+    this.apart = { group, parts, lines };
+  }
+
+  private unexplode(): void {
+    const a = this.apart;
+    if (!a) return;
+    this.root.remove(a.group);
+    a.group.traverse((o) => {
+      if (o instanceof THREE.Mesh) {
+        o.geometry.dispose();
+        (o.material as THREE.Material).dispose();
+      }
+    });
+    for (const l of a.lines) l.geometry.dispose();
+    this.apart = null;
+    for (const child of this.root.children) child.visible = true;
+    // joints that hide when shrunk, and the beam and halos, set their own visibility again next frame
   }
 
   /**
@@ -269,31 +566,38 @@ export class StructureView {
   }
 
   private clear(): void {
+    this.unexplode();
     for (const p of this.pieces) {
-      this.root.remove(p.mesh);
+      p.mesh.removeFromParent();
       p.mesh.geometry.dispose();
       p.mat.dispose();
     }
     this.pieces.length = 0;
+    for (const jv of this.joints.values()) this.root.remove(jv.group);
+    this.joints.clear();
+    for (const w of this.windows) for (const sash of w.sashes) this.root.remove(sash.group);
+    this.windows.length = 0;
+    this.uncut.clear();
     if (this.beam) {
       this.root.remove(this.beam);
       const cone = this.beam.children[0] as THREE.Mesh;
       cone.geometry.dispose();
       (cone.material as THREE.Material).dispose();
       this.beam = null;
+      this.beamJoint = undefined;
     }
     for (const h of this.halos) {
-      this.root.remove(h);
-      h.material.dispose();
+      this.root.remove(h.sprite);
+      h.sprite.material.dispose();
     }
     this.halos.length = 0;
-    if (this.lines) {
-      this.root.remove(this.lines);
-      this.lines.geometry.dispose();
-      this.lineMat?.dispose();
-      this.lines = null;
-      this.lineMat = null;
+    for (const l of this.lineSets) {
+      l.removeFromParent();
+      l.geometry.dispose();
     }
+    this.lineSets.length = 0;
+    this.lineMat?.dispose();
+    this.lineMat = null;
   }
 
   /** Called by the scene on resize so fat lines know the viewport. */

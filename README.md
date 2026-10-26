@@ -11,8 +11,9 @@ That link is the save file: open it on any device to continue, or share it. Type
 happen in the box ("water the flower", "a dragon flies in and breathes fire at the house", "make
 it huge" while looking at something). Desktop: click to look, WASD to walk, Shift to run, `/` to
 type. Phone: left thumb walks, right thumb looks, tap a thing to name it. Clicking or tapping a
-thing also pokes it: objects jiggle, animals and people turn to you and answer, and a building's
-door swings open or shut. The menu has Worlds (tap
+thing also pokes it: objects jiggle, animals and people turn to you and answer, and built things
+work the piece you clicked: a house's door or one of its windows, a mailbox's door or flag, a bin's
+lid, a well's bucket, a lamp's light, a fountain's water. The menu has Worlds (tap
 the title too), Undo, Reset and Copy link. Worlds lists every world you have opened on this device,
 starts a new one, and opens any world from its link or name; the bare site address reopens the
 world you used last. `?dev=1` opens a console that runs hand-written scripts.
@@ -101,12 +102,27 @@ lay out parts for another simple fixture. On a slope a prop stands level on a ro
 `scripts/shots-props.ts` shows each prop up close, `scripts/shots-village-props.mjs` the ones in a
 village.
 
+**Moving pieces.** Built things have joints: parts that move together on a hinge, a slide, a
+stretch (a well rope paying out), a spin, or that shrink away (a fountain's jets) or switch off (a
+lamp). Each moving piece has two named states (`closed`/`open`, `down`/`up`, `on`/`off`) kept in
+the entity's state as `open_<piece>`; the model moves them with
+`{"op":"operate","id":"mailbox_1","part":"door","to":"open"}` and sees them in the world context
+("door (closed), flag (up), windows (2 of 12 open), roof, chimney"). Mailboxes open their door and
+raise their flag, bins flip their lid, wells lower the bucket as the crank turns, lamp posts and the
+lighthouse switch off, fountains stop. House windows are cut into a frame and two sashes that swing
+out over a dark room (lit at night); some houses have plank shutters that swing shut over them (a
+window opening opens its shutters). Named parts (`roof`, `chimney`, `door`, `lantern`, `lid`,
+`bucket`, `hat`, `sign`) come off with `detach` as structures of their own, slide off and land, and
+go back with `reattach`; anim `apart` floats every part out from the middle and back.
+`cd scripts && npx tsx shots-parts.ts http://localhost:8787 OUT` shows all of it.
+
 - `src/shared/structure/` is the kit: `types.ts` (parts), `geometry.ts` (parts -> mesh data with
   metre-based UVs, face shading and outline edges), `collide.ts` (walls push, patios and stairs
   support), and `gen/` with one generator per family: `house` (also `randomHouse` and the
   gingerbread house), `fence`/`yard`, `tower`/`lighthouse`, `witchHut`, `bunker`, `props`, and
   `custom`, which lays out parts the model describes by relation ("a cone on the base") so nothing
-  floats.
+  floats. `joints.ts` names the moving pieces, matches words to them ("lower the bucket", "the
+  shutters") and lists what comes off.
 - The LLM never places coordinates. Spawning a building word (`house`, `cottage`, `barn`, `tower`,
   `fence`, `yard`, `fire station`...) builds a structure; the `build` action adds a look
   (`params: {color: "blue", roof: "hip", stories: 2}`) or a parts list for one-offs. A word nobody

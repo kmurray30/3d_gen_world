@@ -1,5 +1,5 @@
 import type { Entity, Vec3 } from '../types';
-import type { AnimAction, EffectAction, MoveAction, ReattachAction, RemoveAction, ResolvedAction, ResolvedBuild, ResolvedDetach, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
+import type { AnimAction, EffectAction, MoveAction, OperateAction, ReattachAction, RemoveAction, ResolvedAction, ResolvedBuild, ResolvedDetach, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
 import { GESTURE_SECONDS, isGesture } from '../gestures';
 import { DEG, clamp, dir2, easeIn, easeInOut, easeOut, easeOutBack, lerp } from './math';
 import { footprintRadius, renderHeight, massClassFor } from './sizing';
@@ -315,7 +315,13 @@ export class FallTask extends BaseTask {
     if (from) {
       // a small hop up and out, enough to clear the owner's footprint by the time it reaches the ground
       const fp = w.worldPos(from);
-      const out = dir2(fp, [w.player.pos[0], 0, w.player.pos[2]]);
+      // small pieces drop toward the player; big ones (a roof) slide off to one side rather than onto them
+      let out = dir2(fp, [w.player.pos[0], 0, w.player.pos[2]]);
+      if (footprintRadius(e) > 0.6) {
+        const side = [...e.id].reduce((h, c) => h + c.charCodeAt(0), 0) % 2 ? 1 : -1;
+        const a = side * 1.25;
+        out = [out[0] * Math.cos(a) + out[2] * Math.sin(a), 0, -out[0] * Math.sin(a) + out[2] * Math.cos(a)];
+      }
       const off = Math.hypot(e.pos[0] - fp[0], e.pos[2] - fp[2]);
       const need = Math.max(0, footprintRadius(from) + footprintRadius(e) + 0.15 - off);
       this.vy = 1.5;
@@ -703,6 +709,18 @@ function reattachTask(action: ReattachAction, engine: Engine): Task {
   );
 }
 
+function operateTask(action: OperateAction, engine: Engine): Task {
+  return new Tween(
+    action.id,
+    undefined,
+    0,
+    () => undefined,
+    () => engine.operate(action.id, action.part, action.to),
+    undefined,
+    action.delay ?? 0,
+  );
+}
+
 function sayTask(action: SayAction, engine: Engine): Task {
   const dur = action.dur ?? 2.5;
   return new Tween(
@@ -785,6 +803,8 @@ export function makeTasks(action: ResolvedAction, _script: Script, engine: Engin
       return detachTasks(action, engine);
     case 'reattach':
       return [reattachTask(action, engine)];
+    case 'operate':
+      return [operateTask(action, engine)];
     case 'remove':
       return removeTasks(action, engine);
     case 'say':

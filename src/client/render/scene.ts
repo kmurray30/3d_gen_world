@@ -185,7 +185,7 @@ export class SceneView {
           this.scene.add(view.root);
           view.setResolution(w * pr, h * pr);
         }
-        view.update(e, pos, dt);
+        view.update(e, pos, dt, model.transient.get(e.id)?.gesture);
         continue;
       }
       const structView = this.structures.get(e.id);
