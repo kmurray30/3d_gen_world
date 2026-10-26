@@ -5,13 +5,15 @@ car's wheels; where each piece turns; and which ink marks are the eyes, pupils, 
 the drawing into those pieces in the browser and animates them (idle life, walking, gestures, expressions,
 pieces coming off). A drawing without a rig still works: it moves as one card.
 
-Each rig is two small files in `assets/rigs/` (a JSON and a piece map PNG, about 8 KB together) plus the
-labelling that made it. The game only asks for the drawings listed in `assets/rigs/index.json`.
+Each rig is one small JSON file in `assets/rigs/` (about 8 KB, with each piece's exact pixel mask) plus the
+labelling that made it. All the cutting happens here, offline: the game only stamps the drawing through the
+masks, so it never reads pixels back from a canvas (Safari and other privacy-minded browsers add noise to such
+reads, which would scatter pixels across pieces). The game only asks for the drawings listed in `assets/rigs/index.json`.
 
 | file | what it does |
 | --- | --- |
 | `segment.py` | numbers a drawing's regions (paint between outlines) and ink marks on an overlay with 0-1000 rulers |
-| `build_rig.py` | turns a labelling (`labels/<word>.json`) into the rig, plus a review picture |
+| `build_rig.py` | turns a labelling (`labels/<word>.json`) into the rig with its piece masks, plus a review picture |
 | `labels/` | the 20 hand-made labellings of the starter set (they always win over automatic ones) |
 | `auto_rig.py` | labels drawings with a vision model on your own machine, checks and builds them |
 | `auto_labels/` | the labellings `auto_rig.py` made (edit one and rebuild it to fix a rig by hand) |

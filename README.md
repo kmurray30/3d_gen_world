@@ -139,8 +139,10 @@ go back with `reattach`; anim `apart` floats every part out from the middle and 
 
 Rigged drawings are cut into their paper pieces in the browser and move like a paper puppet: a head,
 arms, hands, legs, tails, ears, wings, wheels, clock hands and windmill blades, each turning on its
-own joint. A rig is a small JSON file plus a piece map (`assets/rigs/<word>.json` and `.png`; 20
-starter rigs ship, 168 KB in all). Drawings without a rig still move as one card.
+own joint. A rig is one small JSON file (`assets/rigs/<word>.json`) with every piece's exact pixel mask;
+20 starter rigs ship, 156 KB in all. The browser only stamps the drawing through the masks and never reads
+pixels back, because browsers that guard against fingerprinting (Safari now does by default) add noise to
+canvas reads. Drawings without a rig still move as one card.
 
 - **Idle life.** Rigged things breathe, sway, blink and glance around; walkers swing their legs (or
   lift them, seen from the front); tails wag, ears twitch, clock hands tick and blades turn.

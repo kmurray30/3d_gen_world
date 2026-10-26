@@ -6,16 +6,19 @@ another one (a hand at the wrist, a dog's tail at its base), and which small ink
 eyebrows and the mouth. Coordinates are thousandths of the drawing's width and height (0-1000), as on the
 overlay's rulers. This writes, per drawing:
 
-  assets/rigs/<file>.json   pieces with their kind, parent, joint (pivot) and draw order, plus face fills
-  assets/rigs/<file>.png    the piece map: each pixel's value is its piece's index + 1 (0 = empty)
+  assets/rigs/<file>.json   pieces with their kind, parent, joint (pivot), draw order, mask, plus face fills
 
-and a review picture with every piece tinted and its joint marked.
+and a review picture with every piece tinted and its joint marked. Each piece carries its exact pixel mask
+(run-length encoded), with the outline ink along its seams and, for pieces tucked behind their parent, a few
+pixels of the parent under it, so the game only stamps the drawing through masks and never has to read pixels
+back (browsers that guard against fingerprinting add noise to such reads).
 
     python3 words_and_images/rig/build_rig.py words_and_images/rig/labels/boy.json --review /tmp/review
 """
 from __future__ import annotations
 
 import argparse
+import base64
 import colorsys
 import json
 from pathlib import Path
@@ -39,6 +42,60 @@ Z_BY_KIND = {"arm": -1, "hand": -1, "leg": -2, "foot": -1, "tail": -3, "wing": -
              "clock_hand": 2, "door": 1, "lid": 1, "blade": 1}
 # what a detachable piece becomes in the world
 DETACH_WORD = {"hat": "hat", "held": None, "wheel": "wheel", "accessory": None}
+INK_MAX = 72  # same as segment.py
+SEAM = 4      # px of outline ink along its edges a piece takes, so a moved arm keeps its outline
+TUCK = 6      # px a piece tucked behind its parent reaches under it, so a turning joint never opens a gap
+
+
+def _varint(n: int, out: bytearray) -> None:
+    while True:
+        b = n & 0x7F
+        n >>= 7
+        if n:
+            out.append(b | 0x80)
+        else:
+            out.append(b)
+            return
+
+
+def encode_mask(m: np.ndarray) -> tuple[list[int], str]:
+    """A mask's bounding rectangle [x0, y0, x1, y1) and its rows as runs: per row the number of runs, then each
+    run's gap from the previous run's end (or x0) and its length, as base64 of 7-bit varints."""
+    ys, xs = np.nonzero(m)
+    if not len(ys):
+        return [0, 0, 1, 1], base64.b64encode(bytes([0])).decode()
+    x0, y0, x1, y1 = int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1
+    out = bytearray()
+    for y in range(y0, y1):
+        row = m[y, x0:x1].astype(np.int8)
+        d = np.diff(np.concatenate(([0], row, [0])))
+        starts = np.nonzero(d == 1)[0]
+        ends = np.nonzero(d == -1)[0]
+        _varint(len(starts), out)
+        at = 0
+        for a, b in zip(starts, ends):
+            _varint(int(a - at), out)
+            _varint(int(b - a), out)
+            at = int(b)
+    return [x0, y0, x1, y1], base64.b64encode(bytes(out)).decode()
+
+
+def final_masks(owner: np.ndarray, ink: np.ndarray, pieces: list[dict]) -> list[np.ndarray]:
+    """What each piece's card shows: its own pixels, the outline ink within SEAM of them, and for a piece tucked
+    behind its parent the parent's pixels within TUCK. Face marks keep exactly their own pixels."""
+    index = {p["id"]: i for i, p in enumerate(pieces)}
+    out = []
+    for k, p in enumerate(pieces):
+        own = owner == k + 1
+        m = own.copy()
+        if p["kind"] not in FACE:
+            others = (owner > 0) & ~own
+            m |= others & ink & ndimage.maximum_filter(own, size=2 * SEAM + 1)
+            parent = index.get(p.get("parent", ""))
+            if p["z"] < 0 and parent is not None:
+                m |= others & (owner == parent + 1) & ndimage.maximum_filter(own, size=2 * max(SEAM, TUCK) + 1)
+        out.append(m)
+    return out
 
 
 def to_px(p: list[float], w: int, h: int) -> tuple[float, float]:
@@ -326,14 +383,17 @@ def build(spec: dict, review: Path | None = None, out: Path = RIGS) -> dict:
                 entry[extra] = p[extra]
         out_pieces.append(entry)
 
+    ink_px = alpha & (rgba[..., :3].max(axis=2) < INK_MAX)
+    for entry, m in zip(out_pieces, final_masks(owner, ink_px, out_pieces)):
+        entry["rect"], entry["mask"] = encode_mask(m)
     file = f"{word.replace(' ', '_')}.webp"
-    rig = {"v": 1, "file": file, "w": w, "h": h, "view": spec.get("view", "front"), "pieces": out_pieces}
+    rig = {"v": 2, "file": file, "w": w, "h": h, "view": spec.get("view", "front"), "pieces": out_pieces}
     if "mouth_at" in face:
         mx, my = to_px(face["mouth_at"], w, h)
         rig["mouth_at"] = [round(mx / (w - 1), 4), round(my / (h - 1), 4), face.get("mouth_w", 60) / 1000]
     out.mkdir(parents=True, exist_ok=True)
     stem = file[:-5]
-    Image.fromarray(owner.astype(np.uint8), "L").save(out / f"{stem}.png", optimize=True)
+    (out / f"{stem}.png").unlink(missing_ok=True)  # the old piece map, from before masks were in the JSON
     (out / f"{stem}.json").write_text(json.dumps(rig, separators=(",", ":")))
     if review:
         review.mkdir(parents=True, exist_ok=True)

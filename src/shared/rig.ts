@@ -1,8 +1,9 @@
 /**
- * Rigs: how a drawing comes apart into paper pieces. Each rigged sprite ships a small JSON (this shape) and a
- * piece map PNG (each pixel's value is its piece index + 1) made offline by words_and_images/rig/. Coordinates
- * are fractions of the drawing's width and height, origin top-left, as in the image. The game cuts the original
- * picture into pieces at load time, so the drawing itself is unchanged.
+ * Rigs: how a drawing comes apart into paper pieces. Each rigged sprite ships a small JSON (this shape) made
+ * offline by words_and_images/rig/, with every piece's exact pixel mask. Coordinates are fractions of the
+ * drawing's width and height, origin top-left, as in the image; masks are in the drawing's pixels. The game
+ * stamps the original picture through the masks at load time (it never reads pixels back), so the drawing
+ * itself is unchanged.
  */
 import { z } from 'zod';
 
@@ -37,13 +38,16 @@ export const RigPieceSchema = z.object({
   spin: z.number().optional(),
   /** Doors and lids: how far they swing open, degrees (sign gives the direction). */
   open: z.number().optional(),
+  /** The pixels the piece's card shows: their rectangle x0, y0, x1, y1 (exclusive) and `encodeMask` runs. */
+  rect: z.tuple([z.number().int(), z.number().int(), z.number().int(), z.number().int()]),
+  mask: z.string(),
 });
 export type RigPiece = z.infer<typeof RigPieceSchema>;
 
 export const RigSchema = z.object({
-  v: z.literal(1),
+  v: z.literal(2),
   file: z.string(),
-  /** Size of the piece map in pixels (the drawing's size). */
+  /** Size of the drawing in pixels, the masks' frame. */
   w: z.number().int().positive(),
   h: z.number().int().positive(),
   /** front: people facing out; side: animals in profile (they face image-left as drawn). */
@@ -53,6 +57,40 @@ export const RigSchema = z.object({
   mouth_at: z.tuple([z.number(), z.number(), z.number()]).optional(),
 });
 export type Rig = z.infer<typeof RigSchema>;
+
+/**
+ * A piece's mask as a w x h grid over its rect (1 = shown). The encoding is base64 of 7-bit varints: per row
+ * the number of runs, then each run's gap from the last run's end (or the rect's left edge) and its length.
+ */
+export function decodeMask(mask: string, rect: readonly [number, number, number, number]): Uint8Array {
+  const w = Math.max(1, rect[2] - rect[0]);
+  const h = Math.max(1, rect[3] - rect[1]);
+  const out = new Uint8Array(w * h);
+  const bin = atob(mask);
+  let at = 0;
+  const next = (): number => {
+    let v = 0;
+    let shift = 0;
+    for (;;) {
+      const b = bin.charCodeAt(at++);
+      if (Number.isNaN(b)) return 0;
+      v |= (b & 0x7f) << shift;
+      if (b < 0x80) return v;
+      shift += 7;
+    }
+  };
+  for (let y = 0; y < h && at < bin.length; y++) {
+    const runs = next();
+    let x = 0;
+    for (let r = 0; r < runs; r++) {
+      x += next();
+      const len = next();
+      out.fill(1, y * w + Math.min(w, x), y * w + Math.min(w, x + len));
+      x += len;
+    }
+  }
+  return out;
+}
 
 /** The order pieces must be built in: every parent before its children. Unknown parents hang from the root. */
 export function rigOrder(rig: Rig): RigPiece[] {

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { RigSchema, findPiece, rigOrder, type Rig } from '../../src/shared/rig';
+import { RigSchema, decodeMask, findPiece, rigOrder, type Rig } from '../../src/shared/rig';
 import { GESTURES, GESTURE_SECONDS } from '../../src/shared/gestures';
 import { ActionSchema } from '../../src/shared/schema';
 import type { Entity } from '../../src/shared/types';
@@ -29,7 +29,7 @@ describe('rigs', () => {
     expect(rigs.size).toBeGreaterThanOrEqual(20);
     for (const rig of rigs.values()) {
       expect(index.files).toContain(rig.file);
-      expect(fs.existsSync(path.join(RIGS, rig.file.replace('.webp', '.png'))), rig.file).toBe(true);
+      expect(fs.existsSync(path.join(RIGS, rig.file.replace('.webp', '.png'))), `${rig.file}: no piece map files any more`).toBe(false);
       const ids = new Set(rig.pieces.map((p) => p.id));
       expect(ids.size, rig.file).toBe(rig.pieces.length);
       expect(rig.pieces.filter((p) => !p.parent).length, `${rig.file} has one root`).toBe(1);
@@ -38,6 +38,12 @@ describe('rigs', () => {
         for (const v of [...p.pivot, ...p.bbox]) expect(v, `${rig.file}: ${p.id}`).toBeGreaterThanOrEqual(-0.01), expect(v).toBeLessThanOrEqual(1.01);
         expect(p.bbox[2]).toBeGreaterThan(p.bbox[0]);
         expect(p.bbox[3]).toBeGreaterThan(p.bbox[1]);
+        // its exact mask sits inside the drawing and shows something
+        const [x0, y0, x1, y1] = p.rect;
+        expect(x0 >= 0 && y0 >= 0 && x1 <= rig.w && y1 <= rig.h && x1 > x0 && y1 > y0, `${rig.file}: ${p.id} rect`).toBe(true);
+        const m = decodeMask(p.mask, p.rect);
+        expect(m.length).toBe((x1 - x0) * (y1 - y0));
+        expect(m.reduce((a, b) => a + b, 0), `${rig.file}: ${p.id} mask`).toBeGreaterThan(0);
       }
       // parents come before their children in build order
       const seen = new Set<string>();
@@ -58,6 +64,16 @@ describe('rigs', () => {
     expect(rigs.get('clock.webp')!.pieces.filter((p) => p.kind === 'clock_hand').length).toBe(2);
     expect(rigs.get('windmill.webp')!.pieces.some((p) => p.kind === 'blade')).toBe(true);
     expect(rigs.get('farmer.webp')!.pieces.find((p) => p.kind === 'hat')?.detach).toBe('hat');
+  });
+
+  it('masks round-trip: a run-length mask decodes to exactly the pixels encoded', () => {
+    // rows: [1,1,0,1], [0,0,0,0], [0,1,1,1] in a 4 x 3 rect -> runs (count, gap, len)...
+    const bytes = [2, 0, 2, 1, 1, 0, 1, 1, 3];
+    const mask = btoa(String.fromCharCode(...bytes));
+    expect([...decodeMask(mask, [10, 20, 14, 23])]).toEqual([1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1]);
+    // a long run needs a two-byte varint
+    const long = btoa(String.fromCharCode(1, 0, 0x80 | 44, 1));
+    expect(decodeMask(long, [0, 0, 300, 1]).reduce((a, b) => a + b, 0)).toBe(44 + 128);
   });
 
   it("finds a part by name, with left and right being the character's own", () => {

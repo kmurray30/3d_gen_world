@@ -1,16 +1,13 @@
 /**
- * Cutting a drawing into its paper pieces, in the browser. A rig's piece map says which piece owns each pixel;
- * each piece also takes the outline ink along its edges (so a moved arm keeps its outline and the body keeps
- * its own), pieces tucked behind their parent reach a few pixels under it (so a turning joint never opens a
- * gap), and the paint under face marks is filled with the colour around them (so a blink shows skin, not a
- * hole). The pieces are packed into one atlas texture per drawing.
+ * Cutting a drawing into its paper pieces, in the browser. Each piece of a rig carries its exact pixel mask
+ * (made offline, outline ink along its seams and a tuck under its parent included), so cutting is only drawing:
+ * the picture is stamped through each mask into one atlas, and the paint under face marks is filled with the
+ * colour around them (so a blink shows skin, not a hole). Nothing is read back from a canvas: browsers that
+ * guard against fingerprinting add noise to such reads, which would scatter pixels across pieces.
  */
 import * as THREE from 'three';
-import { FACE_KINDS, RigSchema, type Rig, type RigPiece } from '../../shared/rig';
+import { FACE_KINDS, RigSchema, decodeMask, type Rig, type RigPiece } from '../../shared/rig';
 
-const INK_MAX = 72;
-const SEAM = 4;
-const TUCK = 6;
 const PAD = 2;
 
 export interface CutPiece {
@@ -70,19 +67,15 @@ export class RigStore {
   }
 
   /** Load and cut a drawing's rig; `image` is the drawing as already loaded for its texture. */
-  load(file: string, image: CanvasImageSource & { width: number; height: number }): Promise<PuppetAsset | null> {
+  load(file: string, image: CanvasImageSource): Promise<PuppetAsset | null> {
     let p = this.assets.get(file);
     if (!p) {
       const stem = file.replace(/\.webp$/, '');
-      p = Promise.all([
-        fetch(`${this.base}/${encodeURIComponent(stem)}.json`).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`rig ${r.status}`)))),
-        fetch(`${this.base}/${encodeURIComponent(stem)}.png`)
-          .then((r) => (r.ok ? r.blob() : Promise.reject(new Error(`rig map ${r.status}`))))
-          .then((b) => createImageBitmap(b, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' })),
-      ])
-        .then(([json, map]) => {
+      p = fetch(`${this.base}/${encodeURIComponent(stem)}.json`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`rig ${r.status}`))))
+        .then((json) => {
           const rig = RigSchema.parse(json);
-          const asset = cutRig(rig, map, image);
+          const asset = cutRig(rig, image);
           this.ready.set(file, asset);
           return asset;
         })
@@ -96,130 +89,105 @@ export class RigStore {
   }
 }
 
-/** Cut the drawing into pieces and pack them into an atlas. */
-export function cutRig(rig: Rig, map: CanvasImageSource, image: CanvasImageSource): PuppetAsset {
+/** Stamp the drawing through each piece's mask and pack the pieces into one atlas. */
+export function cutRig(rig: Rig, image: CanvasImageSource): PuppetAsset {
   const W = rig.w;
   const H = rig.h;
-  const src = canvasOf(W, H);
-  src.ctx.drawImage(image, 0, 0, W, H);
-  const px = src.ctx.getImageData(0, 0, W, H).data;
-  const lab = canvasOf(W, H);
-  lab.ctx.imageSmoothingEnabled = false;
-  lab.ctx.drawImage(map, 0, 0, W, H);
-  const ld = lab.ctx.getImageData(0, 0, W, H).data;
-  const owner = new Int16Array(W * H);
-  const ink = new Uint8Array(W * H);
-  for (let i = 0; i < W * H; i++) {
-    owner[i] = ld[i * 4] - 1;
-    const a = px[i * 4 + 3];
-    ink[i] = a > 128 && Math.max(px[i * 4], px[i * 4 + 1], px[i * 4 + 2]) < INK_MAX ? 1 : 0;
-  }
   const index = new Map(rig.pieces.map((p, i) => [p.id, i]));
-  const masks: Uint8Array[] = [];
-  const rects: Array<[number, number, number, number]> = [];
-  rig.pieces.forEach((p, k) => {
-    const own = new Uint8Array(W * H);
-    for (let i = 0; i < W * H; i++) if (owner[i] === k) own[i] = 1;
-    const parent = p.parent !== undefined ? index.get(p.parent) : undefined;
-    // a face mark keeps exactly its own pixels; other pieces take the ink along their edges, and pieces tucked
-    // behind their parent reach a little under it
-    const mask = own.slice();
-    if (!FACE_KINDS.includes(p.kind)) {
-      const near = dilate(own, W, H, Math.max(SEAM, TUCK));
-      const seam = dilate(own, W, H, SEAM);
-      for (let i = 0; i < W * H; i++) {
-        if (mask[i] || owner[i] < 0) continue;
-        if (seam[i] && ink[i]) mask[i] = 1;
-        else if (near[i] && p.z < 0 && parent !== undefined && owner[i] === parent) mask[i] = 1;
-      }
-    }
-    masks.push(mask);
-    rects.push(bounds(mask, W, H));
-  });
-  // pixels of each piece, with the paint under its face marks filled in
-  const layers = rig.pieces.map((p, k) => {
-    const [x0, y0, x1, y1] = rects[k];
-    const w = Math.max(1, x1 - x0);
-    const h = Math.max(1, y1 - y0);
-    const out = new ImageData(w, h);
-    const m = masks[k];
-    for (let y = y0; y < y1; y++)
-      for (let x = x0; x < x1; x++) {
-        const i = y * W + x;
-        if (!m[i]) continue;
-        const o = ((y - y0) * w + (x - x0)) * 4;
-        out.data[o] = px[i * 4];
-        out.data[o + 1] = px[i * 4 + 1];
-        out.data[o + 2] = px[i * 4 + 2];
-        out.data[o + 3] = px[i * 4 + 3];
-      }
-    return out;
-  });
+  const rects = rig.pieces.map((p) => p.rect);
+  const masks = rig.pieces.map((p) => decodeMask(p.mask, p.rect));
+  const size = (k: number): [number, number] => [Math.max(1, rects[k][2] - rects[k][0]), Math.max(1, rects[k][3] - rects[k][1])];
+  // the paint under each face mark, grown a pixel, in its holder's frame: filled with the colour around it
+  const fills = rig.pieces.map(() => [] as Array<{ grid: Uint8Array; color: string }>);
   rig.pieces.forEach((f, k) => {
     if (!FACE_KINDS.includes(f.kind) || !f.parent) return;
     const holder = index.get(f.parent);
     if (holder === undefined) return;
-    const [r, g, b] = hex(f.fill ?? '#ffffff');
-    const grow = dilate(masks[k], W, H, 1);
-    const [x0, y0, x1, y1] = rects[holder];
-    const layer = layers[holder];
-    const w = x1 - x0;
-    for (let y = y0; y < y1; y++)
-      for (let x = x0; x < x1; x++) {
-        const i = y * W + x;
-        if (!grow[i]) continue;
-        const o = ((y - y0) * w + (x - x0)) * 4;
-        layer.data[o] = r;
-        layer.data[o + 1] = g;
-        layer.data[o + 2] = b;
-        layer.data[o + 3] = 255;
+    const [hw, hh] = size(holder);
+    const [fw, fh] = size(k);
+    const grid = new Uint8Array(hw * hh);
+    const dx = rects[k][0] - rects[holder][0];
+    const dy = rects[k][1] - rects[holder][1];
+    for (let y = 0; y < fh; y++)
+      for (let x = 0; x < fw; x++) {
+        if (!masks[k][y * fw + x]) continue;
+        const hx = x + dx;
+        const hy = y + dy;
+        if (hx >= 0 && hy >= 0 && hx < hw && hy < hh) grid[hy * hw + hx] = 1;
       }
+    fills[holder].push({ grid: dilate(grid, hw, hh, 1), color: f.fill ?? '#ffffff' });
   });
-  // shelf-pack the layers into one atlas
-  const order = rig.pieces.map((_, k) => k).sort((a, b) => layers[b].height - layers[a].height);
+  const cells = rig.pieces.map((_, k) => {
+    const [w, h] = size(k);
+    const cell = canvasOf(w, h);
+    cell.ctx.drawImage(image, -rects[k][0], -rects[k][1], W, H);
+    cell.ctx.globalCompositeOperation = 'destination-in';
+    cell.ctx.drawImage(stencil(masks[k], w, h, [255, 255, 255]), 0, 0);
+    cell.ctx.globalCompositeOperation = 'source-over';
+    for (const f of fills[k]) cell.ctx.drawImage(stencil(f.grid, w, h, hex(f.color)), 0, 0);
+    return cell.canvas;
+  });
+  // shelf-pack the cells into one atlas
+  const order = rig.pieces.map((_, k) => k).sort((a, b) => cells[b].height - cells[a].height);
   const atlasW = Math.min(2048, Math.max(64, nextPow2(Math.ceil(W * 1.25))));
   let x = 0;
   let y = 0;
   let shelf = 0;
   const at: Array<[number, number]> = [];
   for (const k of order) {
-    const l = layers[k];
-    if (x + l.width + PAD > atlasW) {
+    const c = cells[k];
+    if (x + c.width + PAD > atlasW) {
       x = 0;
       y += shelf + PAD;
       shelf = 0;
     }
     at[k] = [x, y];
-    x += l.width + PAD;
-    shelf = Math.max(shelf, l.height);
+    x += c.width + PAD;
+    shelf = Math.max(shelf, c.height);
   }
   const atlasH = Math.max(64, y + shelf + PAD);
   const atlas = canvasOf(atlasW, atlasH);
-  for (const k of order) atlas.ctx.putImageData(layers[k], at[k][0], at[k][1]);
+  for (const k of order) atlas.ctx.drawImage(cells[k], at[k][0], at[k][1]);
   const texture = new THREE.CanvasTexture(atlas.canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
+  // where the atlas is painted, for picking, straight from the masks
+  const alpha = new Uint8Array(atlasW * atlasH);
   const pieces = new Map<string, CutPiece>();
   rig.pieces.forEach((p, k) => {
+    const [w, h] = size(k);
     const [ax, ay] = at[k];
-    const l = layers[k];
+    for (let yy = 0; yy < h; yy++)
+      for (let xx = 0; xx < w; xx++) if (masks[k][yy * w + xx] || fills[k].some((f) => f.grid[yy * w + xx])) alpha[(ay + yy) * atlasW + ax + xx] = 255;
     pieces.set(p.id, {
       piece: p,
       rect: rects[k],
-      uv: [ax / atlasW, 1 - (ay + l.height) / atlasH, (ax + l.width) / atlasW, 1 - ay / atlasH],
+      uv: [ax / atlasW, 1 - (ay + h) / atlasH, (ax + w) / atlasW, 1 - ay / atlasH],
     });
   });
-  const ad = atlas.ctx.getImageData(0, 0, atlasW, atlasH).data;
-  const alpha = new Uint8Array(atlasW * atlasH);
-  for (let i = 0; i < alpha.length; i++) alpha[i] = ad[i * 4 + 3];
   return { rig, texture, pieces, alpha, atlasW, atlasH };
+}
+
+/** A canvas that is `rgb` where the grid is set and clear elsewhere (written, never read). */
+function stencil(grid: Uint8Array, w: number, h: number, [r, g, b]: [number, number, number]): HTMLCanvasElement {
+  const c = canvasOf(w, h);
+  const img = c.ctx.createImageData(w, h);
+  for (let i = 0; i < w * h; i++) {
+    if (!grid[i]) continue;
+    img.data[i * 4] = r;
+    img.data[i * 4 + 1] = g;
+    img.data[i * 4 + 2] = b;
+    img.data[i * 4 + 3] = 255;
+  }
+  c.ctx.putImageData(img, 0, 0);
+  return c.canvas;
 }
 
 function canvasOf(w: number, h: number): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
-  return { canvas, ctx: canvas.getContext('2d', { willReadFrequently: true })! };
+  return { canvas, ctx: canvas.getContext('2d')! };
 }
 
 /** Square dilation by r pixels (separable max filter). */
@@ -252,23 +220,6 @@ function dilate(m: Uint8Array, W: number, H: number, r: number): Uint8Array {
     }
   }
   return out;
-}
-
-function bounds(m: Uint8Array, W: number, H: number): [number, number, number, number] {
-  let x0 = W;
-  let y0 = H;
-  let x1 = 0;
-  let y1 = 0;
-  for (let y = 0; y < H; y++)
-    for (let x = 0; x < W; x++)
-      if (m[y * W + x]) {
-        if (x < x0) x0 = x;
-        if (x > x1) x1 = x;
-        if (y < y0) y0 = y;
-        if (y > y1) y1 = y;
-      }
-  if (x1 < x0) return [0, 0, 1, 1];
-  return [x0, y0, x1 + 1, y1 + 1];
 }
 
 function nextPow2(v: number): number {
