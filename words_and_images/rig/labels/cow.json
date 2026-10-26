@@ -1,0 +1,122 @@
+{
+ "word": "cow",
+ "view": "side",
+ "pieces": [
+  {
+   "id": "body",
+   "kind": "body",
+   "regions": [
+    1,
+    4
+   ]
+  },
+  {
+   "id": "head",
+   "kind": "head",
+   "parent": "body",
+   "regions": [
+    2,
+    3,
+    8,
+    9
+   ]
+  },
+  {
+   "id": "tail",
+   "kind": "tail",
+   "parent": "body",
+   "regions": [
+    13,
+    6
+   ]
+  },
+  {
+   "id": "leg_fn",
+   "kind": "leg",
+   "parent": "body",
+   "regions": [
+    5,
+    12
+   ],
+   "z": -1
+  },
+  {
+   "id": "leg_hn",
+   "kind": "leg",
+   "parent": "body",
+   "regions": [
+    7,
+    14
+   ],
+   "z": -1
+  },
+  {
+   "id": "leg_ff",
+   "kind": "leg",
+   "parent": "body",
+   "from": "body",
+   "cuts": [
+    [
+     [
+      355,
+      735
+     ],
+     [
+      490,
+      735
+     ]
+    ]
+   ],
+   "keep": [
+    420,
+    860
+   ],
+   "z": -2
+  },
+  {
+   "id": "hoof_ff",
+   "kind": "foot",
+   "parent": "leg_ff",
+   "regions": [
+    10
+   ]
+  },
+  {
+   "id": "leg_hf",
+   "kind": "leg",
+   "parent": "body",
+   "from": "body",
+   "cuts": [
+    [
+     [
+      765,
+      765
+     ],
+     [
+      905,
+      765
+     ]
+    ]
+   ],
+   "keep": [
+    840,
+    880
+   ],
+   "z": -2
+  },
+  {
+   "id": "hoof_hf",
+   "kind": "foot",
+   "parent": "leg_hf",
+   "regions": [
+    11
+   ]
+  }
+ ],
+ "face": {
+  "eyes": [
+   19,
+   20
+  ]
+ }
+}

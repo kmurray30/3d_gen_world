@@ -64,6 +64,10 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     onError: (msg) => hud.toast(msg, 'error'),
   });
   const scene = new SceneView(canvas, config.spriteVersion, hudRoot);
+  // which drawings come apart into paper pieces (a tiny list; drawings load their rigs as they appear)
+  await scene.rigs.init();
+  const rigOf = (file: string) => scene.rigs.rigOf(file);
+  engine.rigs = rigOf;
   const player = new PlayerController(engine.world.player);
   player.resolveCollisions = (pos) => {
     engine.collidePlayer(pos);
@@ -129,7 +133,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
 
   const onCommand = (text: string) => {
     store.pushUndo();
-    return runStream(`/api/worlds/${slug}/command`, { command: text, context: compactWorld(engine.world, targetId) }, 'thinking...');
+    return runStream(`/api/worlds/${slug}/command`, { command: text, context: compactWorld(engine.world, targetId, 40, rigOf) }, 'thinking...');
   };
   const onUndo = async () => {
     if (busy) {
@@ -194,19 +198,20 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   });
   if (new URLSearchParams(location.search).get('dev') === '1') {
     new DevConsole(hudRoot, (steps: Step[]) =>
-      void runStream(`/api/worlds/${slug}/script`, { steps, context: compactWorld(engine.world, targetId) }, 'script...').catch(() => engine.run(resolveStepsLocally(steps))),
+      void runStream(`/api/worlds/${slug}/script`, { steps, context: compactWorld(engine.world, targetId, 40, rigOf) }, 'script...').catch(() => engine.run(resolveStepsLocally(steps))),
     );
   }
 
   const desktop = new DesktopInput(canvas);
   desktop.onLockedClick = () => {
-    const id = scene.pick(0, 0);
-    if (id) engine.poke(id);
+    const hit = scene.pickPart(0, 0);
+    if (hit) engine.poke(hit.id, hit.piece);
   };
   desktop.onFreeClick = (x, y) => {
-    // poke whatever was clicked, then lock the pointer as before so the click also starts looking around
-    const id = scene.pick((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
-    if (id) engine.poke(id);
+    // poke whatever was clicked (the piece of it, on a paper puppet), then lock the pointer so the click also
+    // starts looking around
+    const hit = scene.pickPart((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+    if (hit) engine.poke(hit.id, hit.piece);
     return false;
   };
   const touch = coarse ? new TouchInput(canvas, hudRoot) : null;
@@ -234,8 +239,9 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
 
   if (touch) {
     touch.onTap = (x, y) => {
-      const id = scene.pick((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
-      if (id) engine.poke(id);
+      const hit = scene.pickPart((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+      const id = hit?.id ?? null;
+      if (hit) engine.poke(hit.id, hit.piece);
       const e = id ? engine.world.get(id) : undefined;
       targetId = e?.id;
       hud.setTarget(e ? e.label : null);

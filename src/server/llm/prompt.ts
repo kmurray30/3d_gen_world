@@ -19,8 +19,10 @@ spawn  {op:"spawn", ref, word, at:PLACE, [alt:[words]], [face:"player"|id], [sca
 build  {op:"build", ref, word, at:PLACE, [gen], [params:{...}], [parts:[...]], [delay]}   a building or prop with a chosen look. gen = "house"|"gingerbread"|"fence"|"yard"|"tower"|"lighthouse"|"witch_hut"|"bunker"|"fountain"|"lamppost"|"mailbox"|"signpost"|"well"|"bench"|"birdbath"|"trash_can"|"pillar" (omit to pick from the word). params by gen: house {w, d (metres), stories 1-3, roof "gable"|"hip"|"flat", wallMat, roofMat ("plaster"|"brick"|"plank"|"stone"|"shingle"|"thatch"|"concrete"|"metal"), color, roofColor, trimColor, doorColor (colour names), chimney, sign:"TEXT"}; fence {length, style "picket"|"rail"|"stone"}; yard {w, d}; tower {r, h, cap "cone"|"battlements"|"flat", color}; lighthouse {h, color}; witch_hut {wallColor, hatColor}; bunker {levels}; fountain {r (basin radius, metres), tiers 1|2, color (stone), water}; lamppost {h, color}; mailbox {color}; signpost {arms 1-3, color}; well {color, roofColor}; bench {w, color}; birdbath/trash_can {color}; pillar {h, color}.
        For something no generator makes (a wizard tower with a crooked hat, a giant teapot house, a simple fixture like a water trough or a podium), give parts instead of gen: each part is {shape:"box"|"cylinder"|"cone"|"wedge"|"pyramid"|"stairs"|"dome", w, d, h, [r], [name], [mat], [color], [on:"<name of an earlier part>"], [at:"top"|"front"|"back"|"left"|"right"], [dx], [dz]}. Parts sit on top of (default) or beside the part they name; the first part stands on the ground. Never give coordinates.
 move   {op:"move", id, to:PLACE, [speed:"slow"|"walk"|"run"|"fly"|"instant"], [style:"walk"|"hop"|"slide"|"fly"], [face], [delay]}   living things walk/hop, birds fly, objects slide; "to" with rel "on" climbs onto the target
-set    {op:"set", id, [word (morph into another sprite)], [alt], [scale], [tilt:degrees], [face], [state:{flag:true/false}], [params:{...} (buildings only: regenerate with changed parameters, e.g. stories, roof, color, wallMat, w, d)], [dur], [delay]}   growing = scale 1.5-3; transforming = word; tilt for pouring/bowing/leaning; state flags like on_fire, wet, frozen, asleep
-anim   {op:"anim", id, name:"hop"|"wobble"|"shake"|"spin"|"bounce"|"nod"|"fall_over"|"pulse", [times], [delay]}
+set    {op:"set", id, [word (morph into another sprite)], [alt], [scale], [tilt:degrees], [face], [expression:"neutral"|"happy"|"sad"|"angry"|"surprised"|"scared"|"sleepy"|"laughing"|"confused"], [state:{flag:true/false}], [params:{...} (buildings only: regenerate with changed parameters, e.g. stories, roof, color, wallMat, w, d)], [dur], [delay]}   growing = scale 1.5-3; transforming = word; tilt for pouring/bowing/leaning; expression sets a face until changed (neutral puts it back); state flags like on_fire, wet, frozen, asleep, open_<part> (a door or lid)
+anim   {op:"anim", id, name, [times], [delay]}   whole-body: "hop"|"wobble"|"shake"|"spin"|"bounce"|"fall_over"|"pulse"; gestures: "wave"|"point"|"clap"|"shrug"|"thumbs_up"|"cover_eyes"|"hands_on_hips"|"arms_up"|"dance"|"bow"|"nod"|"shake_head"|"wink"|"laugh"|"cry"|"gasp"|"look_around"|"wag" (tails)|"flap" (wings)|"apart" (pops into its pieces and snaps back). Things with parts act gestures out with their arms, faces and tails; others move as a whole.
+detach {op:"detach", id, part, [ref], [delay]}   a part comes off and becomes its own thing that falls to the ground (knock a hat off, a wheel falls off, the robot's arm drops off); part is one of the thing's listed parts; ref names the piece for later steps
+reattach {op:"reattach", id, [part], [delay]}   put a piece that came off back (id is the piece, or its owner with part)
 attach {op:"attach", id, to, [where:"top"|"held"], [delay]}   put something on top of / in the hands of another thing
 drop   {op:"drop", id, [delay]}   falls down (off whatever it sits on) and lands
 remove {op:"remove", id|"all", [how:"pop"|"fade"|"sink"|"fly_away"|"explode"], [delay]}
@@ -43,6 +45,8 @@ RULES:
 - Scale only for "giant", "tiny", "grows", "shrinks": sizes are already realistic. Face "player" when something addresses the player.
 - Changing a building (add a storey, repaint it, new roof, make it wider): set with params on its id, giving only what changes; the world list shows a building's current parameters, so "add a story" means stories: current + 1 (max 3).
 - Buildings and props: spawn the word (a plain "house" or "fountain" is fine); use build when the player asks for a colour, size, material or an unusual shape. Detailed things (statues, scarecrows, people, animals, vehicles, plants) stay drawn cutouts. Toys and miniatures (doll house, birdhouse) are cutouts, not buildings. The player can walk into buildings and onto roofs; "goes inside" means move to the building's front with dist close, then remove how fade.
+- Feelings and body language: use gestures and expressions rather than tilts ("he waves" = anim wave; "she is furious" = set expression angry plus maybe anim shake_head; "the crowd cheers" = anim arms_up on each). Talking (say) moves the speaker's mouth by itself. Put a face back to neutral when the moment is over.
+- Parts: a thing whose world line lists parts can lose them with detach and get them back with reattach ("knock off his hat", "the robot's arm falls off"); pieces that are off show as part(off). Doors and lids listed as parts open with set state {"open_<part>": true}.
 - If the command is impossible, unclear or empty, answer {"steps":[{"op":"say","text":"<one short line>"}]}.
 
 EXAMPLES (world lines show ids: word):
@@ -116,10 +120,15 @@ function describe(e: CompactEntity, ctx: CompactWorld): string {
   else parts.push(`${dist}m ${bearing(ctx.player.yaw, dx, dz)}`);
   if (e.pos[1] > 0.3 && !e.parent) parts.push(`${Math.round(e.pos[1])}m up`);
   const flags = Object.entries(e.state ?? {})
-    .filter(([, v]) => v === true)
+    .filter(([k, v]) => v === true && !k.startsWith('off_'))
     .map(([k]) => k);
   if (flags.length) parts.push(flags.join(','));
   if (e.effects?.length) parts.push(e.effects.join(','));
+  if (typeof e.state?.expression === 'string') parts.push(`looks ${e.state.expression}`);
+  if (e.parts?.length) {
+    const off = new Set(Object.entries(e.state ?? {}).filter(([k, v]) => k.startsWith('off_') && v === true).map(([k]) => k.slice(4)));
+    parts.push(`parts: ${e.parts.map((p) => (off.has(p) ? `${p}(off)` : p)).join(', ')}`);
+  }
   if (e.structure) {
     const shown = Object.entries(e.structure.params)
       .filter(([k, v]) => (typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean') && !['random', 'label', 'parts', 'points'].includes(k))

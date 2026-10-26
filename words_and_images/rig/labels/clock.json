@@ -1,0 +1,47 @@
+{
+ "word": "clock",
+ "view": "front",
+ "pieces": [
+  {
+   "id": "body",
+   "kind": "body",
+   "regions": [
+    1,
+    2
+   ]
+  },
+  {
+   "id": "minute_hand",
+   "kind": "clock_hand",
+   "parent": "body",
+   "regions": [
+    3
+   ],
+   "pivot": [
+    498,
+    504
+   ]
+  },
+  {
+   "id": "hour_hand",
+   "kind": "clock_hand",
+   "parent": "body",
+   "regions": [
+    4
+   ],
+   "pivot": [
+    498,
+    504
+   ]
+  },
+  {
+   "id": "cap",
+   "kind": "other",
+   "parent": "body",
+   "regions": [
+    5
+   ],
+   "z": 5
+  }
+ ]
+}

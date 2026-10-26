@@ -1,0 +1,40 @@
+{
+ "word": "windmill",
+ "view": "front",
+ "pieces": [
+  {
+   "id": "body",
+   "kind": "body",
+   "regions": [
+    1,
+    6,
+    7,
+    12,
+    13,
+    14,
+    15
+   ]
+  },
+  {
+   "id": "sails",
+   "kind": "blade",
+   "parent": "body",
+   "regions": [
+    2,
+    3,
+    4,
+    5,
+    8,
+    9,
+    10,
+    11
+   ],
+   "pivot": [
+    498,
+    337
+   ],
+   "spin": 0.7,
+   "z": 1
+  }
+ ]
+}

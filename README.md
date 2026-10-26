@@ -119,6 +119,38 @@ village.
   `scripts/shots-door.mjs` shows doors closed and poked open, and `scripts/shots-facing.mjs`
   shows cutouts from the side and after a stretch of idle life.
 
+## Puppets: drawings cut into pieces
+
+Rigged drawings are cut into their paper pieces in the browser and move like a paper puppet: a head,
+arms, hands, legs, tails, ears, wings, wheels, clock hands and windmill blades, each turning on its
+own joint. A rig is a small JSON file plus a piece map (`assets/rigs/<word>.json` and `.png`; 20
+starter rigs ship, 168 KB in all). Drawings without a rig still move as one card.
+
+- **Idle life.** Rigged things breathe, sway, blink and glance around; walkers swing their legs (or
+  lift them, seen from the front); tails wag, ears twitch, clock hands tick and blades turn.
+- **Faces.** The drawn face stays as drawn. Expressions (`happy`, `sad`, `angry`, `surprised`,
+  `scared`, `sleepy`, `laughing`, `confused`) swap the drawn mouth for an inked one, close the
+  eyes with paper lids, and add eyebrows only when the expression needs them (a character whose
+  drawing has brows moves its own). Talking moves the mouth while a speech bubble is up.
+- **Gestures.** `wave`, `point`, `clap`, `shrug`, `thumbs_up`, `cover_eyes`, `hands_on_hips`,
+  `arms_up`, `dance`, `bow`, `nod`, `shake_head`, `wink`, `laugh`, `cry`, `gasp`, `look_around`,
+  `wag`, `flap` and `apart` (the pieces float out into an exploded view and back) are anims the
+  model can use like `jump` or `spin`.
+- **Parts.** `{"op":"detach","id":"farmer_1","part":"hat"}` takes a piece off as a thing of its
+  own: it hops clear, falls, can be picked up, thrown or named like anything else, and
+  `{"op":"reattach","id":"hat_1"}` puts it back. The world context lists each rigged thing's parts,
+  so "knock his hat off" or "the dog's tail falls off" work.
+- **Clicks.** A poke reacts to the piece under the dot: a hat is knocked off, a hand waves, a head
+  nods, a tail wags, a loose piece goes back on.
+
+Rigs are made offline (`words_and_images/rig/`, Python with numpy, scipy and Pillow):
+`segment.py <word> --out DIR` splits a drawing into regions along its ink and writes an overlay
+with rulers; a label file (`labels/<word>.json`) names the regions per piece in 0-1000 coordinates,
+with cut lines, automatic wrist, leg and sleeve splits, outline polygons and face marks; and
+`build_rig.py labels/*.json --review DIR` writes the rigs plus a review sheet per drawing.
+`node scripts/shots-puppets.mjs http://localhost:8787 OUT boy dog` shows rigs idling, gesturing,
+walking, making faces, talking and coming apart.
+
 ## Terrain, water and villages
 
 - `src/shared/terrain/field.ts`: a world's terrain is a saved recipe (`world.terrain`): seeded hills,

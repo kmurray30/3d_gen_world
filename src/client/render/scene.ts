@@ -2,7 +2,9 @@ import * as THREE from 'three';
 import type { Entity, PlayerState, SpriteRef, Vec3 } from '../../shared/types';
 import { worldPos } from '../../shared/engine/transform';
 import type { WorldModel } from '../../shared/engine/world';
-import { SpriteView, origamiKind, type GroundView } from './sprites';
+import { SpriteView, origamiKind, type GroundView, type LifeInput } from './sprites';
+import { RigStore, paintedAt, type PuppetAsset } from './rig-cut';
+import { renderHeight } from '../../shared/engine/sizing';
 import { applyCrayon, crayonTexture, CRAYON_METRES } from './crayon';
 import { flipFor } from '../../shared/engine/facing';
 import { StructureView } from './structures';
@@ -30,6 +32,8 @@ export class SceneView {
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
   readonly textures: TextureStore;
+  /** Which drawings come apart into paper pieces, and their cut-up atlases. */
+  readonly rigs = new RigStore();
   readonly tiles = new MaterialTiles();
   readonly views = new Map<string, SpriteView>();
   readonly structures = new Map<string, StructureView>();
@@ -192,7 +196,7 @@ export class SceneView {
       }
       let view = this.views.get(e.id);
       if (!view) {
-        view = new SpriteView(e.id, this.shadowTex, this.haloTex);
+        view = new SpriteView(e.id, this.shadowTex, this.haloTex, this.rigs);
         this.views.set(e.id, view);
         this.scene.add(view.root);
       }
@@ -201,7 +205,7 @@ export class SceneView {
       const phase = hashPhase(e.id);
       if (living) sq *= 1 + 0.015 * Math.sin(this.clock * 2.2 + phase);
       if (living && !e.parent && pos[1] - model.ground(pos[0], pos[2]) > 0.3) pos[1] += 0.08 * Math.sin(this.clock * 1.8 + phase);
-      view.update(e, pos, cam.yaw, this.textures, this.resolveFlip(e, pos, byId, camState), sq, e.parent ? null : origamiKind(e.word), this.groundView);
+      view.update(e, pos, cam.yaw, this.textures, this.resolveFlip(e, pos, byId, camState), sq, e.parent ? null : origamiKind(e.word), this.groundView, this.lifeOf(e, pos, model, dt, cam));
     }
     this.terrain?.update(dt);
     this.effects.syncPersistent(model);
@@ -258,7 +262,7 @@ export class SceneView {
       sq = 1 + Math.sin(this.avatarPhase * 18) * 0.02;
     }
     const camState: PlayerState = { pos: cam.pos, yaw: cam.yaw, pitch: cam.pitch };
-    this.avatar.update(e, pos, cam.yaw, this.textures, this.resolveFlip(e, pos, new Map(), camState), sq, null, this.groundView);
+    this.avatar.update(e, pos, cam.yaw, this.textures, this.resolveFlip(e, pos, new Map(), camState), sq, null, this.groundView, { dt, time: this.clock, talking: false, look: null });
   }
 
 
@@ -299,6 +303,11 @@ export class SceneView {
 
   /** Entity under a screen point (normalised device coords), nearest first. */
   pick(ndcX: number, ndcY: number): string | null {
+    return this.pickPart(ndcX, ndcY)?.id ?? null;
+  }
+
+  /** What is under a screen point: the entity and, on a paper puppet, which of its pieces. */
+  pickPart(ndcX: number, ndcY: number): { id: string; piece?: string } | null {
     this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
     const bodies: THREE.Object3D[] = [];
     for (const v of this.views.values()) if (v.root.visible) bodies.push(...v.pickables);
@@ -307,9 +316,38 @@ export class SceneView {
     for (const hit of hits) {
       if (hit.distance > 40) break;
       const id = hit.object.userData.entityId as string | undefined;
-      if (id) return id;
+      if (!id) continue;
+      const piece = hit.object.userData.piece as string | undefined;
+      if (piece && hit.uv) {
+        // only where the piece is painted: its card is a rectangle, the piece inside it is not
+        const mat = (hit.object as THREE.Mesh).material as THREE.MeshBasicMaterial;
+        const asset = (hit.object as THREE.Mesh).userData.asset as PuppetAsset | undefined;
+        if (asset && mat.map === asset.texture && !paintedAt(asset, hit.uv.x, hit.uv.y)) continue;
+      }
+      return { id, ...(piece ? { piece } : {}) };
     }
     return null;
+  }
+
+  /** A sprite's life this frame: the clock, whether it is speaking, its gesture, and what it would look at. */
+  private lifeOf(e: Entity, pos: Vec3, model: WorldModel, dt: number, cam: CameraPose): LifeInput {
+    const tr = model.transient.get(e.id);
+    let look: [number, number] | null = null;
+    if (e.kind === 'human' || e.kind === 'humanoid' || e.kind === 'animal') {
+      // the player catches the eye when near: across the paper's own right axis, and up or down
+      const p = model.player.pos;
+      const h = renderHeight(e);
+      const dx = p[0] - pos[0];
+      const dy = p[1] + 1.4 - (pos[1] + h * 0.85);
+      const dz = p[2] - pos[2];
+      const d = Math.hypot(dx, dz);
+      if (d < 9 && d > 0.2) {
+        const yaw = e.yaw === undefined ? cam.yaw : (e.yaw * Math.PI) / 180;
+        const across = (dx * Math.cos(yaw) - dz * Math.sin(yaw)) / d;
+        look = [Math.max(-1, Math.min(1, across * 1.4)), Math.max(-1, Math.min(1, (dy / Math.max(1, d)) * 1.5))];
+      }
+    }
+    return { dt, time: this.clock, talking: this.bubbles.talking(e.id), look, gesture: tr?.gesture };
   }
 }
 

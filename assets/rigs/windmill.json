@@ -1,0 +1,1 @@
+{"v":1,"file":"windmill.webp","w":248,"h":319,"view":"front","pieces":[{"id":"body","kind":"body","pivot":[0.5027,1.0],"z":0,"bbox":[0.1734,0.3824,0.8266,1.0]},{"id":"sails","kind":"blade","parent":"body","pivot":[0.498,0.337],"z":1,"bbox":[0.0,0.0,1.0,0.6708],"spin":0.7}]}

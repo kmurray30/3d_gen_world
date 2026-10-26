@@ -1,0 +1,140 @@
+{
+ "word": "teacher",
+ "view": "front",
+ "pieces": [
+  {
+   "id": "body",
+   "kind": "body",
+   "regions": [
+    1,
+    5,
+    10,
+    11,
+    12,
+    16
+   ]
+  },
+  {
+   "id": "head",
+   "kind": "head",
+   "parent": "body",
+   "regions": [
+    3,
+    4
+   ]
+  },
+  {
+   "id": "arm_l",
+   "kind": "arm",
+   "side": "l",
+   "parent": "body",
+   "from": "body",
+   "regions": [
+    13
+   ],
+   "split": "sleeve"
+  },
+  {
+   "id": "hand_l",
+   "kind": "hand",
+   "side": "l",
+   "parent": "arm_l",
+   "regions": [
+    8
+   ]
+  },
+  {
+   "id": "arm_r",
+   "kind": "arm",
+   "side": "r",
+   "parent": "body",
+   "from": "body",
+   "regions": [
+    14
+   ],
+   "poly": [
+    [
+     1020,
+     290
+    ],
+    [
+     905,
+     305
+    ],
+    [
+     848,
+     360
+    ],
+    [
+     848,
+     595
+    ],
+    [
+     1020,
+     595
+    ]
+   ]
+  },
+  {
+   "id": "hand_r",
+   "kind": "hand",
+   "side": "r",
+   "parent": "arm_r",
+   "regions": [
+    9
+   ]
+  },
+  {
+   "id": "leg_l",
+   "kind": "leg",
+   "side": "l",
+   "parent": "body",
+   "regions": [
+    2
+   ],
+   "split": "legs"
+  },
+  {
+   "id": "leg_r",
+   "kind": "leg",
+   "side": "r",
+   "parent": "body",
+   "regions": [
+    2
+   ],
+   "split": "legs"
+  },
+  {
+   "id": "foot_l",
+   "kind": "foot",
+   "side": "l",
+   "parent": "leg_l",
+   "regions": [
+    7
+   ]
+  },
+  {
+   "id": "foot_r",
+   "kind": "foot",
+   "side": "r",
+   "parent": "leg_r",
+   "regions": [
+    6
+   ]
+  }
+ ],
+ "erase": [
+  15
+ ],
+ "face": {
+  "eyes": [
+   19,
+   20
+  ],
+  "brows": [
+   17,
+   18
+  ],
+  "mouth": 23
+ }
+}

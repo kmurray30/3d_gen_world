@@ -1,0 +1,169 @@
+{
+ "word": "soldier",
+ "view": "front",
+ "pieces": [
+  {
+   "id": "body",
+   "kind": "body",
+   "regions": [
+    2,
+    3,
+    6,
+    7,
+    10,
+    11,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    33,
+    36,
+    38
+   ]
+  },
+  {
+   "id": "head",
+   "kind": "head",
+   "parent": "body",
+   "regions": [
+    5,
+    34,
+    35
+   ]
+  },
+  {
+   "id": "hat",
+   "kind": "hat",
+   "parent": "head",
+   "regions": [
+    4,
+    30
+   ],
+   "detach": "helmet"
+  },
+  {
+   "id": "arm_l",
+   "kind": "arm",
+   "side": "l",
+   "parent": "body",
+   "from": "body",
+   "regions": [
+    21
+   ],
+   "poly": [
+    [
+     -20,
+     250
+    ],
+    [
+     125,
+     285
+    ],
+    [
+     205,
+     335
+    ],
+    [
+     215,
+     565
+    ],
+    [
+     -20,
+     565
+    ]
+   ]
+  },
+  {
+   "id": "hand_l",
+   "kind": "hand",
+   "side": "l",
+   "parent": "arm_l",
+   "regions": [
+    8
+   ]
+  },
+  {
+   "id": "arm_r",
+   "kind": "arm",
+   "side": "r",
+   "parent": "body",
+   "from": "body",
+   "regions": [
+    22
+   ],
+   "poly": [
+    [
+     1020,
+     250
+    ],
+    [
+     875,
+     285
+    ],
+    [
+     795,
+     335
+    ],
+    [
+     785,
+     565
+    ],
+    [
+     1020,
+     565
+    ]
+   ]
+  },
+  {
+   "id": "hand_r",
+   "kind": "hand",
+   "side": "r",
+   "parent": "arm_r",
+   "regions": [
+    9
+   ]
+  },
+  {
+   "id": "leg_l",
+   "kind": "leg",
+   "side": "l",
+   "parent": "body",
+   "regions": [
+    1,
+    12,
+    31
+   ],
+   "split": "legs"
+  },
+  {
+   "id": "leg_r",
+   "kind": "leg",
+   "side": "r",
+   "parent": "body",
+   "regions": [
+    1,
+    13,
+    32,
+    37
+   ],
+   "split": "legs"
+  }
+ ],
+ "face": {
+  "eyes": [
+   39,
+   40
+  ],
+  "mouth": 42
+ }
+}

@@ -1,0 +1,15 @@
+{"word": "farmer", "view": "front",
+ "pieces": [
+  {"id": "body", "kind": "body", "regions": [2, 9, 10, 12, 15, 16, 17, 23, 24, 25, 26]},
+  {"id": "head", "kind": "head", "parent": "body", "regions": [3, 27, 28]},
+  {"id": "hat", "kind": "hat", "parent": "head", "regions": [6, 11, 18, 31]},
+  {"id": "arm_l", "kind": "arm", "side": "l", "parent": "body", "regions": [4, 21]},
+  {"id": "hand_l", "kind": "hand", "side": "l", "parent": "arm_l", "regions": [13]},
+  {"id": "arm_r", "kind": "arm", "side": "r", "parent": "body", "regions": [5, 22]},
+  {"id": "hand_r", "kind": "hand", "side": "r", "parent": "arm_r", "regions": [14]},
+  {"id": "leg_l", "kind": "leg", "side": "l", "parent": "body", "regions": [1], "split": "legs"},
+  {"id": "leg_r", "kind": "leg", "side": "r", "parent": "body", "regions": [1], "split": "legs"},
+  {"id": "foot_l", "kind": "foot", "side": "l", "parent": "leg_l", "regions": [7, 19, 29]},
+  {"id": "foot_r", "kind": "foot", "side": "r", "parent": "leg_r", "regions": [8, 20, 30]}
+ ],
+ "face": {"eyes": [34, 35], "brows": [32, 33], "mouth": 37}}

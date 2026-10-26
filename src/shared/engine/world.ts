@@ -10,6 +10,8 @@ export interface Transient {
   ofs: Vec3;
   /** Vertical squash multiplier for bounces and landings (1 = none). */
   sq: number;
+  /** A gesture being acted out (wave, clap...): seconds in, out of its length. Puppets move their pieces. */
+  gesture?: { name: string; t: number; dur: number };
 }
 
 /**

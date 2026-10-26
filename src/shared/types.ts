@@ -16,6 +16,8 @@ export interface SpriteRef {
   file: string | null;
   w: number;
   h: number;
+  /** Only this piece of a rigged drawing (a hat that came off its owner). */
+  piece?: string;
 }
 
 export interface Entity {

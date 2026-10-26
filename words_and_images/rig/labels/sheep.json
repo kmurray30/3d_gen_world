@@ -1,0 +1,94 @@
+{
+ "word": "sheep",
+ "view": "side",
+ "pieces": [
+  {
+   "id": "body",
+   "kind": "body",
+   "regions": [
+    1
+   ]
+  },
+  {
+   "id": "head",
+   "kind": "head",
+   "parent": "body",
+   "regions": [
+    2,
+    3
+   ]
+  },
+  {
+   "id": "ear_l",
+   "kind": "ear",
+   "side": "l",
+   "parent": "head",
+   "regions": [
+    8
+   ]
+  },
+  {
+   "id": "ear_r",
+   "kind": "ear",
+   "side": "r",
+   "parent": "head",
+   "regions": [
+    7
+   ]
+  },
+  {
+   "id": "tail",
+   "kind": "tail",
+   "parent": "body",
+   "regions": [
+    10
+   ]
+  },
+  {
+   "id": "leg_ff",
+   "kind": "leg",
+   "parent": "body",
+   "regions": [
+    5,
+    13
+   ],
+   "z": -2
+  },
+  {
+   "id": "leg_fn",
+   "kind": "leg",
+   "parent": "body",
+   "regions": [
+    6,
+    11
+   ],
+   "z": -1
+  },
+  {
+   "id": "leg_hf",
+   "kind": "leg",
+   "parent": "body",
+   "regions": [
+    9
+   ],
+   "z": -2
+  },
+  {
+   "id": "leg_hn",
+   "kind": "leg",
+   "parent": "body",
+   "regions": [
+    4,
+    12
+   ],
+   "z": -1
+  }
+ ],
+ "face": {
+  "eyes": [
+   14,
+   15
+  ],
+  "mouth": 16
+ }
+}

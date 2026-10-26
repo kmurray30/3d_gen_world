@@ -4,10 +4,23 @@ import { footprintRadius, renderHeight, renderWidth } from '../../shared/engine/
 import type { TextureStore } from './textures';
 import { DEFAULT_TREE_COLORS, OrigamiPlant, sampleTreeColors, type TreeColors } from './origami';
 import { LIGHT, tinted } from './tint';
+import type { RigStore, PuppetAsset } from './rig-cut';
+import { Puppet } from './puppet';
+import { PuppetMotion, wholeCardGesture } from './puppet-motion';
 
 const PLANE = new THREE.PlaneGeometry(1, 1);
 const SHADOW = new THREE.CircleGeometry(0.5, 28).rotateX(-Math.PI / 2);
 const UP = new THREE.Vector3(0, 1, 0);
+
+/** What drives a sprite's life this frame beyond its entity: time, speech, what to look at, a gesture. */
+export interface LifeInput {
+  dt: number;
+  time: number;
+  talking: boolean;
+  /** Where something worth looking at is across and up the drawing (-1..1), or null. */
+  look: [number, number] | null;
+  gesture?: { name: string; t: number; dur: number };
+}
 
 /** What the ground looks like under a sprite: its height and slope. Flat meadow when absent. */
 export interface GroundView {
@@ -50,11 +63,19 @@ export class SpriteView {
   private halo: THREE.Sprite | null = null;
   /** When set, the paper's horizontal scale (-1..1) instead of the plain mirror: a paper turn in progress. */
   turn: number | null = null;
+  /** The drawing cut into paper pieces, once its rig has loaded (rigged drawings only). */
+  private puppet: Puppet | null = null;
+  private motion: PuppetMotion | null = null;
+  private readonly holder = new THREE.Group();
+  private puppetFor = '';
+  private lastPos: Vec3 | null = null;
+  private speed = 0;
 
   constructor(
     public readonly id: string,
     shadowTex: THREE.Texture,
     private readonly haloTex?: THREE.Texture,
+    private readonly rigs?: RigStore,
   ) {
     const mat = tinted(
       new THREE.MeshBasicMaterial({
@@ -73,10 +94,16 @@ export class SpriteView {
     );
     this.shadow.position.y = 0.012;
     this.shadow.renderOrder = -1;
+    this.pivot.add(this.holder);
     this.root.add(this.pivot, this.shadow);
   }
 
-  update(e: Entity, pos: Vec3, camYaw: number, textures: TextureStore, flip: boolean, sq = 1, origami: 'tree' | 'bush' | null = null, ground?: GroundView): void {
+  update(e: Entity, pos: Vec3, camYaw: number, textures: TextureStore, flip: boolean, sq = 1, origami: 'tree' | 'bush' | null = null, ground?: GroundView, life?: LifeInput): void {
+    if (life && life.dt > 0) {
+      const v = this.lastPos ? Math.hypot(pos[0] - this.lastPos[0], pos[2] - this.lastPos[2]) / life.dt : 0;
+      this.speed += (Math.min(8, v) - this.speed) * Math.min(1, life.dt * 10);
+      this.lastPos = [pos[0], pos[1], pos[2]];
+    }
     this.root.position.set(pos[0], pos[1], pos[2]);
     this.root.visible = !e.hidden;
     const h = renderHeight(e);
@@ -96,11 +123,36 @@ export class SpriteView {
       const yaw = e.yaw === undefined ? camYaw : e.yaw * DEG;
       const tilt = (e.tilt * Math.PI) / 180;
       const mirror = flip && this.hasRealTexture;
+      const xs = this.turn !== null && this.hasRealTexture ? this.turn : mirror ? -1 : 1;
       this.pivot.rotation.set(0, yaw, 0, 'YXZ');
       this.pivot.position.y = hs / 2;
-      this.body.position.y = 0;
-      this.body.rotation.set(0, 0, tilt, 'YXZ');
-      this.body.scale.set(this.turn !== null && this.hasRealTexture ? ws * this.turn : mirror ? -ws : ws, hs, 1);
+      // a drawing without a rig still acts out gestures with its whole card
+      const card = life?.gesture && !this.puppet ? wholeCardGesture(life.gesture.name, life.gesture.t / Math.max(0.01, life.gesture.dur)) : null;
+      this.body.position.set(card ? card.x * hs : 0, card ? card.y * hs : 0, 0);
+      this.body.rotation.set(0, 0, tilt + (card ? (card.tilt * Math.PI) / 180 : 0), 'YXZ');
+      this.body.scale.set(ws * xs, hs * (card?.sq ?? 1), 1);
+      this.body.visible = !this.puppet;
+      if (this.puppet && this.motion) {
+        this.holder.visible = true;
+        this.holder.rotation.set(0, 0, tilt);
+        this.holder.scale.set((ws / this.puppet.aspect) * xs, hs, hs);
+        this.puppet.root.position.y = -0.5;
+        this.puppet.setOpacity(mat.opacity);
+        const look = life?.look ? ([life.look[0] * xs, life.look[1]] as [number, number]) : null;
+        const pose = this.motion.update({
+          dt: life?.dt ?? 0,
+          time: life?.time ?? 0,
+          speed: this.speed,
+          airborne: ground ? pos[1] - ground.height(pos[0], pos[2]) > 0.3 : pos[1] > 0.3,
+          talking: life?.talking ?? false,
+          expression: typeof e.state.expression === 'string' ? e.state.expression : undefined,
+          gesture: life?.gesture,
+          look,
+          metres: hs,
+          state: e.state,
+        });
+        this.puppet.apply(pose);
+      } else this.holder.visible = false;
     }
     // Shadow lies on the ground under the entity, tilted with the slope; shrinks and fades as the entity rises.
     const g = ground ? ground.height(pos[0], pos[2]) : 0;
@@ -137,6 +189,7 @@ export class SpriteView {
       mat.map = textures.placeholder(e.label, e.kind, e.sprite.w / Math.max(1, e.sprite.h));
       mat.needsUpdate = true;
       this.hasRealTexture = false;
+      this.setPuppet(null);
       if (e.sprite.file) {
         const file = e.sprite.file;
         textures
@@ -147,6 +200,14 @@ export class SpriteView {
             mat.map = tex;
             mat.needsUpdate = true;
             this.origamiColors = sampleTreeColors(tex);
+            // a rigged drawing comes apart into its paper pieces
+            const only = e.sprite.piece;
+            if (this.rigs?.has(file) && tex.image) {
+              const want = `${file}|${only ?? ''}`;
+              void this.rigs.load(file, tex.image as HTMLImageElement).then((asset) => {
+                if (asset && this.wantedFile === file && this.puppetFor !== want) this.setPuppet(asset, only, want);
+              });
+            }
           })
           .catch(() => {
             /* keep placeholder */
@@ -168,13 +229,35 @@ export class SpriteView {
     }
   }
 
+  private setPuppet(asset: PuppetAsset | null, only?: string, key = ''): void {
+    if (this.puppet) {
+      this.holder.remove(this.puppet.root);
+      this.puppet.dispose();
+      this.puppet = null;
+      this.motion = null;
+    }
+    this.puppetFor = key;
+    if (!asset) return;
+    this.puppet = new Puppet(asset, this.id, only);
+    this.motion = only ? null : new PuppetMotion(asset.rig);
+    if (only) this.motion = new PuppetMotion({ ...asset.rig, pieces: asset.rig.pieces.filter((p) => this.puppet!.pieces.includes(p)) });
+    this.holder.add(this.puppet.root);
+  }
+
+  /** The piece ids this sprite is made of (empty without a rig). */
+  get pieceIds(): string[] {
+    return this.puppet ? this.puppet.pieces.map((p) => p.id) : [];
+  }
+
   /** Meshes that count for picking. */
   get pickables(): THREE.Object3D[] {
-    return this.origami ? this.origami.pickables : [this.body];
+    if (this.origami) return this.origami.pickables;
+    return this.puppet ? this.puppet.pickables : [this.body];
   }
 
   dispose(): void {
     this.setOrigami(null, { id: this.id, word: '' } as Entity);
+    this.setPuppet(null);
     this.body.material.dispose();
     this.shadow.material.dispose();
     this.halo?.material.dispose();

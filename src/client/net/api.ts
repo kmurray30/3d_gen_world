@@ -1,3 +1,4 @@
+import { FACE_KINDS, type Rig } from '../../shared/rig';
 import type { CompactWorld, StreamEvent } from '../../shared/schema';
 import type { WorldModel } from '../../shared/engine/world';
 import { renderHeight } from '../../shared/engine/sizing';
@@ -59,8 +60,15 @@ export async function streamNdjson(url: string, body: unknown, onEvent: (ev: Str
   }
 }
 
+/** The pieces of a rigged drawing a command can name: limbs, head, hat, tail, wheels... (not the face marks). */
+function partsOf(rig: Rig | undefined): string[] | undefined {
+  if (!rig) return undefined;
+  const parts = rig.pieces.filter((p) => p.parent && !FACE_KINDS.includes(p.kind)).map((p) => p.id);
+  return parts.length ? parts.slice(0, 32) : undefined;
+}
+
 /** What the model gets to see: the nearest entities with rounded positions, no coordinates for the model to copy. */
-export function compactWorld(model: WorldModel, target?: string, limit = 40): CompactWorld {
+export function compactWorld(model: WorldModel, target?: string, limit = 40, rigOf: (file: string) => Rig | undefined = () => undefined): CompactWorld {
   const p = model.player.pos;
   const r1 = (v: number) => Math.round(v * 10) / 10;
   const entities = model
@@ -79,6 +87,7 @@ export function compactWorld(model: WorldModel, target?: string, limit = 40): Co
       state: Object.keys(e.state).length ? e.state : undefined,
       effects: e.effects.length ? e.effects : undefined,
       structure: e.structure ? { gen: e.structure.gen, params: e.structure.params } : undefined,
+      parts: partsOf(e.sprite.file ? rigOf(e.sprite.file) : undefined),
     }));
   return { player: { pos: [r1(p[0]), r1(p[1] - model.ground(p[0], p[2])), r1(p[2])], yaw: Math.round(model.player.yaw * 100) / 100 }, target, entities };
 }

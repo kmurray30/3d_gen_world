@@ -1,6 +1,6 @@
 import type { ResolvedAction, ResolvedStep } from '../schema';
 
-export type Channel = 'xz' | 'y' | 'facing' | 'scale' | 'tilt' | 'sprite' | 'alpha';
+export type Channel = 'xz' | 'y' | 'facing' | 'scale' | 'tilt' | 'sprite' | 'alpha' | 'gesture';
 
 /** A unit of work advanced by the scheduler every frame. `update` returns true when complete. */
 export interface Task {

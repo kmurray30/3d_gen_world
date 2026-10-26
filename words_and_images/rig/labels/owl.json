@@ -1,0 +1,59 @@
+{
+ "word": "owl",
+ "view": "front",
+ "pieces": [
+  {
+   "id": "body",
+   "kind": "body",
+   "regions": [
+    1,
+    7
+   ]
+  },
+  {
+   "id": "wing_l",
+   "kind": "wing",
+   "side": "l",
+   "parent": "body",
+   "regions": [
+    3
+   ]
+  },
+  {
+   "id": "wing_r",
+   "kind": "wing",
+   "side": "r",
+   "parent": "body",
+   "regions": [
+    4
+   ]
+  },
+  {
+   "id": "leg_l",
+   "kind": "leg",
+   "side": "l",
+   "parent": "body",
+   "regions": [
+    6
+   ]
+  },
+  {
+   "id": "leg_r",
+   "kind": "leg",
+   "side": "r",
+   "parent": "body",
+   "regions": [
+    5
+   ]
+  }
+ ],
+ "face": {
+  "eyes": [
+   2
+  ],
+  "pupils": [
+   9,
+   8
+  ]
+ }
+}

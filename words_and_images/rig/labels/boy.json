@@ -1,0 +1,17 @@
+{
+  "word": "boy",
+  "view": "front",
+  "pieces": [
+    {"id": "body", "kind": "body", "regions": [1, 9]},
+    {"id": "head", "kind": "head", "parent": "body", "regions": [3, 4]},
+    {"id": "arm_l", "kind": "arm", "side": "l", "parent": "body", "regions": [5]},
+    {"id": "hand_l", "kind": "hand", "side": "l", "parent": "arm_l", "from": "arm_l", "cuts": [[[-50, 610], [220, 610]]], "keep": [65, 669]},
+    {"id": "arm_r", "kind": "arm", "side": "r", "parent": "body", "regions": [6]},
+    {"id": "hand_r", "kind": "hand", "side": "r", "parent": "arm_r", "from": "arm_r", "cuts": [[[780, 610], [1050, 610]]], "keep": [923, 662]},
+    {"id": "leg_l", "kind": "leg", "side": "l", "parent": "body", "regions": [2, 10, 11], "cuts": [[[497, 600], [497, 735]]], "keep": [323, 862], "pivot": [335, 646]},
+    {"id": "leg_r", "kind": "leg", "side": "r", "parent": "body", "regions": [2, 10, 11], "cuts": [[[497, 600], [497, 735]]], "keep": [677, 862], "pivot": [665, 646]},
+    {"id": "foot_l", "kind": "foot", "side": "l", "parent": "leg_l", "regions": [7]},
+    {"id": "foot_r", "kind": "foot", "side": "r", "parent": "leg_r", "regions": [8]}
+  ],
+  "face": {"eyes": [14, 15], "brows": [12, 13], "mouth": 17}
+}

@@ -30,6 +30,12 @@ export class BubbleLayer {
     while (this.bubbles.length > MAX_BUBBLES) this.bubbles.shift()!.el.remove();
   }
 
+  /** Whether this entity has a speech bubble up (its mouth moves). */
+  talking(id: string): boolean {
+    const now = performance.now();
+    return this.bubbles.some((b) => b.id === id && b.until > now);
+  }
+
   update(camera: THREE.Camera, model: WorldModel, width: number, height: number): void {
     const now = performance.now();
     for (let i = this.bubbles.length - 1; i >= 0; i--) {

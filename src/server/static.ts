@@ -9,6 +9,7 @@ const SHORT = 'public, max-age=60, must-revalidate';
  *  - /sprites/<manifestVersion>/<size>/<file>.webp  -> assets/sprites/<size>/<file>.webp (immutable; the
  *    version segment changes whenever the manifest changes, so word-named files can still be cached forever)
  *  - /manifest.json                                  -> assets/manifest.json (short cache)
+ *  - /rigs/<file>.json|png, /rigs/index.json          -> assets/rigs (how drawings come apart; short cache)
  *  - everything else                                 -> dist/client (Vite output; hashed bundles are immutable)
  *  - /w/<slug>                                       -> dist/client/index.html (SPA)
  * Roots are relative to the process working directory (repo root locally, /app in the container).
@@ -21,6 +22,15 @@ export function mountStatic(app: Hono): void {
       rewriteRequestPath: (p) => p.replace(/^\/sprites\/[^/]+\//, '/sprites/'),
       onFound: (_path, c) => {
         c.header('Cache-Control', IMMUTABLE);
+      },
+    }),
+  );
+  app.use(
+    '/rigs/*',
+    serveStatic({
+      root: './assets',
+      onFound: (_path, c) => {
+        c.header('Cache-Control', SHORT);
       },
     }),
   );

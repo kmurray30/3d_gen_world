@@ -1,0 +1,15 @@
+{"word": "girl", "view": "front",
+ "pieces": [
+  {"id": "body", "kind": "body", "regions": [3, 11, 2]},
+  {"id": "head", "kind": "head", "parent": "body", "regions": [4, 1, 14]},
+  {"id": "arm_l", "kind": "arm", "side": "l", "parent": "body", "regions": [7]},
+  {"id": "hand_l", "kind": "hand", "side": "l", "parent": "arm_l", "from": "arm_l", "split": "wrist"},
+  {"id": "arm_r", "kind": "arm", "side": "r", "parent": "body", "regions": [8]},
+  {"id": "hand_r", "kind": "hand", "side": "r", "parent": "arm_r", "from": "arm_r", "split": "wrist"},
+  {"id": "leg_l", "kind": "leg", "side": "l", "parent": "body", "regions": [6]},
+  {"id": "leg_r", "kind": "leg", "side": "r", "parent": "body", "regions": [5]},
+  {"id": "foot_l", "kind": "foot", "side": "l", "parent": "leg_l", "regions": [9, 16]},
+  {"id": "foot_r", "kind": "foot", "side": "r", "parent": "leg_r", "regions": [10, 15]}
+ ],
+ "erase": [12, 13],
+ "face": {"eyes": [19, 20], "brows": [17, 18], "mouth": 22}}
