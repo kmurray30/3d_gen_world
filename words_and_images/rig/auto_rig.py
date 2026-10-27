@@ -12,6 +12,12 @@ Try two models on 40 varied drawings first, then look at the sheet and pick one:
     python3 words_and_images/rig/auto_rig.py pilot --models qwen3-vl:30b qwen3-vl:32b
     open words_and_images/rig/pilot/index.html
 
+Try it on just the drawings villages use (village_words.txt; --redo-hand rigs the hand-made ones with the model
+too, so you can judge it on people and animals) and look at them in the game before doing everything:
+
+    python3 words_and_images/rig/auto_rig.py pilot --models qwen3-vl:30b qwen3-vl:32b --words-file words_and_images/rig/village_words.txt --out words_and_images/rig/pilot-village
+    python3 words_and_images/rig/auto_rig.py run --model qwen3-vl:30b --words-file words_and_images/rig/village_words.txt --redo-hand
+
 Then rig everything with the one you chose (resumable: run it again and it carries on where it stopped):
 
     python3 words_and_images/rig/auto_rig.py run --model qwen3-vl:30b
@@ -378,7 +384,9 @@ td,th{{border:1px solid #ddd;padding:6px;vertical-align:top;background:#fff}}img
 
 def pilot_sheet(root: Path, models: list[str], items: list[dict], recs: dict[str, dict[str, dict]], total: int) -> Path:
     rows = []
-    head = "".join(f"<th>{html.escape(m)}</th>" for m in models)
+    hand_dir = root / "_hand" / "review"
+    has_hand = any((hand_dir / (i["stem"] + "-rig.png")).exists() for i in items)
+    head = "".join(f"<th>{html.escape(m)}</th>" for m in models) + ("<th>hand-made (for comparison)</th>" if has_hand else "")
     srows = "".join(
         f"<tr><td>{html.escape(m)}</td>" + "".join(f"<td>{v}</td>" for v in stats(list(recs[m].values()), total).values()) + "</tr>" for m in models
     )
@@ -391,6 +399,9 @@ def pilot_sheet(root: Path, models: list[str], items: list[dict], recs: dict[str
             st = r.get("status", "-")
             note = html.escape(r.get("error", "")[:200])
             cells.append(f'<td><span class="{st}">{st}</span> <small>{r.get("pieces", "")} pieces, {r.get("seconds", "?")}s</small><br>{img_tag(root / safe(m) / "review" / (item["stem"] + "-rig.png"), root)}<br><small>{note}</small></td>')
+        if has_hand:
+            pic = hand_dir / (item["stem"] + "-rig.png")
+            cells.append(f"<td>{img_tag(pic, root) if pic.exists() else '<div class=\"none\">not hand-made</div>'}</td>")
         rows.append("<tr>" + "".join(cells) + "</tr>")
     body = (f"<p>Each piece is tinted its own colour, joints are red dots, cut lines red. Pick the model whose rigs look right more often; "
             f"its speed here times the {total} drawings in scope is the last column.</p>"
@@ -419,6 +430,11 @@ def safe(name: str) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "_", name)
 
 
+def read_words(path: Path) -> list[str]:
+    """Drawings listed one per line (blank lines and # comments skipped), like village_words.txt."""
+    return [ln.strip() for ln in path.read_text().splitlines() if ln.strip() and not ln.strip().startswith("#")]
+
+
 def scope(items: list[dict], kinds: str, words: list[str] | None) -> list[dict]:
     if words:
         want = {w.replace(" ", "_") for w in words}
@@ -435,6 +451,7 @@ def main() -> None:
         p.add_argument("--base-url", default="http://localhost:11434/v1")
         p.add_argument("--kinds", default="human,humanoid,animal,object,other", help="which kinds of drawing are in scope")
         p.add_argument("--words", nargs="*", help="only these drawings")
+        p.add_argument("--words-file", type=Path, help="only the drawings listed in this file (village_words.txt: the ones villages use)")
         p.add_argument("--fake", action="store_true", help="answer with the hand-made labels instead of a model")
         p.add_argument("--timeout", type=float, default=600)
         if name == "pilot":
@@ -446,7 +463,10 @@ def main() -> None:
             p.add_argument("--model", default="qwen3-vl:30b")
             p.add_argument("--limit", type=int, default=0, help="stop after this many (0 = all)")
             p.add_argument("--retry-failed", action="store_true")
+            p.add_argument("--redo-hand", action="store_true", help="rig the hand-made ones with the model too, over their hand rigs (to judge the model on them)")
     args = ap.parse_args()
+    if args.words_file:
+        args.words = (args.words or []) + read_words(args.words_file)
     items = scope(manifest(), args.kinds, args.words)
 
     if args.cmd == "pilot":
@@ -464,12 +484,17 @@ def main() -> None:
             got = run_list(model, chosen, root / "labels", root / "rigs", root / "review", root / "results.jsonl", retry_failed=False)
             recs[m] = {r["stem"]: r for r in got}
             print(json.dumps({m: stats(got, len(items))}), flush=True)
-        sheet = pilot_sheet(args.out, args.models, chosen, recs, len(items))
+        # the hand-made rigs of any of these, as a yardstick beside the models'
+        for i in chosen:
+            spec = HAND / f"{i['stem']}.json"
+            if spec.exists():
+                build(json.loads(spec.read_text()), args.out / "_hand" / "review", args.out / "_hand" / "rigs")
+        sheet = pilot_sheet(args.out, args.models, chosen, recs, len(manifest()) if args.words else len(items))
         print(f"\nPilot sheet: {sheet}")
         return
 
     model = Fake() if args.fake else Model(args.model, args.base_url, args.timeout)
-    hand = {p.stem for p in HAND.glob("*.json")}
+    hand = set() if args.redo_hand else {p.stem for p in HAND.glob("*.json")}
     todo = [i for i in items if i["stem"] not in hand]
     if args.limit:
         todo = todo[: args.limit]
@@ -479,6 +504,8 @@ def main() -> None:
     sheet = review_sheet(review, got)
     print(json.dumps(stats(got, len(todo))))
     print(f"\nReview sheet: {sheet}\nRigs are in {RIGS}; commit assets/rigs and words_and_images/rig/auto_labels to ship them.")
+    if args.redo_hand:
+        print("The hand-made rigs were replaced by the model's. To put them back: python3 words_and_images/rig/build_rig.py words_and_images/rig/labels/*.json")
 
 
 if __name__ == "__main__":

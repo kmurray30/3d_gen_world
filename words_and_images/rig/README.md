@@ -53,6 +53,24 @@ cut lines in red), how many were rigged, left static or failed, the seconds per 
 means for the whole set. Pick the model whose rigs look right more often; if both look about the same, take
 the faster one. Running it again skips what is done; delete `pilot/` to start over.
 
+### 2b. The village first: see it in the game
+
+`village_words.txt` lists the 26 drawings villages use (people, animals, the scarecrow, flowers, crates,
+trees; `scripts/village-sprites.ts` makes it). Compare both models on just those, with the hand-made rigs
+beside them for reference, then put the one you like into the game and walk round a village:
+
+```
+caffeinate -i python3 words_and_images/rig/auto_rig.py pilot --models qwen3-vl:30b qwen3-vl:32b \
+  --words-file words_and_images/rig/village_words.txt --out words_and_images/rig/pilot-village
+open words_and_images/rig/pilot-village/index.html
+python3 words_and_images/rig/auto_rig.py run --model qwen3-vl:30b --words-file words_and_images/rig/village_words.txt --redo-hand
+npm run build && node dist/server/index.js     # then open http://localhost:8787/?preset=village
+```
+
+`--redo-hand` lets the model rig the 12 hand-made ones too (over their hand rigs), so the village shows the
+model's work on people and animals. To put the hand-made rigs back:
+`python3 words_and_images/rig/build_rig.py words_and_images/rig/labels/*.json` (or `git checkout assets/rigs`).
+
 ### 3. The full run
 
 ```
