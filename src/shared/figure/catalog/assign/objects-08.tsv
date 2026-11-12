@@ -1,0 +1,263 @@
+word	type	height_m	tags
+raft	object	0.5	float
+rag	object	0.3	cloth, wipe
+ragdoll	object	0.4	rag doll
+railing	object	1.0	banister, handrail
+railroad crossing sign	object	2.0	level crossing sign, xing sign
+railroad tracks	object	0.15	railway tracks
+raincoat	object	1.0	rain jacket, waterproof coat
+raindrop	object	0.1	rain droplet
+raisin	object	0.1	dried grape
+rake	object	1.5	garden rake
+ramp	object	2.0	slope, incline
+raspberry bush	object	1.5	raspberry shrub
+rattle (baby)	object	0.15	
+ravioli	object	0.1	
+razor	object	0.1	shaver
+reactor	object	10.0	nuclear reactor
+rear view mirror	object	0.2	rearview mirror
+recliner	object	1.0	reclining chair, armchair
+record	object	0.3	vinyl record, lp
+record store	object	3.0	music shop, vinyl store
+recovery vehicle	object	4.0	tow truck, wrecker
+rectangle	object	0.1	
+recycle sign	object	1.0	recycling symbol
+recycling bin	object	1.0	trash can, recycle bin
+recycling plant	object	12.0	recycling facility, waste plant
+red button	object	0.1	
+red cap	object	0.15	red hat
+red switch	object	0.1	
+redwood	object	1.0	giant sequoia
+reed (music)	object	0.1	
+reef	object	0.5	coral reef
+reflector	object	0.1	retroreflector
+refrigerator	object	1.7	fridge, icebox
+rehabilitation center	object	10.0	rehab center, recovery center
+rein	object	2.0	horse rein
+reins	object	2.0	horse reins, bridle reins
+relish	object	0.15	pickle relish
+remote	object	0.2	remote control, clicker
+remote controlled aircraft	object	1.5	rc plane, rc airplane
+remote controlled car	object	0.2	rc car
+remote controlled helicopter	object	0.5	rc helicopter
+rescue helicopter	object	5.0	air ambulance, medevac helicopter
+reservoir	object	10.0	water reservoir, dam lake
+respirator	object	0.3	gas mask
+restaurant	object	5.0	diner, eatery, cafe
+restricted area sign	object	0.9	no trespassing sign, keep out sign
+retro glasses	object	0.1	vintage glasses, wayfarers
+revolver	object	0.15	six-shooter
+revolving door	object	2.2	turnstile door
+rhombus (shape)	object	0.1	diamond shape
+rhubarb pie	object	0.1	
+ribbon	object	1.0	bow
+ribcage	object	0.4	rib cage
+rice	object	0.1	
+rice cake	object	0.1	
+rice cooker	object	0.25	rice steamer
+rickshaw	object	1.7	tuk tuk, pedicab
+ricotta	object	0.1	
+riding mower	object	1.1	lawn tractor
+rifle	object	1.1	gun
+ring	object	0.1	band
+riot gear	object	1.8	riot armor
+riot shield	object	1.3	ballistic shield
+roach motel	object	0.15	roach trap
+road	object	0.1	street, highway
+road sign	object	1.0	traffic sign, street sign
+roadblock	object	1.2	barricade, road barrier
+roadwork sign	object	1.5	construction sign
+roast beef	object	0.15	
+robe	object	1.4	bathrobe, dressing gown
+robot costume	object	1.7	robot suit
+rock candy	object	0.15	rock sugar
+rock salt	object	0.1	halite
+rocket	object	3.0	
+rocket engine	object	4.0	
+rocket launcher	object	1.2	bazooka
+rocket ship	object	4.0	spaceship
+rocking chair	object	1.0	rocker
+rocking horse	object	1.0	rocking horse toy
+rod	object	1.5	fishing rod, pole
+roller-skates	object	0.2	roller skates
+rollercoaster	object	12.0	roller coaster
+rolling pin	object	0.5	rollingpin
+roof	object	8.0	
+root	object	0.2	
+root beer	object	0.3	rootbeer
+root beer float	object	0.2	
+rope	object	3.0	
+rope ladder	object	4.0	
+rope swing	object	3.0	
+rosary beads	object	0.6	rosary
+rose	object	0.6	
+router	object	0.1	
+rowboat	object	2.5	dinghy, row boat
+rowing machine	object	1.5	ergometer, rowing erg
+rubber (material)	object	0.1	latex, elastic
+rubber band	object	0.1	elastic band
+rubber band gun	object	0.2	
+rubber chicken	object	0.4	
+rubber duck	object	0.1	bath duck
+rubber gloves	object	0.3	latex gloves, dish gloves
+rubber stamp	object	0.1	
+rubble	object	0.5	debris, wreckage
+ruby	object	0.1	red gem, ruby gem
+rudder	object	2.0	ship rudder, boat rudder
+rug	object	0.1	carpet, mat
+rugby ball	object	0.28	rugby ball
+ruin	object	10.0	ruins
+ruler	object	0.3	measuring stick, straightedge
+runway	object	0.1	airport runway
+rupee (nintendo)	object	0.1	zelda rupee, rupees
+rust	object	0.1	iron oxide
+saddle	object	0.5	horse saddle
+safe	object	0.6	strongbox, safety box
+safety cone	object	0.9	traffic cone, construction cone
+safety pin	object	0.1	
+safety vest	object	0.7	reflective vest, hi-vis vest
+sail	object	10.0	
+sailboat	object	12.0	sailing boat
+salad	object	0.1	
+salad dressing	object	0.2	salad sauce
+saliva	object	0.5	spit, drool
+salon	object	2.5	hair salon, beauty salon
+salsa	object	0.1	salsa sauce, pico de gallo
+salt	object	0.1	
+salt lick	object	0.3	
+salt mine	object	12.0	
+salt shaker	object	0.15	salt cellar
+sampler	object	0.2	
+sand	object	0.1	
+sand dollar	object	0.1	
+sand toy	object	0.2	beach toy
+sandal	object	0.1	
+sandbag	object	0.4	
+sandbox	object	0.5	sand box
+sandcastle	object	1.0	
+sandpaper	object	0.3	
+sandstone	object	0.1	
+sandwich	object	0.1	
+santa hat	object	0.3	santa claus hat
+sapling	object	1.0	
+sapphire	object	0.1	
+sardine can	object	0.1	
+sash	object	2.0	window sash, belt sash
+satellite	object	2.0	space satellite
+satellite dish	object	0.9	dish antenna, parabolic antenna
+sauce	object	0.2	gravy, condiment
+saucer	object	0.15	flying saucer, cup saucer
+sauna	object	2.2	steam room
+sausage	object	0.15	hot dog, wurst
+saw	object	0.5	handsaw, power saw
+sawblade	object	0.3	saw blade
+sawdust	object	0.1	
+sawhorse	object	0.8	saw bench
+sawmill	object	10.0	lumber mill
+saxophone	object	0.8	sax
+scaffold	object	5.0	scaffolding
+scale (balance)	object	0.2	balance scale
+scale (organic)	object	0.1	fish scale
+scallion	object	0.3	green onion, spring onion
+scalpel	object	0.15	
+scanner	object	0.3	document scanner
+scarecrow	object	1.8	
+scarf	object	1.7	muffler
+scepter	object	0.9	sceptre
+school	object	10.0	
+school bell	object	0.5	
+school bus	object	3.0	
+school desk	object	0.75	student desk
+schoolhouse	object	8.0	school building
+science museum	object	12.0	science center
+scissors	object	0.25	pair of scissors
+scoop	object	0.2	ladle
+scooter	object	1.1	kick scooter
+scoreboard	object	3.0	
+scraper (tool)	object	0.25	scraper, putty knife
+screen door	object	2.0	screen door
+screw	object	0.1	bolt
+screwdriver	object	0.2	screw driver
+scroll	object	0.3	parchment
+scrubs	object	1.7	surgical scrubs
+scuba gear	object	1.0	diving equipment, scuba kit
+scythe	object	1.7	sickle
+sea shell	object	0.1	seashell
+seat belt	object	2.0	seatbelt
+seaweed (plant)	object	1.0	sea weed
+security camera	object	0.2	cctv, surveillance camera
+seed	object	0.1	
+seesaw	object	2.5	teeter-totter
+semi trailer	object	4.0	semi truck, tractor trailer
+septic tank	object	2.0	
+sequin	object	0.1	
+seven ball	object	0.1	7 ball
+sewer (place)	object	2.0	sewers, underground sewer
+sewing kit	object	0.15	sewing set
+sewing machine	object	0.3	sewing machine
+shackles	object	0.25	manacles, fetters
+shampoo	object	0.25	hair shampoo
+shaver	object	0.15	razor, electric shaver
+shears	object	0.25	scissors, pruning shears
+sheath	object	0.2	scabbard
+shed	object	2.5	garden shed, tool shed
+sheet music	object	0.3	music score, piano sheet
+shell (sea)	object	0.1	seashell
+sherbet	object	0.1	sherbert
+sheriff hat	object	0.15	sheriff's hat
+shield	object	1.0	
+shingle	object	0.3	roof tile
+shipyard	object	5.0	
+shirt	object	0.7	t-shirt
+shoe	object	0.12	
+shoe polish	object	0.15	shoe shine
+shoe store	object	3.0	shoestore
+shoebox	object	0.3	
+shoehorn	object	0.2	
+shoelace	object	1.0	shoestring
+shoes	object	0.15	footwear, sneakers, boots
+shooting range	object	0.5	gun range, firing range
+shopping bag	object	0.4	tote bag, carrier bag
+shopping cart	object	1.0	trolley, shopping trolley
+shorts	object	0.3	short pants
+shotgun	object	1.2	
+shoulder pads	object	0.2	shoulder protection
+shovel	object	1.5	spade
+shower	object	2.0	
+shower cap	object	0.25	bath cap
+shower curtain	object	2.0	
+shower head	object	0.25	showerhead
+shrapnel	object	0.1	
+shredder	object	0.5	paper shredder
+shrine	object	2.0	
+shroud	object	2.0	pall, winding sheet
+shrub	object	1.5	bush
+shutter	object	1.0	window blind
+sickle	object	0.6	scythe
+sieve	object	0.2	strainer, colander
+sign	object	2.0	road sign, notice
+signpost	object	2.5	direction sign, milestone
+silk	object	0.5	silk fabric
+silo	object	12.0	grain silo
+silver (material)	object	0.5	silver metal
+silver bullet	object	0.1	
+sink	object	0.9	kitchen sink, bathroom sink
+sinkhole	object	10.0	
+skate park	object	3.0	skatepark
+skateboard	object	0.8	skate board
+skeleton	object	1.7	bone man, skeletal figure
+sketch	object	0.2	drawing
+skewer	object	0.3	spit
+ski hill	object	5.0	ski slope
+ski jump	object	1.0	ski ramp
+ski lift	object	10.0	chairlift
+ski mask	object	0.25	balaclava, ski balaclava
+ski pole	object	1.2	ski stick
+skin cream	object	0.1	moisturizer, lotion
+skirt	object	0.6	
+skis	object	1.7	ski
+skull	object	0.22	
+skullcap	object	0.15	beanie, kippah
+skylight	object	1.0	roof window
+skyscraper	object	3.0	high-rise, tower block
+sled	object	0.2	sledge, toboggan

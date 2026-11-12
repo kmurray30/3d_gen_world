@@ -1,0 +1,262 @@
+word	type	height_m	tags
+abacus	object	0.2	abacus calculator
+accordion	object	0.5	squeezebox
+acid	object	0.1	lsd
+acorn	object	0.1	
+acoustic guitar	object	1.0	steel string guitar
+adam's apple	object	0.1	
+address book	object	0.2	phone book, contact list
+air compressor	object	0.6	compressor
+air conditioning	object	1.8	ac, air conditioner
+air filter	object	0.3	air cleaner
+air horn	object	0.4	train horn
+air mattress	object	0.2	inflatable mattress, airbed
+air tank	object	0.5	scuba tank, oxygen tank
+air vent	object	0.2	vent, air grille
+airbag	object	0.6	air bag
+aircraft carrier	object	12.0	carrier
+airlock	object	2.0	
+airplane	object	12.0	aeroplane, plane
+airport	object	12.0	
+aisle	object	2.0	passageway
+alarm clock	object	0.15	alarmclock
+almond	object	0.1	
+alphabet	object	0.5	
+amber	object	0.1	
+ambulance	object	2.5	
+american cheese	object	0.1	
+ammonia	object	0.2	
+amp	object	0.15	amplifier
+amphitheater	object	12.0	coliseum, arena, stadium
+amulet	object	0.1	talisman, charm
+amusement park	object	12.0	theme park, funfair
+anchor (boat)	object	2.0	ship anchor, sea anchor
+angel food cake	object	0.1	
+angel wings	object	0.5	chicken wings
+animal food	object	0.2	pet food
+animal shelter	object	5.0	
+ankle	object	0.15	
+answering machine	object	0.2	voicemail machine
+ant farm	object	0.25	ant colony
+ant hill	object	0.3	anthill, ant mound
+antenna (metal)	object	1.0	aerial
+antidote	object	0.1	
+antifreeze	object	0.3	
+antique shop	object	4.0	antiques shop
+antler	object	0.8	
+antlers	object	0.8	antler
+anvil	object	0.6	
+apartment	object	3.0	flat
+apparatus	object	1.0	device, machine
+apple core	object	0.1	
+apple pie	object	0.1	
+apple sauce	object	0.2	applesauce
+apple tree	object	6.0	
+apricot tree	object	6.0	
+apron	object	0.7	bib
+aquarium (building)	object	12.0	fish tank building
+aqueduct	object	12.0	
+arcade machine	object	1.8	arcade cabinet
+arch	object	12.0	archway
+ark of the covenant	object	1.3	
+arm	object	0.7	
+armchair	object	0.9	arm chair
+armor	object	1.7	armour
+armory	object	10.0	armoury, weapon depot
+arms	object	1.7	weapons, firearms
+army men	object	0.1	toy soldiers, plastic army men
+army uniform	object	1.7	military uniform, camouflage uniform
+arrow	object	0.8	bolt
+arrowhead	object	0.1	arrow point
+art museum	object	12.0	gallery, art gallery
+art supply store	object	5.0	craft store
+artichoke	object	1.0	globe artichoke
+artifact	object	0.2	
+ash	object	0.2	ash tree
+asparagus	object	1.5	
+aspen tree	object	12.0	quaking aspen
+asphalt	object	0.1	tarmac, blacktop
+assault rifle	object	1.0	ar-15
+asterisk	object	0.1	star symbol
+asteroid	object	12.0	minor planet
+asteroid belt	object	12.0	
+asylum	object	10.0	sanatorium, madhouse
+at sign	object	0.1	@ symbol
+atm	object	1.6	cash machine, cashpoint
+atom	object	0.1	
+attic	object	2.5	loft
+atv	object	1.2	quad bike, four-wheeler
+auction house	object	10.0	
+automatic door	object	2.2	sliding door
+avocado	object	0.15	
+avocado tree	object	7.0	
+awning	object	3.0	canopy
+axe	object	0.8	hatchet
+baby bottle	object	0.18	baby milk bottle
+baby monitor	object	0.15	
+baby powder	object	0.2	talcum powder
+back scratcher	object	0.3	
+backhoe	object	6.0	
+backpack	object	0.5	knapsack, rucksack
+bacon	object	0.1	
+badge	object	0.1	shield, emblem
+bag	object	0.3	sack, pouch
+bagel	object	0.1	
+bagpipes	object	0.7	
+baguette	object	0.65	french bread
+bait	object	0.1	lure
+baked beans	object	0.15	
+bakery	object	3.0	bake shop
+baking powder	object	0.15	
+baking sheet	object	0.35	baking tray
+balcony	object	3.0	
+ball	object	0.25	
+ball bearing	object	0.1	
+ball gown	object	1.5	gown
+ball pit	object	1.0	
+ballet shoes	object	0.15	pointe shoes
+balloon (fun)	object	0.3	party balloon
+ballroom	object	4.0	dance hall
+balls	object	0.1	spheres
+bamboo	object	10.0	
+banana	object	0.2	
+banana bread	object	0.1	
+banana chips	object	0.1	
+banana peel	object	0.1	
+banana suit	object	1.7	banana costume
+banana tree	object	5.0	banana plant
+band saw	object	1.5	
+bandage	object	0.1	dressing
+bandana	object	0.55	headscarf
+bandit mask	object	0.25	bandana mask
+banjo	object	0.9	
+bank	object	3.0	money bank
+banner	object	2.0	flag
+bar stool	object	1.1	barstool
+barbed wire	object	1.2	
+barber's pole	object	1.5	barber pole
+barcode	object	0.1	
+bark	object	0.1	tree bark
+barn	object	8.0	
+barracks	object	10.0	
+barrette	object	0.1	hair clip, hair barrette
+barrier	object	1.8	fence, wall, gate
+baseball	object	0.1	baseball ball
+baseball base	object	0.2	base, bag
+baseball glove	object	0.3	mitt, fielder's glove
+baseboard	object	0.15	skirting board, base molding
+basement	object	2.5	cellar
+basket	object	0.3	basket weave
+basketball	object	0.24	basket ball
+basketball court	object	9.0	basketball floor
+basketball goal	object	3.05	basketball hoop, basketball rim
+basketball jersey	object	0.7	basketball shirt, basketball uniform
+bat (sports)	object	0.85	baseball bat
+bat-signal	object	5.0	bat signal
+bath mat	object	0.1	bathroom mat
+bathroom	object	2.5	restroom, lavatory, washroom
+bathtub	object	0.6	bath, tub
+batman costume	object	1.7	batsuit
+batmobile (regular)	object	1.5	
+baton (performance)	object	0.6	twirling baton, majorette baton
+batter (food)	object	0.1	
+battering ram	object	4.0	ram
+battery	object	0.2	aa battery, cell
+battle axe	object	1.5	battleaxe
+battleship	object	12.0	warship
+bayonet	object	0.5	bayonette
+bb gun	object	0.9	bbgun, bbgun
+bbq sauce	object	0.2	barbecue sauce
+bbq wing	object	0.1	barbecue wing, buffalo wing
+beach ball	object	0.7	
+beach umbrella	object	2.0	
+beacon	object	5.0	lighthouse
+beak	object	0.1	bill
+beaker	object	0.15	lab glass, glass beaker, erlenmeyer flask
+bean	object	0.1	broad bean, green bean
+bean bag (chair)	object	0.8	beanbag chair, bean bag lounge
+beanie	object	0.2	beanie hat, toque, skullcap
+bear rug	object	2.5	bearskin rug
+bear suit	object	1.7	bear costume
+bear trap	object	0.3	
+beard	object	0.15	facial hair
+beaver dam	object	2.0	
+bed	object	0.6	mattress
+bedroom	object	2.5	
+bedspread	object	0.1	bed cover, quilt
+beef	object	1.7	cow
+beehive	object	0.5	honeycomb
+beet	object	0.3	beetroot
+bell (handbell)	object	0.2	handbell
+bell tower	object	5.0	campanile, steeple
+belt	object	1.0	waistband
+beret	object	0.15	beanie, cap
+berry	object	0.1	strawberry, blueberry, raspberry
+bib	object	0.25	baby bib, drool bib
+bicycle	object	1.1	bike, cycle
+bicycle horn	object	0.1	bike horn
+big toe	object	0.1	
+bike helmet	object	0.25	bicycle helmet
+bike rack	object	1.5	bicycle rack
+bikini	object	0.5	two-piece swimsuit
+bill (paper)	object	0.1	banknote, paper money
+billboard	object	10.0	hoarding
+binder	object	0.3	folder, ring binder
+binoculars	object	0.15	field glasses
+biohazard sign	object	0.3	hazard sign, biohazard symbol
+biplane	object	4.0	double-wing plane
+birch tree	object	12.0	birch
+bird cage	object	0.6	birdcage
+birdbath	object	0.8	bird bath
+birdhouse	object	0.4	bird house
+birthday cake	object	0.2	bday cake
+birthday candle	object	0.2	
+biscuit	object	0.1	cookie, scone
+black and white photo	object	0.2	monochrome photo, grayscale image
+black belt	object	2.0	karate belt
+bladder	object	0.15	urinary bladder
+blanket	object	0.1	throw, bed cover
+bleach	object	0.25	clorox
+bleachers	object	3.0	stands
+blender	object	0.4	mixer
+blimp	object	0.3	zeppelin, dirigible
+blindfold	object	0.15	
+bling	object	0.5	bling-bling, jewelry, ice
+block	object	0.2	building block, wooden block
+blood bank	object	2.0	blood center
+blood pressure cuff	object	0.15	sphygmomanometer cuff, bp cuff
+blouse	object	0.7	women's shirt, top
+blowdryer	object	0.25	hair dryer, blow drier
+blt	object	0.1	bacon lettuce tomato
+blue cheese	object	0.1	bleu cheese
+blue suit	object	1.7	
+blueprints	object	1.0	blue print
+blush	object	0.1	blusher
+board game	object	0.1	boardgame
+boat	object	8.0	ship, vessel
+boat house	object	4.0	boathouse
+bobblehead	object	0.2	nodder, wobbler
+bobby pin	object	0.1	hair pin, hairpin
+body bag	object	2.0	cadaver bag, human remains pouch
+body shop	object	5.0	auto body shop
+body wash	object	0.2	shower gel
+boiler	object	1.8	furnace
+bok choi	object	0.25	bok choy, pak choi
+bolt (metal)	object	0.1	screw
+bomb	object	0.3	
+bomb shelter	object	2.5	fallout shelter
+bomber (plane)	object	10.0	bomber aircraft
+bone	object	0.3	skeleton part
+bongo (music)	object	0.3	bongo drum
+bonnet	object	0.25	hat
+bonsai	object	0.5	bonsai tree
+book	object	0.25	
+book holder	object	0.3	book stand
+book store	object	4.0	bookshop
+bookcase	object	1.8	bookshelf
+boomerang	object	0.75	
+booster seat	object	0.4	
+boot	object	0.3	riding boot
+boston cream pie	object	0.1	
+bottle	object	0.25	flask
+bottle opener	object	0.15	corkscrew, cap opener

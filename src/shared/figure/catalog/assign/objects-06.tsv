@@ -1,0 +1,262 @@
+word	type	height_m	tags
+laundry detergent	object	0.25	washing powder, detergent
+lava	object	0.1	magma
+lava lamp	object	0.4	plasma lamp
+law office	object	3.0	law firm
+lawn chair	object	0.9	deck chair, folding chair
+lawn mower	object	1.0	mower
+lead	object	0.1	leash
+leaf	object	0.1	foliage
+leaf blower	object	1.0	leafblower, blower
+leash	object	1.5	dog leash, lead
+leather	object	0.1	
+leather jacket	object	0.7	bomber jacket
+led	object	0.1	led light, led bulb
+leek	object	0.3	
+leg	object	0.9	limb
+leg warmer	object	0.4	legwarmers
+legs	object	0.9	
+lei	object	1.0	flower necklace, garland
+lemon	object	0.1	
+lemon tree	object	4.0	
+lemonade	object	0.2	
+lemonade stand	object	1.2	lemonade cart
+lens	object	0.1	camera lens
+leotard	object	0.7	bodysuit
+less than sign	object	0.1	<
+letter	object	0.25	
+letter opener	object	0.2	paper knife
+letters	object	0.1	alphabet characters
+lettuce	object	0.3	salad greens
+level	object	0.3	spirit level, bubble level
+lever	object	0.5	crowbar, pry bar
+library	object	10.0	book repository
+license	object	0.1	driving license, permit
+license plate	object	0.15	number plate, registration plate
+lid	object	0.1	cover, top
+lie detector	object	0.3	polygraph
+life preserver (ring)	object	0.8	lifebuoy, ring buoy
+life raft	object	3.0	rescue raft
+life ring	object	0.8	lifebuoy, ring buoy
+lifeboat	object	7.0	rescue boat
+lifeguard stand	object	4.0	lifeguard tower
+lifejacket	object	0.7	life vest, flotation device
+light switch	object	0.1	lightswitch, wall switch, electrical switch
+lightbulb	object	0.12	light bulb, bulb
+lighter	object	0.1	cigarette lighter, pocket lighter
+lighthouse	object	12.0	light house
+lightning rod	object	2.0	lightning conductor
+lily (flower)	object	1.0	lily flower
+lily of the valley	object	0.2	
+limb	object	0.7	arm, leg
+lime	object	0.1	lime fruit
+lime tree	object	10.0	linden tree
+limestone	object	0.5	
+limo	object	1.8	limousine
+lingerie	object	0.5	underwear, intimates
+lint	object	0.5	fluff, fuzz
+lip balm	object	0.1	chapstick, lip moisturizer
+lip stain	object	0.1	lip tint
+lipstick	object	0.1	
+liquorice	object	0.15	licorice
+liver	object	0.15	
+living room	object	2.5	family room, lounge
+lobster trap	object	0.5	lobster pot
+locker	object	1.8	cabinet, cupboard
+locker room	object	3.0	changing room
+loft	object	4.0	attic, mezzanine
+log cabin	object	4.0	log house
+lollipop	object	0.1	sucker
+long johns	object	1.0	thermal underwear
+loom	object	1.5	weaving machine
+lotion	object	0.15	hand cream
+lottery ticket	object	0.1	
+lotus	object	1.0	water lily
+lounge chair	object	1.0	recliner, chaise lounge
+love potion	object	0.2	aphrodisiac
+lunar lander	object	5.0	moon lander
+lunar rover	object	1.5	moon rover
+lunchbox	object	0.2	lunch box
+lung	object	0.25	
+macaroni and cheese	object	0.1	mac and cheese
+mace (weapon)	object	0.7	flanged mace
+machete	object	0.6	
+machine gun	object	1.0	submachine gun, automatic rifle
+magazine (reading)	object	0.3	journal, periodical
+magic bean	object	0.1	
+magic broomstick	object	1.5	witch broom, flying broom
+magic carpet	object	3.0	flying carpet
+magicians hat	object	0.3	magician's hat, top hat
+magnet	object	0.1	
+magnifying glass	object	0.15	magnifier
+mailbox	object	1.0	post box, letter box
+mailing labels	object	0.1	shipping labels
+mall (building)	object	12.0	shopping mall, shopping center
+mallet	object	0.3	croquet mallet, polo mallet
+mane	object	0.3	
+mango	object	0.15	
+mango juice	object	0.2	
+mango tree	object	12.0	
+mangrove swamp	object	10.0	mangal
+manhole	object	1.0	sewer cover
+manor	object	10.0	manor house
+mansion	object	12.0	estate, hall
+map	object	0.3	
+maple tree	object	12.0	
+maraca	object	0.25	
+marble (ball)	object	0.1	marble ball, glass marble
+marble (stone)	object	2.0	marble stone, marble slab
+marble cake	object	0.1	marble loaf
+marker (writing)	object	0.15	felt tip marker, magic marker
+market	object	3.0	marketplace, bazaar
+marmalade	object	0.1	orange marmalade
+marshmallow	object	0.1	
+mascara	object	0.1	
+mascot outfit	object	1.8	mascot costume
+mashed potato	object	0.1	mashed potatoes
+mask (party)	object	0.25	party mask
+mason jar	object	0.15	canning jar
+massage parlor	object	3.0	
+mast	object	0.3	flagpole
+matchbook	object	0.1	
+matchbox	object	0.1	match box
+mattress	object	0.25	
+mayan pyramid	object	7.0	maya pyramid
+mayonnaise	object	0.2	mayo
+maze	object	2.0	labyrinth
+measuring cup	object	0.15	measuring jug, measuring beaker
+meat grinder	object	0.4	meat mincer
+meat locker	object	2.0	freezer, cold storage
+meat thermometer	object	0.15	food thermometer
+meatball	object	0.1	
+mechanical bull	object	1.5	rodeo bull
+medal	object	0.1	medallion
+medicine	object	0.1	medication, drug
+medicine ball	object	0.3	fitness ball, slam ball
+megaphone	object	0.4	bullhorn
+melon	object	0.25	watermelon, cantaloupe
+menorah	object	0.3	hanukkiah
+menu	object	0.3	
+mercury (material)	object	0.1	quicksilver
+merry go round	object	5.0	carousel, roundabout
+mesa	object	3.0	butte
+messenger bag	object	0.3	
+metal detector	object	1.0	
+microphone	object	0.2	mic
+microphone stand	object	1.2	mic stand
+microscope	object	0.4	
+microwave	object	0.3	microwave oven
+milk	object	0.1	
+milk bottle	object	0.2	milk jug
+milk crate	object	0.3	
+milk jug	object	0.25	milk bottle
+milkshake	object	0.15	milk shake, frappe
+mine (explosive)	object	0.15	landmine
+mine (place)	object	3.0	coal mine, gold mine
+mini fridge	object	0.85	compact fridge, small refrigerator
+mini skirt	object	0.4	miniskirt
+minivan	object	1.75	van
+mint	object	0.5	peppermint plant
+minus sign	object	0.1	
+mirror	object	1.5	looking glass
+missile	object	6.0	rocket
+mistletoe	object	0.5	
+mitten	object	0.25	glove
+moat	object	4.0	
+mobile (baby)	object	0.6	crib mobile
+mobile home	object	4.0	trailer home, manufactured home
+modem	object	0.2	
+molasses	object	0.3	treacle
+molding	object	0.1	moulding
+monument	object	10.0	memorial
+moon	object	12.0	
+mop	object	1.5	floor mop
+morgue	object	3.0	mortuary
+mortar (material)	object	0.5	cement mortar, masonry mortar
+mortar (weapon)	object	1.4	mortar launcher, mortar tube
+mosaic	object	0.5	tesserae
+mosque	object	12.0	masjid
+mosquito net	object	2.0	bed net, mosquito netting
+mosquito repellent	object	0.2	bug spray, insect repellent
+moss	object	0.1	
+mothball	object	0.1	
+motherboard	object	0.25	mainboard
+motion detector	object	0.1	pir sensor, motion sensor
+motor	object	0.15	engine
+motor home	object	3.0	rv, camper
+motorcycle	object	1.1	bike, motorbike
+mountain	object	12.0	
+mouse pad	object	0.1	mouse mat
+mouse trap	object	0.1	rat trap
+moustache	object	0.1	mustache
+mouth guard	object	0.1	mouthguard, night guard
+mouth wash	object	0.2	mouthwash
+movie theatre	object	10.0	cinema, movie theater
+moving truck	object	4.0	moving van
+mozzarella	object	0.2	mozzarella cheese
+mud	object	0.1	
+muffin	object	0.1	
+muffin tin	object	0.1	muffin pan
+muffler	object	0.5	silencer, exhaust muffler
+mug	object	0.1	coffee mug
+mug shot	object	0.15	
+mulberry tree	object	10.0	mulberry
+munitions	object	0.3	ammo, ammunition
+muscle	object	0.3	bicep
+museum	object	12.0	
+mushroom (fungi)	object	0.15	toadstool
+music stand	object	1.2	sheet music stand
+musket	object	1.2	flintlock
+mustard	object	0.2	mustard sauce
+muzzle	object	0.15	gun barrel
+nail	object	0.1	
+nail clipper	object	0.1	clippers
+nail file	object	0.15	emery board
+nail gun	object	0.3	nailgun
+nail polish	object	0.1	nail varnish
+name badge	object	0.1	name tag
+napkin	object	0.3	serviette
+neck	object	0.12	
+necklace	object	0.45	neck chain
+needle	object	0.1	sewing needle
+neon sign	object	1.0	neon light
+neptune (planet)	object	12.0	
+nest	object	0.3	bird nest
+net (fish)	object	2.0	fishing net
+news stand	object	2.0	newsstand, newspaper kiosk
+newspaper	object	0.6	paper, daily paper
+nickel	object	0.1	5 cent coin
+night light	object	0.2	nightlight
+night vision goggles	object	0.2	nvg
+nightcap	object	0.25	sleeping cap
+nightclub	object	4.0	club, night club
+nightgown	object	1.3	nightie
+nightstand	object	0.6	bedside table
+no eating sign	object	0.75	no food sign
+no parking sign	object	0.75	no park sign
+noodles	object	0.2	pasta
+noose	object	0.3	hangmans knot
+nose	object	0.1	schnoz
+nose ring	object	0.1	septum ring, bull ring
+note	object	0.1	memo, message
+notebook	object	0.25	notepad, spiral notebook
+nougat	object	0.1	
+nozzle	object	0.1	spray nozzle, hose nozzle
+nuclear reactor	object	12.0	atomic reactor
+nugget	object	0.1	gold nugget, chicken nugget
+nuke	object	0.5	atomic bomb, nuclear bomb
+nursing home	object	10.0	retirement home, care home
+nut (hardware)	object	0.1	hex nut
+nutcracker (kitchen)	object	0.2	nut breaker
+nutcracker (toy)	object	0.3	ballet nutcracker
+nutshell	object	0.1	
+oar	object	1.8	paddle
+oasis	object	0.1	
+oatmeal	object	0.1	porridge
+obelisk	object	12.0	cleopatra's needle
+oboe	object	0.65	
+observatory	object	12.0	
+obsidian	object	0.1	
+ocean	object	12.0	
+octagon	object	0.1	
+odometer	object	0.1	mileage counter

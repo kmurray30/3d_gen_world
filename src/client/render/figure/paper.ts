@@ -10,6 +10,7 @@ import type { FigPart, Figure, Vec3 } from '../../../shared/figure/types';
 import { apply, hull, mul, shapePoints, solve, viewMatrix, type M3 } from '../../../shared/figure/math';
 import { drawCrayonGrain } from '../crayon';
 import { drawFace } from './face';
+import { inkFor, printText } from './label';
 import { tinted } from '../tint';
 
 const PLANE = new THREE.PlaneGeometry(1, 1);
@@ -158,6 +159,7 @@ function pieceTexture(fig: Figure, d: Drawn, p: FigPart, expr: Expr): THREE.Text
       }
     }
     ctx.restore();
+    if (p.role === 'label' && p.text) printText(ctx, p.text, 0, 0, cw, ch, inkFor(p.color));
     if (!p.noInk) {
       path();
       ctx.lineJoin = 'round';

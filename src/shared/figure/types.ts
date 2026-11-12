@@ -45,8 +45,11 @@ export interface FigPart {
   layer?: number;
   /** Paper: only on the front (faces) or back of the cutout. */
   side?: 'front' | 'back';
-  /** head: the face is painted on it in 3D. face: drawn face features (paper only). eye: blinks. glow: unlit. */
-  role?: 'head' | 'face' | 'eye' | 'glow';
+  /** head: the face is painted on it in 3D. face: drawn face features (paper only). eye: blinks. glow: unlit.
+   *  label: a card with `text` printed on its front (letters, numbers, signs, book covers). */
+  role?: 'head' | 'face' | 'eye' | 'glow' | 'label';
+  /** label: the text printed on the card. */
+  text?: string;
   /** Rest size of the solid (not its children); 0 hides it until a clip grows it (a dragon's flame). */
   scale?: number;
   /** Paper: rest rotation used instead of `rot` when flattened (a dragon's wings lie in the paper's plane). */
@@ -60,7 +63,7 @@ export interface FigPart {
   noInk?: boolean;
 }
 
-export type Rig = 'biped' | 'quad' | 'bird' | 'dragon' | 'prop';
+export type Rig = 'biped' | 'quad' | 'bird' | 'dragon' | 'fish' | 'bug' | 'snake' | 'prop';
 
 export interface FaceSpec {
   skin: string;

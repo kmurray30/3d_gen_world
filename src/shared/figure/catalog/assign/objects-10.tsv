@@ -1,0 +1,263 @@
+word	type	height_m	tags
+toadstool	object	0.15	toadstool, mushroom
+toast	object	0.1	toast
+toaster	object	0.2	toaster
+toaster pastry	object	0.15	toaster pastry, pop-tart
+toe	object	0.1	toe
+toenail	object	0.1	toenail
+toffee	object	0.1	toffee
+tofu	object	0.1	tofu
+toga	object	1.5	roman toga
+toilet	object	0.9	lavatory, john, loo
+toilet paper	object	0.1	tp, bathroom tissue
+toilet roll tube	object	0.12	toilet paper tube, tp core
+toilet seat	object	0.1	potty seat
+toilet seat cover	object	0.1	toilet paper cover
+toiletbrush	object	0.35	toilet brush, lavatory brush
+toll booth	object	4.0	tollbooth, toll plaza
+tomahawk	object	0.6	battle axe
+tomato	object	0.1	
+tomato juice	object	0.2	
+tomato plant	object	1.5	
+tomb	object	2.5	grave, crypt
+tommy gun	object	0.85	thompson submachine gun
+tongs	object	0.25	pincers
+tongue	object	0.1	
+tonic	object	0.25	tonic water
+toolbox	object	0.3	tool chest
+tooth	object	0.1	
+toothbrush	object	0.2	tooth brush
+toothpaste	object	0.15	tooth paste
+toothpick	object	0.1	
+top hat	object	0.25	tophat
+torch	object	0.4	flashlight
+torpedo	object	5.0	
+tortilla	object	0.1	
+tote bag	object	0.4	totebag, shopping bag
+toupee	object	0.1	wig, hairpiece
+tow truck	object	3.5	wrecker
+towel	object	1.5	
+towel rack	object	1.0	towel bar, towel rail
+tower	object	10.0	turret
+town hall	object	12.0	city hall
+townhouse	object	9.0	row house, town home
+toy chest	object	0.8	toy box
+toy store	object	4.0	toy shop
+tracksuit	object	1.7	sweatsuit, jogging suit
+tractor	object	3.0	farm tractor
+trading card	object	0.1	collectible card
+traffic barrel	object	1.0	traffic drum, road barrel
+traffic lights	object	4.0	stop light, traffic signal
+trail mix	object	0.2	gorp
+trailer	object	4.0	camper, mobile home
+trailer park	object	3.0	mobile home park, trailer community
+train	object	4.0	locomotive, railway train
+train car	object	4.0	railroad car, rail car, boxcar
+train station	object	10.0	railway station, railroad station, depot
+train whistle	object	0.2	locomotive whistle, railroad whistle
+trampoline	object	1.0	rebounder
+tranquilizer	object	0.1	sedative, tranquiliser
+transcript	object	0.1	record, minutes
+transmission	object	0.3	
+transmission tower	object	1.0	radio tower, tv tower
+transmitter	object	0.2	radio transmitter
+trapdoor	object	2.0	
+trapeze	object	2.5	
+trapezoid	object	0.1	trapezium
+tray	object	0.1	serving tray
+treadmill	object	1.5	
+treasure	object	0.6	
+tree house	object	3.0	treehouse
+tree stump	object	1.0	treestump
+tree topper	object	0.3	
+tree trunk	object	5.0	treetrunk
+triangle (music)	object	0.2	musical triangle
+triangle (shape)	object	0.1	
+tricycle	object	1.0	trike
+trident	object	1.8	three-pronged spear
+tripod	object	1.5	three-legged stand
+trojan horse	object	3.0	trojan horse
+trombone	object	1.0	
+trophy	object	0.5	
+trough	object	0.6	feed trough
+truck	object	4.0	lorry
+truffle	object	0.1	chocolate truffle
+trumpet	object	0.6	
+tuba	object	1.0	bass tuba
+tube	object	0.15	test tube
+tumbleweed	object	1.0	
+tumour	object	0.1	tumor
+tuna salad	object	0.1	
+tuna sandwich	object	0.1	
+tunic	object	0.7	tunica
+tuning fork	object	0.2	
+tunnel	object	5.0	
+turban	object	0.25	
+turbine	object	3.0	
+turnip	object	0.1	
+turnstile	object	2.0	turnstile gate
+turntable	object	0.15	record player
+turret	object	3.0	tower
+turtle neck	object	0.7	turtleneck, polo neck
+turtle shell	object	0.4	
+tusk (bone)	object	1.5	ivory tusk
+tusks	object	1.5	ivory tusks
+tutu	object	0.6	ballet skirt
+tuxedo	object	1.7	tux, dinner jacket
+tv	object	1.0	television, tv set
+tv stand	object	1.5	
+tweezers	object	0.15	forceps
+typewriter	object	0.2	
+ufo	object	3.0	
+ukelele	object	0.7	ukulele
+ultrasound machine	object	1.4	
+umbrella	object	0.9	brolly
+unicycle	object	1.0	one wheel bike
+uranium	object	0.1	
+urinal	object	0.6	men's room fixture
+urn	object	0.3	vase, cremation container
+utility belt	object	0.1	tool belt, batman belt
+valley	object	10.0	
+valve	object	0.1	tap
+van	object	2.5	minivan
+vanilla	object	0.2	vanilla bean
+vanilla wafer	object	0.1	nilla wafer
+vanity	object	0.8	dressing table
+vase	object	0.25	flower vase
+vegetable stand	object	1.5	produce stand, market stall
+veil	object	1.0	bridal veil
+velvet	object	0.1	
+velvet rope	object	1.5	vip rope
+vending machine	object	1.8	vender, snack machine
+venison	object	0.3	deer meat
+vent	object	0.2	air vent
+ventilator	object	1.5	breathing machine
+venus flytrap	object	0.15	venus' flytrap, flytrap
+vertical blinds	object	2.0	vertical window blinds
+vest	object	0.7	waistcoat
+vhs	object	0.25	vhs tape
+video game	object	0.1	videogame, video-game
+video game store	object	3.0	
+video store	object	3.0	video rental store
+viking helmet	object	0.3	norse helmet, horned helmet
+vine	object	5.0	creeper
+vinegar	object	0.2	
+vineyard	object	12.0	grape field
+vintage car	object	1.5	classic car, old car
+vintage radio	object	0.4	retro radio, old radio
+violin	object	0.6	fiddle
+vise	object	0.2	vice
+volcano	object	12.0	
+volleyball	object	0.66	
+volleyball court	object	10.0	
+voodoo doll	object	0.3	
+voucher	object	0.1	coupon
+vr headset	object	0.2	virtual reality headset, vr goggles
+waffle	object	0.1	
+waffle iron	object	0.1	wafflemaker
+wagon (traditional)	object	1.0	horse-drawn wagon, covered wagon
+walk sign	object	0.3	pedestrian signal, walk light
+walk signal	object	0.3	walk sign, pedestrian crossing signal
+walker	object	1.0	walking frame, rollator
+walkie talkie	object	0.2	two-way radio, handie-talkie
+wall	object	3.0	partition, barrier
+wallet	object	0.1	billfold, pocketbook
+wallpaper	object	0.5	
+walnut	object	0.1	
+walnut tree	object	12.0	
+wand	object	0.35	magic stick, baton
+wanted poster	object	0.7	most wanted poster
+warehouse	object	12.0	godown, storage building
+wart	object	0.1	
+wasabi	object	0.1	
+washboard	object	0.3	corrugated iron
+washcloth	object	0.3	facecloth, flannel
+washer (appliance)	object	0.85	washing machine
+washer (hardware)	object	0.1	flat washer, spacer
+watch	object	0.1	
+water bomb	object	0.15	water balloon
+water bottle	object	0.25	
+water cooler	object	1.5	
+water fountain	object	2.0	drinking fountain
+water gun	object	0.6	water pistol, squirt gun
+water heater	object	1.5	
+water park	object	12.0	
+water pump	object	0.5	
+water ski	object	1.7	
+water spout	object	3.0	waterspout
+water tower	object	12.0	
+water treatment plant	object	12.0	
+water wheel	object	5.0	waterwheel
+waterbed	object	0.5	water bed
+waterfall	object	3.0	
+watering can	object	0.3	wateringcan, watering pot
+watermelon	object	0.5	
+wax	object	0.1	
+weather vane	object	1.0	weathercock, wind vane
+web cam	object	0.1	webcam
+wedding cake	object	0.5	
+wedding dress	object	1.5	bridal gown, wedding gown
+wedge (tool)	object	0.2	chock, doorstop
+weed	object	1.0	marijuana, cannabis, pot
+weed wacker	object	1.2	weed whacker, string trimmer, weed eater
+wetfloor sign	object	0.9	wet floor sign, caution wet floor
+wetsuit	object	1.7	dive suit, neoprene suit
+wheat	object	1.0	wheat stalk
+wheel	object	0.6	wheel rim
+wheelchair	object	0.9	wheel chair
+whip	object	0.6	lash, riding crop
+whipped cream	object	0.2	whipping cream, chantilly
+whirlpool	object	0.6	jacuzzi, hot tub
+whisk	object	0.3	whisk broom, egg beater
+whisker	object	0.1	vibrissa
+whistle	object	0.1	penny whistle, flageolet
+white board	object	1.2	whiteboard, dry erase board
+white sauce	object	0.1	bechamel, mother sauce
+whoopee cushion	object	0.1	
+wick	object	0.2	candle wick
+wig	object	0.2	hairpiece
+willow tree	object	12.0	weeping willow
+winch	object	0.5	
+wind chime	object	0.6	wind bell
+wind farm	object	1.0	
+wind turbine	object	1.0	
+windmill	object	12.0	
+window	object	1.2	pane, casement
+window blinds	object	1.2	venetian blinds, window shades
+window cleaner	object	1.7	
+window fan	object	0.4	
+window sill	object	0.1	window ledge
+windscreens	object	1.2	windshields
+wing	object	12.0	
+wings	object	12.0	
+wire (string)	object	0.1	
+wire cutter	object	0.2	wire snips, diagonal cutter
+wishbone	object	0.1	furcula
+witch hat	object	0.4	pointy hat, sorceress hat
+witch's wand	object	0.35	magic wand
+wizard hat	object	0.45	pointy hat, sorcerer hat
+wizard staff	object	1.6	magic staff, mage staff
+wood	object	2.0	timber, log
+wood chip	object	0.1	
+wood chipper	object	2.5	woodchipper
+wooden cage	object	1.5	
+wooden gate	object	2.0	wood gate
+wooden spoon	object	0.3	wood spoon
+wool	object	0.2	wool yarn
+workbench	object	0.9	work bench
+wrapper	object	0.2	candy wrapper
+wrapping paper	object	0.5	gift wrap
+wreath	object	0.6	christmas wreath
+wrecking ball	object	1.5	
+wrench	object	0.25	spanner
+wristband	object	0.1	wristlet
+x-ray (machine)	object	1.8	xray machine
+xylophone	object	0.8	
+yacht	object	12.0	
+yam	object	0.15	
+yoke	object	0.3	ox yoke
+yolk	object	0.1	
+zipper	object	0.15	zip, zipper fastener
+zoo	object	10.0	animal park, menagerie
+zucchini	object	0.2	courgette
+éclair	object	0.1	

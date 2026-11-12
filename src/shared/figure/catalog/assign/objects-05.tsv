@@ -1,0 +1,263 @@
+word	type	height_m	tags
+grindstone	object	0.5	whetstone
+ground beef	object	0.1	minced beef
+ground meat	object	0.1	minced meat
+guacamole	object	0.1	
+guillotine	object	4.0	
+guitar case	object	1.1	guitar gig bag
+guitar strap	object	1.2	guitar belt
+gum	object	0.1	chewing gum
+gumball	object	0.1	
+gumball machine	object	1.7	gum dispenser
+gumdrop	object	0.1	
+gummi bear	object	0.1	gummy bear
+gun	object	0.25	firearm, pistol
+gun range	object	3.0	shooting range
+gunpowder	object	0.5	
+gutters	object	0.15	rain gutters, eaves gutters
+guy fawkes mask	object	0.3	v for vendetta mask
+gym	object	4.0	gymnasium
+gyro	object	0.15	gyros
+gyroscope	object	0.1	
+hacksaw	object	0.5	
+hail	object	0.1	hailstone
+hair	object	0.5	
+hair brush	object	0.25	hairbrush
+hair clip	object	0.1	hairclip, bobby pin
+hair curlers	object	0.1	curlers
+hair spray	object	0.2	hairspray
+hairball	object	0.1	
+hairdye	object	0.15	hair dye, haircolor
+hairnet	object	0.1	hair net, snood
+hairpin	object	0.1	bobby pin, hair clip
+halloween costume	object	1.7	halloween outfit, costume
+hallpass	object	0.2	hall pass, bathroom pass
+hallway	object	2.5	corridor, passageway
+halo	object	0.3	angel ring, nimbus
+ham	object	0.25	ham hock
+hamburger	object	0.1	burger, cheeseburger
+hammer	object	0.35	sledgehammer, claw hammer
+hammock	object	1.5	hanging bed
+hamper	object	0.8	laundry basket, clothes hamper
+hand	object	0.2	
+hand crank	object	0.25	crank handle
+hand mirror	object	0.25	pocket mirror
+handcuffs	object	0.15	cuffs, handcuff
+handheld	object	0.15	hand-held
+handicapped sign	object	0.3	disability symbol, wheelchair sign
+handkerchief	object	0.5	hankie, pocket square
+handle	object	0.15	door handle, knob
+hands	object	0.2	palms
+hang glider	object	3.0	hangglider
+hard drive	object	0.1	hdd
+hard hat	object	0.2	safety helmet, construction helmet
+hardware store	object	5.0	home depot, home improvement store
+harmonica	object	0.15	mouth organ
+harness	object	0.5	
+harp	object	1.5	
+harpoon	object	2.0	
+hash brown	object	0.1	hashbrown
+hat	object	0.2	cap
+hat stand	object	1.8	hat rack, coat rack
+hawaiian shirt	object	0.75	aloha shirt
+hay	object	0.5	
+hay bale	object	1.2	haystack
+haystack	object	3.0	hay pile
+hazel tree	object	5.0	hazel bush
+hazmat suit	object	1.7	hazardous material suit, chemical suit
+head	object	0.25	
+head scarf	object	0.5	headscarf, head wrap
+headband	object	0.2	sweatband, hairband
+headboard	object	1.2	bed headboard, bedroom headboard
+headlight	object	0.2	headlamp
+headphones	object	0.2	earphones, headset
+hearing aid	object	0.1	hearing device
+hearse	object	1.7	funeral car
+heart (organ)	object	0.12	
+heart (shape)	object	0.1	heart symbol
+heat detector	object	0.1	heat sensor, fire detector
+heater	object	0.6	space heater, radiator
+hedge	object	1.5	bush
+hedge trimmer	object	1.0	hedge clippers, bush trimmer
+heels	object	0.1	high heels
+heirloom	object	0.2	
+helicopter	object	4.0	chopper
+helmet	object	0.3	hard hat
+hemisphere	object	12.0	
+herbs	object	0.3	herb
+hexagon	object	0.1	
+high chair	object	0.9	highchair
+highlighter	object	0.13	
+highway	object	12.0	freeway, motorway
+hill	object	12.0	
+hinge	object	0.1	door hinge
+history museum	object	12.0	
+hitch	object	0.15	trailer hitch
+hockey goal	object	1.2	hockey net
+hockey puck	object	0.1	puck
+hockey stick	object	1.5	hockey stick
+hoe (tool)	object	1.5	garden hoe, weeding hoe
+hole puncher	object	0.15	paper punch, hole punch
+holster	object	0.25	gun holster, pistol holster
+holy water	object	0.2	blessed water
+home gym	object	2.5	home workout gym
+homeless shelter	object	8.0	shelter for homeless
+homing missile	object	4.0	guided missile
+honey	object	0.5	
+honeycomb	object	0.1	
+hood (clothes)	object	0.3	cowl
+hook	object	0.15	
+horn (animal)	object	0.5	antler
+horns	object	0.25	antlers
+horror mask	object	0.3	scary mask
+horse carriage	object	2.5	buggy, stagecoach
+horse radish	object	0.2	horseradish
+horse tail	object	0.8	
+horseshoe	object	0.12	
+hose	object	1.8	garden hose
+hospital	object	12.0	medical center, clinic
+hospital bed	object	0.6	medical bed, patient bed
+hot air balloon	object	12.0	hot-air balloon
+hot chocolate	object	0.2	hot cocoa
+hot dog	object	0.15	frankfurter, wiener
+hot dog stand	object	2.0	sausage cart, frankfurter cart
+hot plate	object	0.1	electric hotplate
+hot sauce	object	0.2	chili sauce
+hot spring	object	0.1	thermal spring
+hot tub	object	0.9	jacuzzi, hot tub, spa tub
+hot water bottle	object	0.3	hot water bottle
+hotel	object	12.0	motel, inn, lodge
+hourglass	object	0.2	sand timer, egg timer
+houseboat	object	3.0	floating house
+hoverboard (real)	object	0.1	self-balancing scooter, balance board
+hoverboard (sci-fi)	object	0.1	flying skateboard
+hovercraft	object	4.0	air cushion vehicle
+hubcap	object	0.3	wheel cover, wheel rim cap
+huge boulder	object	3.0	large rock
+hula hoop	object	0.9	hoop
+hula skirt	object	0.8	grass skirt
+hull	object	12.0	ship hull, boat hull
+humidifier	object	0.4	
+hurdle	object	1.1	hurdling barrier
+hut	object	3.0	cabin, shack
+ice (frozen water)	object	0.1	frozen water
+ice block	object	0.1	block of ice
+ice cream	object	0.15	icecream
+ice cream scoop	object	0.1	icecream scoop
+ice cream store	object	3.0	ice cream shop, icecream parlor
+ice cream truck	object	3.5	icecream truck
+ice cube	object	0.1	icecube
+ice cube tray	object	0.1	ice tray
+ice machine	object	1.0	ice maker
+ice pop	object	0.1	popsicle, ice lolly
+ice rink	object	0.1	ice skating rink, skating rink
+ice sculpture	object	1.5	
+ice skates	object	0.3	skates
+iced tea	object	0.2	ice tea
+icing	object	0.1	frosting
+igloo	object	2.5	
+incense	object	0.25	incense stick
+indicator	object	0.1	turn signal
+ink	object	0.1	
+ink cartridge	object	0.1	printer ink
+inline skates	object	0.3	rollerblades
+insulation	object	0.2	thermal insulation
+intercom	object	0.3	interphone
+intestine	object	6.0	
+invisibility cloak	object	1.5	invis cloak
+iron (tool)	object	0.25	clothes iron, steam iron
+iron maiden	object	2.0	
+ironing board	object	1.0	ironing table
+island	object	1.0	
+itching powder	object	0.1	prank powder
+iv bag	object	0.2	iv bag, drip bag
+ivory	object	0.1	elephant tusk
+jack-in-the-box	object	0.3	pop-up toy
+jack-o-lantern	object	0.3	pumpkin lantern
+jackhammer	object	1.5	pneumatic drill, jackhammer drill
+jacks	object	0.1	jackstones
+javelin	object	2.5	spear
+jaw	object	0.15	mandible, jawbone
+jawbreaker	object	0.1	gobstopper
+jeans	object	1.0	denim pants, blue jeans
+jelly	object	0.1	jam, jello
+jelly bean	object	0.1	
+jerky	object	0.2	beef jerky
+jersey	object	0.7	shirt, t-shirt
+jet boat	object	1.0	jetboat
+jet pack	object	0.6	jetpack
+jewelry box	object	0.1	jewellery box
+jewelry store	object	4.0	jewellery store
+jigsaw	object	0.3	jigsaw saw
+jigsaw puzzle	object	0.3	puzzle
+jingle bell	object	0.1	jinglebell
+jolly roger	object	1.0	pirate flag, skull and crossbones
+joystick	object	0.15	game controller, flight stick
+jug (container)	object	0.25	pitcher, ewer
+juice	object	0.2	fruit juice
+juicer	object	0.4	juice extractor
+jukebox	object	1.5	juke box
+jumper cable	object	4.0	jump start cable, booster cable
+jumprope	object	2.5	jump rope, skipping rope
+jungle gym	object	3.0	monkey bars, climbing frame
+junkyard	object	4.0	scrapyard, wrecking yard
+kaleidoscope	object	0.2	
+katana	object	1.0	samurai sword
+kayak	object	4.0	canoe
+kazoo	object	0.2	
+kebab	object	0.25	kabob, skewered meat
+ketchup	object	0.2	catsup, tomato sauce
+kettle	object	0.25	teapot, tea kettle
+key	object	0.1	door key
+key hole	object	0.1	keyhole, lock hole
+key lime pie	object	0.1	
+keyboard (computer)	object	0.1	computer keyboard
+keyboard (music)	object	0.1	piano keyboard
+keycard	object	0.1	key card, hotel key
+keychain	object	0.1	key ring
+keypad	object	0.1	number pad
+keys	object	0.1	door keys
+khakis	object	1.0	chinos
+kick scooter	object	1.0	scooter
+kickball	object	0.2	
+kidney	object	0.11	renal organ
+kidney bean	object	0.1	rajma
+kidney stone	object	0.1	renal calculus
+kilt	object	0.5	scottish skirt
+kimono	object	1.4	japanese robe
+kindling	object	0.3	tinder, fire starter
+kiosk	object	2.5	booth
+kitchen	object	2.5	
+kite (toy)	object	1.0	
+kitty litter	object	0.1	cat litter
+kiwi (fruit)	object	0.1	kiwifruit
+kneecap	object	0.1	patella
+kneepads	object	0.3	knee pads
+knife	object	0.25	
+knife sharpener	object	0.2	sharpening stone
+knight helmet	object	0.35	great helm
+knitting needle	object	0.3	
+knocker	object	0.15	door knocker
+knuckle	object	0.1	
+lab coat	object	1.1	white coat
+label maker	object	0.2	
+laboratory	object	3.0	lab, science lab
+labyrinth	object	0.1	maze
+lace	object	0.1	
+ladder	object	3.0	step ladder
+ladle	object	0.3	dipper
+lair	object	3.0	den
+lamp	object	0.5	light
+lamp shade	object	0.25	lampshade
+lance	object	2.5	spear
+lantern	object	0.3	lamp
+laptop	object	0.2	notebook
+lard	object	0.1	
+large intestine	object	5.0	colon
+large steel door	object	2.5	
+large steel gate	object	4.0	
+lasagna	object	0.1	lasagne
+laser pointer	object	0.15	
+lasso	object	2.0	rope, lariat
+lattice	object	1.0	trellis, grid
+laundromat	object	3.0	coin laundry

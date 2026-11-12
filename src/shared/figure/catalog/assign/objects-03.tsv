@@ -1,0 +1,263 @@
+word	type	height_m	tags
+coat hanger	object	0.45	clothes hanger, wire hanger
+cobblestone	object	0.15	cobble
+cobweb	object	0.2	spider web
+cocktail dress	object	1.0	little black dress
+cocoa	object	0.2	hot chocolate, cacao
+coconut	object	0.2	
+coconut milk	object	0.25	
+coconut tree	object	12.0	coconut palm
+cocoon	object	0.1	
+coffee	object	0.2	java, joe
+coffee bean	object	0.1	coffee seed
+coffee filter	object	0.1	coffee paper
+coffee grinder	object	0.2	coffee mill
+coffee pot	object	0.2	coffee carafe, coffee percolator
+coffee shop	object	4.0	cafe, coffeehouse
+coffee table	object	0.45	cocktail table
+coffeemaker	object	0.35	coffee machine, coffee brewer
+coffin	object	2.0	casket
+coin (money)	object	0.1	coinage
+coin machine	object	1.7	vending machine, coin-operated machine
+coin purse	object	0.1	money purse, change purse
+cold cuts	object	0.1	deli meat, lunch meat
+cold pack	object	0.2	ice pack, gel pack
+coleslaw	object	0.1	slaw
+collard greens	object	0.3	collards
+college	object	12.0	university, campus
+colored pencil	object	0.18	pencil crayon
+coloring book	object	0.28	colouring book
+colosseum	object	0.48	coliseum
+comb	object	0.15	hair comb
+combat boots	object	0.25	army boots
+comedy club	object	4.0	
+comedy mask	object	0.3	laugh mask
+comic book	object	0.27	comicbook
+comic book store	object	5.0	comic shop
+compass	object	0.1	magnetic compass
+compost	object	0.6	compost pile, compost heap
+computer	object	0.4	pc, laptop, desktop
+computer mouse	object	0.1	mouse, optical mouse
+concession stand	object	2.5	snack bar, refreshment stand
+concrete	object	10.0	
+concrete mixer	object	4.0	cement mixer
+conditioner	object	0.2	hair conditioner, fabric softener
+condominium	object	12.0	condo
+cone	object	0.3	traffic cone, pine cone
+confetti	object	0.1	
+conga	object	1.2	conga drum, conga line
+console	object	0.15	game console, video game console
+construction barrel	object	1.0	traffic barrel, construction cone
+construction site	object	10.0	building site
+contact lens	object	0.1	
+contract	object	0.3	agreement
+convention center	object	12.0	conference center
+conveyor belt	object	2.0	
+cookbook	object	0.25	recipe book
+cookie	object	0.1	biscuit
+cookie cutter	object	0.1	
+cookie dough	object	0.1	
+cookie jar	object	0.25	cookie jar
+cooler	object	0.5	ice chest, cool box
+copper	object	0.5	
+copy machine	object	1.0	photocopier, xerox machine
+coral	object	0.5	
+cordless phone	object	0.2	wireless phone
+cork (material)	object	0.5	
+cork (stopper)	object	0.1	bottle stopper, wine cork
+corkboard	object	1.0	bulletin board, pin board
+corkscrew	object	0.2	wine opener, bottle screw
+corn	object	2.5	maize, sweetcorn
+corn dog	object	0.15	batter dog
+corn stalk	object	2.5	maize stalk
+corn syrup	object	0.5	
+corned beef	object	0.1	brined beef
+cornmeal	object	0.5	polenta, corn flour
+cornucopia	object	0.3	horn of plenty
+corpse	object	1.7	dead body, cadaver
+corral	object	1.5	pen, enclosure
+corset	object	0.5	
+cot	object	0.6	camp bed, foldable bed
+cottage cheese	object	0.1	farmer's cheese
+cotton	object	0.1	
+cotton ball	object	0.1	cotton puff
+cotton candy	object	0.2	candy floss
+cotton swab	object	0.15	q-tip
+cough drop	object	0.1	lozenge
+coupon	object	0.1	voucher
+courthouse	object	12.0	court house
+couscous	object	0.1	
+cowbell	object	0.2	
+cowboy boot	object	0.3	
+cowboy hat	object	0.2	stetson
+crab cake	object	0.1	
+cracker	object	0.1	biscuit
+cradle	object	0.8	bassinet
+cranberry	object	0.1	
+cranberry sauce	object	0.1	
+crane (vehicle)	object	12.0	tower crane
+crate	object	1.0	wooden box
+crater	object	10.0	
+crawlspace	object	0.6	crawl space
+crayon	object	0.1	
+cream	object	0.2	creme
+cream cheese	object	0.1	
+cream puff	object	0.1	
+credit card	object	0.1	
+creek	object	1.0	stream, brook
+cricket bat	object	0.85	
+crock pot	object	0.25	slow cooker
+croissant	object	0.15	crescent roll
+cross	object	2.0	crucifix
+cross road sign	object	0.75	
+crossbow	object	0.8	
+crossword puzzle	object	0.25	
+croutons	object	0.1	
+crowbar	object	0.5	pry bar, wrecking bar
+crown	object	0.2	tiara
+cruise ship	object	12.0	liner
+crutch	object	1.4	
+crystal	object	0.15	quartz
+crystal ball	object	0.2	
+cube	object	0.1	die, block
+cuckoo clock	object	0.6	
+cucumber	object	0.2	cucumis sativus
+cup	object	0.1	mug
+cup holder	object	0.1	
+cupcake	object	0.1	
+cyanide	object	0.1	
+cylinder	object	0.15	
+cymbals	object	0.4	hi-hat, crash cymbals
+cypress tree	object	12.0	cypress
+dagger	object	0.3	dirk, stiletto
+dam	object	1.0	levee
+dance floor	object	0.1	dancefloor
+dandelion	object	0.3	
+dandruff	object	0.1	
+danger sign	object	0.9	warning sign, hazard sign
+dart	object	0.15	
+dartboard	object	0.45	
+date palm	object	12.0	
+daycare	object	3.0	nursery, day nursery
+deadbolt	object	0.15	
+debris	object	0.5	rubble, wreckage
+decanter	object	0.25	carafe
+declaration of independence	object	0.65	
+deep fryer	object	0.4	deep fat fryer
+deer caution sign	object	0.9	deer crossing sign
+defibrillator	object	0.3	aed, defib
+deli	object	3.0	delicatessen
+denim	object	0.5	
+denim jacket	object	0.7	jean jacket
+denim skirt	object	0.6	jean skirt
+dental chair	object	1.5	dentist's chair
+dental drill	object	0.2	
+dentist office	object	3.0	dental office, dentist's office
+dentures	object	0.1	false teeth
+deodorant	object	0.15	antiperspirant
+department store	object	12.0	departmentstore
+desk	object	0.75	writing desk, bureau
+dial	object	0.1	knob, rotary dial
+diamond	object	0.1	
+diamond mine	object	3.0	
+diamond ring	object	0.1	engagement ring
+diaper	object	0.3	nappy
+dice	object	0.1	die
+digital clock	object	0.2	led clock, electronic clock
+dining room	object	2.5	
+dinner booth	object	1.2	restaurant booth
+dinosaur bones	object	3.0	fossil
+dinosaur costume	object	1.7	t-rex costume
+dinosaur egg	object	0.3	
+dip	object	0.1	salsa, guacamole
+diploma	object	0.3	degree, certificate
+dipstick	object	0.5	oil gauge
+dirt	object	0.1	soil, earth, mud
+dirt bike	object	1.2	motocross bike, trail bike
+disco ball	object	0.3	mirror ball
+discus	object	0.1	
+disguise	object	0.2	costume, mask
+dishwasher	object	0.85	dish washer
+disinfectant	object	0.25	
+display case	object	1.8	showcase, glass case
+dividers	object	0.3	room dividers, partition
+diving board	object	4.5	springboard
+do not enter sign	object	0.75	no entry sign
+dock	object	2.0	pier, wharf
+dog bowl	object	0.15	dog dish, pet bowl
+dog collar	object	0.1	pet collar, dog leash
+dog ears	object	0.2	dog ears headband
+dog food	object	0.25	kibble, pet food, dog chow
+dog run	object	1.8	dog park, kennel run
+dog tag	object	0.1	dogtag, pet tag
+dog tail	object	0.25	dogtail
+dog whistle	object	0.1	dogwhistle
+doggie door	object	0.4	doggy door, pet door
+doggy bag	object	0.2	doggie bag
+doll	object	0.3	dolly
+dollar sign	object	0.1	$
+dollhouse	object	0.6	doll house
+dome	object	0.5	dome shape
+domino	object	0.1	domino tile
+door	object	2.0	
+door jam	object	2.0	doorjamb, door frame
+door knob	object	0.1	doorknob, door handle
+doorbell	object	0.15	door bell
+doormat	object	0.1	
+doorstep	object	0.2	
+doorstop	object	0.1	door stop, door wedge
+doorway	object	2.1	door frame
+dormitory	object	10.0	dorm, dorms
+doubledecker bus	object	4.2	double decker bus, double-decker bus
+dough	object	0.1	
+doughnut	object	0.1	donut
+dragon kite	object	2.0	dragonfly kite
+dragonfruit	object	0.1	pitaya
+drain	object	0.15	sink drain
+drawbridge	object	12.0	
+dreamcatcher	object	0.5	
+dress	object	1.1	gown
+dress pants	object	1.0	suit pants, trousers
+dresser	object	1.8	bureau, chest of drawers
+drill	object	0.3	power drill, drill press
+drill bit	object	0.1	drillbit
+drone	object	0.5	uav
+drum	object	0.6	
+drum kit	object	1.2	drum set, drums
+drumstick (music)	object	0.4	drum stick
+dry erase marker	object	0.15	dry erase marker, whiteboard marker
+dry ice	object	0.1	solid co2
+dryer	object	0.85	clothes dryer, tumble dryer
+dryer sheet	object	0.25	dryer fabric sheet
+drywall	object	1.2	sheetrock, plasterboard
+duck bill (part)	object	0.1	duck beak
+duffel bag	object	0.7	duffel, gym bag
+dumbbell	object	0.3	
+dump truck	object	4.0	dumptruck
+dumpling	object	0.1	
+dumpster	object	2.5	bin, skip
+dune buggy	object	1.7	beach buggy
+dungeon	object	3.0	
+duplex	object	8.0	two-family house
+dust	object	0.1	
+dust collector	object	1.5	shop vac, dust extractor
+dustpan	object	0.25	dust pan
+dvd	object	0.1	
+dvd player	object	0.1	
+dvd rack	object	1.0	dvd shelf, dvd stand
+dye	object	0.1	colorant, pigment
+dynamitee-reader	object	0.2	kindle, nook
+ear	object	0.1	
+ear plugs	object	0.1	earplugs
+ear ring	object	0.1	earring
+earmuffs	object	0.2	
+earth (planet)	object	12.0	
+earwax	object	0.1	cerumen
+easter egg	object	0.1	
+ebook reader	object	0.2	e-reader, kindle
+egg	object	0.1	
+egg carton	object	0.15	egg box, egg tray
+eggnog	object	0.2	
+eighth note	object	0.1	quaver
+elbow	object	0.1	
+elbow pads	object	0.1	

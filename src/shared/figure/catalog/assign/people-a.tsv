@@ -1,0 +1,172 @@
+word	type	height_m	tags
+abraham lincoln	human	1.93	
+acrobat	human	1.7	gymnast, tumbler
+action figure	humanoid	0.15	gi joe
+actor	human	1.7	thespian, performer
+actress	human	1.65	thespian, performer
+admiral	human	1.7	
+agent diana prince	human	1.8	wonder woman
+alexander the great	human	1.7	
+alien	humanoid	1.7	extraterrestrial, et
+altar boy	human	1.4	
+amazon (person)	human	1.85	amazonian woman
+ambassador	human	1.7	
+anarchist	human	1.7	
+anchorman	human	1.7	news anchor, tv anchor
+android	humanoid	1.7	robot, cyborg
+anesthesiologist	human	1.7	
+angel	humanoid	1.7	cherub
+angler	human	1.7	fisherman, fisher
+ann	human	1.65	
+aquaman	human	1.85	
+archaeologist	human	1.7	archaeologer
+archer	human	1.7	bowman
+architect	human	1.7	
+arsonist	human	1.7	fire starter
+artist	human	1.7	painter, musician, sculptor
+assassin	human	1.7	hitman, killer
+astronaut	human	1.75	spaceman, spacewoman
+astronomer	human	1.7	stargazer
+atheist	human	1.7	nonbeliever
+athlete	human	1.8	sportsman, sportswoman
+baby	human	0.75	
+babysitter	human	1.65	nanny
+baker	human	1.7	
+banker	human	1.75	
+barbarian	human	1.9	berserker
+barber	human	1.7	
+barista	human	1.7	
+baseball player	human	1.8	ballplayer
+basketball player	human	1.98	basketballer
+batman	human	1.88	
+beautician	human	1.7	hairdresser, stylist, cosmetologist
+beethoven	human	1.7	ludwig van beethoven
+beggar	human	1.7	bum
+bellhop	human	1.7	bellboy, porter
+benjamin franklin	human	1.75	ben franklin
+bigfoot	humanoid	2.4	sasquatch
+biker	human	1.75	cyclist, motorcyclist
+biologist	human	1.7	
+birdwatcher	human	1.7	bird watcher, twitcher
+black knight	humanoid	1.8	
+blacksmith	human	1.7	
+bodybuilder	human	1.75	muscleman
+bogeyman	humanoid	1.8	boogeyman
+bomb disposal expert	human	1.7	eod technician
+bookie	human	1.7	bookmaker
+boss	human	1.7	manager, supervisor
+botanist	human	1.7	plant scientist
+bouncer	human	1.9	doorman, club bouncer
+bounty hunter	human	1.75	bountyhunter
+bowler (person)	human	1.75	bowls player
+bowser	humanoid	2.5	king koopa
+boxer (person)	human	1.8	pugilist
+boyfriend	human	1.75	bf, beau
+bride	human	1.65	
+bridesmaid	human	1.65	
+bruce wayne	human	1.88	batman
+bullfighter	human	1.75	matador, torero
+bully	human	1.7	
+bureaucrat	human	1.7	civil servant, official
+businessman	human	1.7	executive, business man
+businesswoman	human	1.65	executive, business woman
+butcher	human	1.7	meat cutter, slaughterer
+butler	human	1.7	valet, manservant
+cab driver	human	1.7	taxi driver
+cable guy	human	1.7	cable repairman
+cafeteria worker	human	1.7	
+camera man	human	1.7	cameraman, camera operator
+camp counselor	human	1.7	camp counsellor
+cannibal	human	1.7	
+captain	human	1.75	skipper, commander
+cardiologist	human	1.7	heart doctor
+carpenter	human	1.7	woodworker
+cat burglar	human	1.7	
+catwoman	human	1.7	
+cellist	human	1.7	
+centaur	humanoid	2.2	
+cerberus	humanoid	2.0	
+champion	human	1.7	winner, victor
+charles darwin	human	1.7	
+cheerleader	human	1.65	
+chef	human	1.7	cook
+chemist	human	1.7	pharmacist
+chief	human	1.7	boss, leader
+child	human	1.2	
+chimney sweeper	human	1.7	chimney sweep
+chinese dragon	humanoid	12.0	long dragon
+choir boy	human	1.4	altar boy
+clark	human	1.8	
+cleopatra	human	1.6	
+cleric	human	1.7	priest
+clerk	human	1.7	shop assistant, cashier
+clone	humanoid	1.7	
+clown	humanoid	1.75	
+colonel	human	1.7	kernel
+columbus	human	1.75	
+comedian	human	1.75	stand-up comedian
+communist (person)	human	1.7	red, bolshevik, commie
+con artist	human	1.7	scammer, swindler
+congressman	human	1.75	congresswoman, congressperson
+conjoined twins	human	1.6	siamese twins
+conservative	human	1.75	right-winger, tory
+construction worker	human	1.75	builder, construction laborer
+corporal	human	1.7	
+cowboy	human	1.75	cowhand, cowpoke
+cowgirl	human	1.7	
+crash test dummy	humanoid	1.75	
+crossing guard	human	1.7	lollipop man, school crossing guard
+crusader	human	1.7	knight
+cupid	human	1.5	eros
+cyclist	human	1.75	bicyclist, bike rider
+cyclops	humanoid	3.0	
+dale	human	1.7	chip
+dancer	human	1.7	ballerina
+daredevil	human	1.75	stuntman
+dark knight	human	1.85	batman
+deep sea diver	human	1.7	scuba diver
+defendant	human	1.7	
+delivery man	human	1.75	delivery guy, courier, delivery driver
+dentist	human	1.7	dental surgeon
+detective	human	1.7	sleuth, gumshoe
+dictator	human	1.7	tyrant
+director	human	1.7	film director, movie director
+dj	human	1.75	disc jockey, deejay
+doctor	human	1.7	physician, doc, md
+doctor jekyll	human	1.7	
+dog catcher	human	1.7	animal control, dog warden
+dog trainer	human	1.7	dogtrainer
+dolly	humanoid	0.3	doll
+don quixote	human	1.7	
+dressmaker	human	1.7	tailor, seamstress
+drill sergeant	human	1.75	di
+driving instructor	human	1.7	driving teacher
+drummer	human	1.7	
+dummy (doll)	humanoid	0.6	mannequin, doll
+dunce	human	1.7	fool
+dwarf	human	1.3	little person, midget
+easter bunny	humanoid	1.7	easter rabbit
+edgar	human	1.7	
+edwin	human	1.7	
+einstein	human	1.7	
+elf (holiday)	humanoid	1.2	santa's elf, christmas elf
+empress	human	1.7	queen, empress dowager
+engineer	human	1.7	
+exterminator	human	1.7	pest control
+fairy	humanoid	0.2	pixie
+fairy godmother	humanoid	1.7	
+farmer	human	1.7	
+father	human	1.75	dad, papa
+father time	humanoid	2.0	
+fencer	human	1.75	
+fighter pilot	human	1.75	jet pilot
+figure skater	human	1.7	
+fireman	human	1.75	firefighter
+first lady	human	1.65	
+fisherman	human	1.75	angler, fisher
+flamenco dancer	human	1.7	
+flash	human	1.7	superhero, the flash
+flight attendant	human	1.7	stewardess, cabin crew
+florist	human	1.7	flower shop
+flower girl	human	1.2	
+food service worker	human	1.7	waiter, server, waitstaff

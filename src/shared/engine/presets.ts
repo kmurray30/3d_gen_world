@@ -52,7 +52,7 @@ const GALLERY_ROWS: Array<{ group: Figure['group']; title: string; z: number; li
 /** Each figure stands as its old sprite, a paper cutout, folded origami and 3D. */
 export const GALLERY_LOOKS: Array<NonNullable<Entity['look']>> = ['sprite', 'paper', 'origami', 'toon', 'cel'];
 
-const KIND_OF_RIG: Record<Figure['rig'], Kind> = { biped: 'human', quad: 'animal', bird: 'animal', dragon: 'other', prop: 'object' };
+const KIND_OF_RIG: Record<Figure['rig'], Kind> = { biped: 'human', quad: 'animal', bird: 'animal', dragon: 'other', fish: 'animal', bug: 'animal', snake: 'animal', prop: 'object' };
 
 export function galleryWorld(slug: string, resolve: SpriteResolver, decals: DecalResolver, now = Date.now()): World {
   const entities: Entity[] = [];

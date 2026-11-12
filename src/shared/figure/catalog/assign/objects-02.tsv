@@ -1,0 +1,263 @@
+word	type	height_m	tags
+bottled water	object	0.25	
+boulder	object	2.0	large rock
+bouncy ball	object	0.1	rubber ball, super ball
+bouncy house	object	5.0	bounce house, inflatable castle
+bouquet	object	0.4	flower bouquet, floral arrangement
+bow (gift)	object	0.15	gift ribbon, present bow
+bow (music)	object	0.75	violin bow, fiddle stick
+bow (weapon)	object	1.7	archery bow
+bow tie	object	0.12	bowtie
+bowl	object	0.15	mixing bowl
+bowling alley	object	3.0	
+bowling ball	object	0.22	
+bowling lane	object	0.2	bowling alley
+bowling pin	object	0.38	tenpin
+box	object	0.5	
+box of chocolates	object	0.1	
+boxers	object	0.3	boxer shorts
+boxing glove	object	0.3	boxing gloves
+boxing ring	object	6.0	
+bra	object	0.2	brassiere
+bracelet	object	0.1	bangle
+braces	object	0.1	orthodontic braces
+brain	object	0.15	
+brass knuckles	object	0.1	knuckle duster
+bread	object	0.15	loaf
+bread knife	object	0.3	breadknife
+bread maker	object	0.4	breadmachine
+brick	object	0.1	
+bridge (structure)	object	1.0	bridge
+brie	object	0.1	
+briefs	object	0.25	underpants
+broccoli	object	0.25	
+brooch	object	0.1	broach, pin, fibula
+broom	object	1.4	broomstick, sweep
+brownie (food)	object	0.1	chocolate brownie
+brownie batter	object	0.1	
+brush (cleaning)	object	0.3	scrub brush
+brushes	object	0.3	brush
+brussels sprout	object	0.1	brussel sprout
+bubble	object	0.1	
+bubble tea	object	0.15	boba tea, tapioca tea
+bubble wand	object	0.25	soap wand, bubble stick
+bubbles	object	0.1	
+bucket	object	0.3	pail
+bucket hat	object	0.2	fisherman's hat
+buckle	object	0.1	
+bug (spy)	object	0.1	wiretap, listening device
+bug spray	object	0.25	insect repellent
+bug zapper	object	0.5	mosquito zapper, bug killer
+bulb	object	0.12	light bulb
+bulldozer	object	4.0	dozer
+bullet	object	0.1	
+bullet proof vest	object	0.7	bulletproof vest, kevlar vest
+bullet train	object	4.0	shinkansen, high-speed train
+bulletin board	object	1.2	corkboard, pinboard
+bumper car	object	1.5	dodgems
+bungalow	object	4.0	
+bungee cord	object	0.15	bungee rope
+bunk bed	object	1.8	
+bunker	object	3.0	sand trap
+bunny ears	object	0.25	
+buoy	object	2.0	buoy marker, navigation buoy
+burrito	object	0.2	
+bus	object	3.0	coach, motorcoach
+bus station	object	8.0	bus terminal, bus depot
+business card	object	0.1	name card
+business park	object	12.0	office park, industrial park
+bust	object	0.6	sculpture, statue
+butcher shop	object	3.0	butcher store, meat market
+butter	object	0.1	
+butter dish	object	0.1	butter holder
+buttercup	object	0.3	
+butterfly net	object	1.0	net for butterflies
+butterfly wings	object	0.1	
+buttermilk	object	0.2	
+butterscotch pudding	object	0.1	
+button (clothes)	object	0.1	shirt button
+button (mechanical)	object	0.1	push button
+cab	object	1.7	taxi
+cable car	object	3.0	tramway
+caboose	object	3.5	train caboose
+cactus	object	1.0	
+cafeteria	object	3.0	canteen
+cage (container)	object	1.0	birdcage, crate
+cake	object	0.1	
+cake mix	object	0.25	
+cake stand	object	0.3	
+calamari	object	0.1	fried squid
+calculator (electronics)	object	0.15	
+calendar	object	0.3	datebook
+calzone	object	0.2	
+camcorder	object	0.2	video camera
+camera	object	0.15	
+camp ground	object	12.0	campsite, camping ground
+campfire	object	1.5	
+can	object	0.12	tin can, metal can
+can of worms	object	0.12	
+can opener	object	0.2	tin opener
+canadian bacon	object	0.1	back bacon
+candle	object	0.2	
+candleholder	object	0.15	candlestick
+candlestick	object	0.25	candle holder
+candy	object	0.1	sweets, lolly
+candy apple	object	0.15	caramel apple
+candy bar	object	0.15	
+candy cane	object	0.3	
+candy corn	object	0.1	
+candy store	object	3.0	sweet shop
+cane	object	0.9	walking stick
+cannon	object	2.5	
+cannonball	object	0.2	
+canoe	object	0.5	
+canopy	object	3.0	awning, cover
+canopy bed	object	2.2	four-poster bed
+canteen (container)	object	0.25	water bottle, flask
+canvas	object	1.0	cloth, sailcloth
+canyon	object	10.0	gorge, ravine
+cap and gown	object	1.7	graduation cap and gown, mortarboard
+cap gun	object	0.2	toy gun, pop gun
+capsule (shape)	object	0.1	pill shape, ovoid
+car	object	1.5	automobile, vehicle, auto
+car battery	object	0.25	automotive battery, vehicle battery
+car dealership	object	8.0	auto dealership
+car jack	object	0.5	vehicle jack, auto jack
+car seat	object	0.7	vehicle seat, auto seat
+car wash	object	4.0	auto wash
+cardboard	object	0.1	corrugated board
+cards	object	0.1	playing cards
+cargo plane	object	12.0	freighter plane, transport plane
+cargo ship	object	12.0	freighter ship, container ship
+carousel	object	5.0	merry-go-round
+carriage	object	2.5	horse-drawn carriage, coach
+carrot	object	0.25	
+carrot juice	object	0.2	
+cart (vehicle)	object	1.5	handcart, wagon
+carton	object	0.25	cardboard box
+cartridge (electronics)	object	0.1	game cartridge
+case	object	0.3	suitcase, briefcase
+cash register	object	0.4	register, checkout
+cashew	object	0.1	
+casino	object	12.0	gambling house
+casserole	object	0.2	casserole dish
+cassette	object	0.12	cassette tape, audio cassette
+cast	object	0.3	plaster cast
+castle	object	12.0	
+cat ears	object	0.1	neko ears
+cat food	object	0.2	catfood
+cat scan machine	object	2.0	ct scanner, ct scan machine
+cat tail (tail)	object	0.25	
+catamaran	object	12.0	
+catapult	object	5.0	
+cathedral	object	1.0	
+catnip	object	0.3	catnip plant
+cattle crossing sign	object	1.5	cattle sign
+cauldron	object	0.4	witch pot, witch's cauldron
+cauliflower	object	0.25	
+caution sign	object	0.9	warning sign
+caution tape	object	0.1	warning tape, hazard tape
+cave	object	5.0	
+caviar	object	0.1	
+cd case	object	0.12	disc case, cd jewel case
+ceiling fan	object	0.3	
+celery	object	0.3	
+cellar	object	2.0	basement
+cello	object	1.25	violoncello
+cellophane	object	0.1	cling film
+ceramic	object	0.2	pottery
+cereal	object	0.3	
+cereal box	object	0.3	
+chain (tool)	object	1.0	chain tool
+chain link fence	object	1.8	chainlink fence, wire fence
+chainmail	object	0.5	chain mail, mail armor
+chainsaw	object	0.5	chain saw
+chair	object	0.9	armchair
+chaise lounge	object	0.9	chaise longue
+chalk (material)	object	0.1	
+chalk (writing)	object	0.1	chalk stick
+chalkboard	object	1.0	blackboard
+chandelier	object	1.0	light fixture
+changing table	object	0.9	diaper station
+charcoal	object	0.2	briquettes
+charger (electronics)	object	0.1	power adapter
+chariot	object	1.5	war chariot
+charm	object	0.1	bracelet charm
+chase	object	0.2	
+checkbook	object	0.15	chequebook
+checkerboard	object	0.5	draughtboard
+checkers	object	0.5	draughts
+cheddar	object	0.2	
+cheekbone	object	1.7	zygomatic bone, malar bone
+cheerleader outfit	object	1.65	cheer uniform
+cheese	object	0.2	
+cheeseburger	object	0.1	
+cheesecake	object	0.1	
+chef hat	object	0.35	toque
+cherry	object	0.1	
+cherry bomb	object	0.1	
+cherry picker	object	12.0	boom lift
+cherry pie	object	0.1	
+cherry soda	object	0.2	cherry pop
+cherry tomato	object	0.1	
+cherry tree	object	8.0	cherry tree
+chess piece	object	0.1	chessman
+chest	object	0.6	treasure chest, coffer
+chicken breast	object	0.1	
+chicken coop	object	2.0	henhouse
+chicken feed	object	0.1	poultry feed
+chicken finger	object	0.1	chicken tender, chicken nugget
+chicken leg	object	0.12	drumstick
+chicken nugget	object	0.1	nugget
+chili	object	0.1	chilli
+chime	object	0.2	bell
+chimney	object	5.0	chimbley
+chip	object	0.1	potato chip, crisps
+chisel	object	0.25	
+chocolate	object	0.1	chocolate bar
+chocolate cake	object	0.1	
+chocolate chip	object	0.1	
+choker	object	0.1	necklace
+chop sticks	object	0.23	chopsticks
+christmas lights	object	2.0	xmas lights, holiday lights
+christmas stocking	object	0.7	xmas stocking, holiday stocking
+christmas sweater	object	0.7	xmas sweater, ugly christmas sweater
+chrysanthemum	object	1.0	mum
+church	object	12.0	chapel
+church bell	object	1.0	
+churros	object	0.15	
+cider	object	0.3	apple cider
+cinder	object	0.1	ember, ash
+cinnamon	object	0.5	cinnamon stick
+cinnamon bun	object	0.1	cinnamon roll
+circle	object	0.1	ring, loop
+circuit	object	0.1	electrical circuit
+circuit breaker	object	0.15	
+circular saw	object	0.4	
+clam chowder	object	0.1	manhattan clam chowder, new england clam chowder
+clarinet	object	0.7	b-flat clarinet
+classroom	object	3.0	
+claw	object	0.1	talon
+claw machine	object	2.0	claw crane, ufo catcher
+claws	object	0.1	talons
+clay	object	0.1	modeling clay
+climbing wall	object	4.0	bouldering wall
+clip	object	0.1	paperclip, bulldog clip
+cloak	object	1.5	cape
+clock	object	0.3	
+clock face	object	0.25	clock dial
+clock hand	object	0.1	clock pointer
+clock tower	object	1.0	
+clog	object	0.15	wooden shoe
+closet door	object	2.0	wardrobe door
+clothespin	object	0.1	clothes peg, peg
+cloud	object	12.0	
+clover	object	0.15	
+clown car	object	1.5	
+clown nose	object	0.1	red nose
+clown suit	object	1.7	
+club (weapon)	object	0.8	bat, cudgel, truncheon
+coal	object	0.1	anthracite
+coal mine	object	3.0	
+coaster (drink)	object	0.1	beermat, drink mat
+coat	object	1.0	jacket, overcoat

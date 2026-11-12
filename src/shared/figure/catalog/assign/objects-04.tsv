@@ -1,0 +1,263 @@
+word	type	height_m	tags
+electric blanket	object	1.5	heated blanket
+electric chair	object	1.2	
+electric guitar	object	1.0	e guitar
+electric mixer	object	0.3	stand mixer
+electric razor	object	0.15	electric shaver
+electrical outlet	object	0.1	power outlet, wall socket
+electricity pylon	object	12.0	electric pylon, power pylon
+electrodes	object	0.1	
+electronics store	object	4.0	electronics shop
+elephant trunk	object	2.0	elephant nose
+elevator	object	2.2	lift
+elliptical machine	object	1.7	elliptical trainer, cross trainer
+embassy	object	12.0	
+emerald	object	0.1	
+emergency exit	object	2.1	fire exit
+emergency room	object	3.0	er
+employment office	object	4.0	job center
+energy bar	object	0.2	protein bar
+energy drink	object	0.25	
+english muffin	object	0.1	
+entertainment center	object	1.8	tv stand, media console
+envelope	object	0.1	
+equal sign	object	0.1	equals sign
+eraser	object	0.1	rubber
+escalator	object	6.0	moving staircase
+eucalyptus tree	object	12.0	gum tree
+excalibur	object	1.0	
+exclamation point (punctuation)	object	0.1	exclamation mark, bang
+exercise ball	object	0.65	fitness ball, swiss ball, yoga ball
+exercise cycle	object	1.2	stationary bike, exercise bike
+exit sign	object	0.2	
+extension cord	object	0.2	power cord, extension lead
+eye chart	object	0.3	snellen chart
+eye drops	object	0.1	
+eye liner	object	0.12	eyeliner
+eye patch	object	0.1	
+eye shadow	object	0.1	eyeshadow
+eyebrow pencil	object	0.15	brow pencil
+eyedropper	object	0.1	dropper, pipette
+eyeglasses	object	0.1	glasses, spectacles
+factory	object	12.0	plant, mill
+fan (tool)	object	0.3	hand fan
+fang	object	0.1	
+fangs	object	0.1	teeth
+fanny pack	object	0.2	waist bag, bum bag
+farm	object	8.0	
+faucet	object	0.2	tap
+fax machine	object	0.3	
+feather	object	0.15	
+feather duster	object	0.8	
+fedora	object	0.12	
+feet	object	0.25	
+ferris wheel	object	12.0	
+fertilizer	object	0.3	manure, compost
+feta	object	0.1	feta cheese
+fidget spinner	object	0.1	
+field goalpost	object	11.0	football goalpost
+fig	object	0.1	
+fig tree	object	6.0	
+fighter jet	object	5.0	jet fighter
+fighter plane	object	5.0	jet fighter, fighter jet
+figurine	object	0.15	statue, miniature, model figure
+file (tool)	object	0.25	metal file, rasp
+filing cabinet	object	1.3	file cabinet
+film (material)	object	0.1	plastic film, cling wrap
+film reel	object	0.3	movie reel, cinema reel
+fin (organic)	object	0.3	dorsal fin, shark fin
+finger	object	0.1	
+fingerless glove	object	0.2	half glove
+fingerprint	object	0.1	finger print
+finish line	object	0.1	race line
+fire alarm	object	0.3	smoke detector
+fire engine	object	3.5	fire truck
+fire escape	object	3.0	
+fire extinguisher	object	0.6	
+fire hose	object	0.15	
+fire hydrant	object	1.0	
+fire log	object	0.4	firewood
+fire pit	object	0.5	
+fire station	object	10.0	firehouse
+firecracker	object	0.2	firework
+fireman uniform	object	1.75	firefighter uniform
+fireplace	object	1.0	hearth
+fireworks	object	0.3	firecracker
+first aid kit	object	0.25	first aid box
+fish bait	object	0.1	fishing bait, bait, worm
+fish food	object	0.1	fish flakes, aquarium food
+fish market	object	5.0	seafood market
+fish stick	object	0.12	fish finger, fish fingers
+fish tail	object	0.3	fish fin
+fish tank	object	0.5	aquarium
+fishing hook	object	0.1	hook
+fishing line	object	2.0	line
+fishing pole	object	2.5	fishing rod, rod, pole
+fishing reel	object	0.25	fishing spool
+fishing rod	object	1.8	
+fitness tracker	object	0.1	activity tracker, step counter
+fixed ladder	object	3.0	stationary ladder
+flag	object	1.5	banner
+flagpole	object	10.0	flag staff
+flamethrower	object	1.0	
+flare	object	0.2	signal flare
+flare gun	object	0.3	signal gun
+flash bomb	object	0.1	flashbang, stun grenade
+flashcard	object	0.1	index card
+flashlight	object	0.15	torch
+flier (paper)	object	0.3	flyer
+floodlight	object	0.3	flood light, spotlight
+floor	object	0.1	
+floor lamp	object	1.5	standing lamp
+floor tile	object	0.3	tile
+floppy disk	object	0.1	
+floss	object	0.1	dental floss
+flour	object	0.2	
+flower box	object	0.3	window box
+flower shop	object	4.0	florist
+flowerbed	object	0.3	flower bed
+flowerpot	object	0.25	plant pot
+flute	object	0.7	
+fly swatter	object	0.5	flyswatter, swatter
+flying car	object	1.5	hovercar
+foam	object	0.1	
+foam block	object	0.3	
+foam dart	object	0.1	
+foam dart gun	object	0.7	nerf gun
+foam finger	object	0.45	foam hand
+fog horn	object	0.5	foghorn
+folder	object	0.3	file folder
+folding chair	object	0.9	foldable chair, folding stool
+folding fan	object	0.25	foldable fan
+folding screen	object	1.8	room divider, shoji screen, foldable screen
+folding table	object	0.75	foldable table, card table
+food	object	0.1	
+food truck	object	3.0	mobile kitchen, food van
+foosball	object	1.0	table soccer, rod football
+foot	object	0.25	
+football	object	0.28	soccer ball
+football helmet	object	0.3	gridiron helmet
+fork	object	0.2	
+forklift	object	3.0	lift truck
+fort	object	10.0	fortress
+fortune cookie	object	0.1	
+foundation (makeup)	object	0.1	base, makeup base
+foundation (stone)	object	1.5	base, footing, footings
+fountain	object	2.0	water fountain, font
+frame	object	1.0	picture frame, frame structure
+freckle	object	0.1	
+freezer	object	1.7	deep freezer
+french braid	object	0.3	
+french doors	object	2.1	
+french horn	object	0.8	
+french toast	object	0.1	
+fried chicken	object	0.15	
+fried rice	object	0.1	
+fries	object	0.1	french fries
+frog legs	object	0.2	
+fruit	object	0.1	
+fruitcake	object	0.15	
+fudge	object	0.1	
+fun house	object	5.0	house of fun, mirror house
+funeral home	object	8.0	mortuary, funeral parlor
+fungus	object	0.1	mushroom
+funnel	object	0.2	
+funnel cake	object	0.1	
+fur	object	0.1	
+fur coat	object	1.0	faux fur coat
+furnace (appliance)	object	1.5	
+furniture store	object	5.0	
+fuse	object	0.1	
+fuse box	object	0.3	fuse panel
+gadget	object	0.15	gizmo, device
+gallows	object	4.0	
+game guide	object	0.25	walkthrough, strategy guide
+gamepad	object	0.15	controller, joypad
+garage (room)	object	3.0	carport
+garage door	object	2.2	garage gate
+garbage bag	object	1.0	trash bag
+garbage can	object	0.9	trash can, bin
+garbage dump	object	5.0	landfill, dump
+garlic	object	0.1	clove
+garlic bread	object	0.25	
+garlic fries	object	0.1	
+gas mask	object	0.2	gas mask
+gas pump	object	1.7	fuel pump, petrol pump
+gas station	object	6.0	petrol station, service station
+gas tank	object	1.0	fuel tank, gasoline tank
+gasoline	object	0.5	petrol, fuel
+gateway	object	2.5	gate, entrance
+gauge	object	0.15	meter, dial
+gauntlet	object	0.6	glove, armored glove
+gauze	object	0.5	bandage, cloth
+gazebo	object	3.0	pergola, pavilion
+gear	object	0.1	cog, cogwheel, gearwheel
+geiger counter	object	0.2	radiation detector
+gel	object	0.1	jelly, hair gel
+gelatin	object	0.1	jelly, jello
+gem	object	0.1	jewel, precious stone
+generator	object	1.5	power generator
+gift	object	0.2	present
+gift certificate	object	0.1	gift card, gift voucher
+gift shop	object	3.0	souvenir shop
+gill	object	0.1	
+ginger ale	object	0.3	ginger beer
+gingerbread	object	0.1	gingerbread cookie, gingerbread man
+gingerbread house	object	0.3	
+girdle	object	0.3	corset
+glacier	object	12.0	
+gland	object	0.1	
+glass slipper	object	0.2	
+glaze	object	0.1	icing
+globe	object	0.3	orb
+glove	object	0.25	mitt
+gloves	object	0.3	mittens, gauntlets
+glow stick	object	0.2	light stick, glowstick
+glue	object	0.1	adhesive, superglue
+glue gun	object	0.25	hot glue gun
+goalpost	object	7.5	goal posts
+goblet	object	0.2	chalice
+goggles	object	0.15	safety glasses
+gold	object	0.1	
+gold mine	object	10.0	
+golden egg	object	0.15	
+golf bag	object	1.0	golf clubs bag
+golf ball	object	0.1	
+golf cart	object	1.8	golf buggy
+golf club	object	1.1	golf stick
+golf course	object	12.0	
+golf glove	object	0.2	
+gong	object	0.8	
+gorge	object	10.0	canyon, ravine
+gps	object	0.1	satnav
+graffiti	object	2.0	street art, tagging
+grail	object	0.2	holy grail
+grandfather clock	object	2.0	granddad clock, longcase clock
+granite	object	0.5	
+grape	object	0.1	
+grape juice	object	0.5	grapejuice
+grape soda	object	0.5	grape pop
+grapefruit tree	object	6.0	
+grapes	object	0.1	
+grapevine	object	5.0	
+graph paper	object	0.3	
+grass	object	0.5	turf
+grassland	object	1.0	prairie, savanna, steppe
+grate	object	0.2	grille
+grater	object	0.25	shredder
+grave	object	2.0	tomb
+gravel	object	0.1	
+graveyard	object	2.0	cemetery
+gravy	object	0.1	
+gravy boat	object	0.1	sauce boat
+greater than sign	object	0.1	>
+greek temple	object	12.0	
+green button	object	0.1	
+green switch	object	0.1	
+greenhouse	object	4.0	glasshouse
+grenade	object	0.15	hand grenade
+grenade launcher	object	0.8	grenade rifle
+griddle	object	0.1	grill pan
+grill	object	1.0	barbecue, bbq
+grilled cheese	object	0.1	cheese toastie, cheese sandwich
+grinder (tool)	object	0.25	angle grinder

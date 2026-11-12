@@ -4,6 +4,7 @@
  */
 import type { Figure, Vec3 } from './types';
 import { Parts, bird, dragon, figure, person, quadruped, shadeHex } from './kit';
+import { catalog } from './catalog/index';
 
 const SKIN = { light: '#f6d2b4', fair: '#f0c39f', tan: '#d9a173', brown: '#a8714a', deep: '#7a4b2e' };
 
@@ -270,11 +271,23 @@ const cache = new Map<string, Figure>();
 export function getFigure(key: string): Figure | null {
   const hit = cache.get(key);
   if (hit) return hit;
-  const b = builders[key];
+  const b = builders[key] ?? catalog().get(key)?.f;
   if (!b) return null;
-  const f = b();
+  let f: Figure;
+  try {
+    f = b();
+  } catch {
+    return null;
+  }
+  // the catalog builds figures under their own word; make sure the key matches what was asked for
+  if (f.key !== key) f = { ...f, key };
   cache.set(key, f);
   return f;
+}
+
+/** Every word that has a figure: the hand-made samples and the catalog. */
+export function figureKeys(): string[] {
+  return [...new Set([...Object.keys(builders), ...catalog().keys()])];
 }
 
 /** The sample figure for a vocabulary word, or null. */

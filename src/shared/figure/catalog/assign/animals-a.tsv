@@ -1,0 +1,173 @@
+word	type	height_m	tags
+adder	animal	0.6	viper
+akita	animal	0.7	akita inu
+albatross	animal	1.1	
+alligator	animal	4.0	gator
+anaconda	animal	6.0	boa constrictor
+angelfish	animal	0.15	
+anglerfish	animal	0.3	
+ankylosaurus	animal	2.0	armored dinosaur
+ant	animal	0.1	formicidae
+anteater	animal	1.8	aardvark
+antelope	animal	1.3	
+arctic fox	animal	0.5	white fox, polar fox
+armadillo	animal	0.6	
+baboon	animal	1.0	mandrill
+badger	animal	0.6	
+badger cub	animal	0.3	
+barracuda	animal	1.2	
+bass (fish)	animal	0.5	sea bass, largemouth bass
+basset hound	animal	0.38	basset
+bat (animal)	animal	0.15	flying fox
+beagle	animal	0.4	
+bear	animal	2.5	grizzly bear, brown bear, black bear
+beaver	animal	0.5	north american beaver
+beaver pup	animal	0.2	beaver kit, beaver kitling
+bed bug	animal	0.1	cimex lectularius
+bee	animal	0.1	honeybee
+beetle	animal	0.1	bug
+beluga whale	animal	5.0	white whale
+bird	animal	0.25	sparrow, robin
+black bear	animal	1.7	american black bear
+black mamba	animal	3.5	
+black widow	animal	0.1	
+blackbird	animal	0.25	grackle
+bloodhound	animal	0.65	blood hound
+blowfish	animal	0.3	pufferfish, puffer fish
+blue jay	animal	0.25	
+blue whale	animal	12.0	
+boa	animal	3.0	boa constrictor
+boar	animal	1.0	wild boar
+bobcat	animal	0.6	wildcat, lynx
+border collie	animal	0.55	border collie dog
+boston terrier	animal	0.4	boston bull
+brontosaurus	animal	7.0	apatosaurus
+buffalo	animal	1.8	bison
+buffalo calf	animal	0.9	bison calf
+bull	animal	1.5	male cow
+bull terrier	animal	0.6	
+bulldog	animal	0.4	english bulldog
+bunny	animal	0.3	rabbit
+butterfly	animal	0.1	
+calf	animal	1.0	baby cow
+calico	animal	0.25	calico cat
+camel	animal	2.0	dromedary
+canary	animal	0.13	
+cardinal (bird)	animal	0.22	redbird
+caterpillar	animal	0.1	
+catfish	animal	1.0	
+centipede	animal	0.1	millipede
+chameleon	animal	0.3	
+cheetah	animal	0.9	
+cheetah cub	animal	0.3	
+chick (bird)	animal	0.15	baby chicken
+chicken (bird)	animal	0.7	hen, rooster
+chihuahua	animal	0.2	chi
+chimpanzee	animal	1.4	chimp
+chow chow	animal	0.5	chowchow
+cicada	animal	0.1	
+clam	animal	0.1	quahog, littleneck
+clownfish	animal	0.1	anemonefish
+cobra	animal	1.5	king cobra
+cockatiel	animal	0.33	cockatoo
+cockatoo	animal	0.4	cockatoo parrot
+cocker spaniel	animal	0.4	english cocker spaniel
+cockroach	animal	0.1	
+collie	animal	0.6	border collie, lassie dog
+corgi	animal	0.3	welsh corgi, pembroke corgi, cardigan corgi
+crab	animal	0.2	
+crane (bird)	animal	1.4	
+crayfish	animal	0.15	crawfish
+cricket	animal	0.1	
+crocodile	animal	4.0	croc, alligator
+crow	animal	0.5	raven
+cub	animal	0.5	pup
+dachshund	animal	0.2	sausage dog, wiener dog
+dalmatian	animal	0.6	firehouse dog, spotted dog
+deer	animal	1.2	doe, buck, hart
+dingo	animal	0.6	
+dinosaur	animal	4.0	
+dodo	animal	1.0	
+dolphin	animal	2.5	bottle-nosed dolphin
+dolphin calf	animal	1.0	
+donkey	animal	1.2	ass
+donkey foal	animal	0.7	donkey colt
+dove	animal	0.35	pigeon
+dragonfly	animal	0.1	
+duck	animal	0.5	
+duckling	animal	0.25	baby duck
+eagle	animal	0.8	bald eagle
+eel	animal	1.0	electric eel
+elephant	animal	3.0	african elephant, asian elephant
+elephant calf	animal	1.5	
+emperor penguin	animal	1.2	king penguin
+emu	animal	1.9	
+falcon	animal	0.5	
+fawn	animal	0.8	doe
+fire ant	animal	0.1	
+firefly	animal	0.1	lightning bug
+fish (animal)	animal	0.3	fish
+flamingo	animal	1.2	
+flea	animal	0.1	
+fly	animal	0.1	housefly
+flying fish	animal	0.4	
+flying squirrel	animal	0.3	
+foal	animal	1.0	young horse
+fox	animal	0.4	vixen, tod
+fox cub	animal	0.25	kit, fox kit
+french bulldog	animal	0.33	frenchie
+frog	animal	0.1	
+gecko	animal	0.15	
+german shepherd	animal	0.6	shepherd dog
+giraffe	animal	5.0	
+giraffe calf	animal	1.8	
+goat	animal	0.7	goat
+golden retriever	animal	0.6	golden retriever dog
+goldfish	animal	0.1	
+goose	animal	0.9	gander
+gopher	animal	0.3	ground squirrel
+gorilla	animal	1.7	silverback
+grasshopper	animal	0.1	locust
+gray whale	animal	12.0	grey whale
+great dane	animal	0.8	
+great white shark	animal	6.0	white shark, great white
+greyhound	animal	0.75	greyhound dog
+guide dog	animal	0.6	seeing eye dog
+guinea pig	animal	0.25	
+guppy	animal	0.1	guppy fish
+hammerhead (shark)	animal	4.0	hammerhead shark
+hamster	animal	0.2	
+hare	animal	0.3	jackrabbit
+hawk	animal	0.5	
+hedgehog	animal	0.25	
+heron	animal	1.0	
+hippopotamus	animal	1.5	hippo
+honey badger	animal	0.25	ratel
+hooves	animal	0.15	cloven hooves
+hornet	animal	0.1	wasp
+horsefly	animal	0.1	gadfly
+horseshoe crab	animal	0.5	
+hound	animal	0.6	dog, hound dog
+hummingbird	animal	0.1	
+humpback whale	animal	12.0	
+husky	animal	0.6	siberian husky
+hyena	animal	0.8	
+hyena cub	animal	0.4	
+iguana	animal	1.2	
+inchworm	animal	0.1	looping caterpillar
+irish setter	animal	0.65	setter
+jack russel terrier	animal	0.25	jack russell terrier
+jackal	animal	0.4	
+jaguar	animal	0.75	panther
+jellyfish	animal	0.3	medusa
+joey	animal	0.2	baby kangaroo
+kangaroo	animal	1.7	red kangaroo, eastern grey kangaroo
+kid (animal)	animal	0.5	young goat, baby goat, goat kid
+kit (animal)	animal	0.2	baby fox
+kitten	animal	0.2	baby cat
+kiwi (bird)	animal	0.4	
+koala	animal	0.7	
+koala cub	animal	0.3	koala joey
+komodo dragon	animal	1.0	komodo lizard
+krill	animal	0.1	
+labrador	animal	0.6	labrador retriever, lab

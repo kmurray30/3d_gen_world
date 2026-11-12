@@ -1,0 +1,172 @@
+word	type	height_m	tags
+pediatrician	human	1.7	children's doctor, pediatrist, child doctor
+pegasus	humanoid	1.6	winged horse
+people	human	1.7	humans, persons
+persian	human	1.7	iranian
+pharaoh	human	1.7	king
+pharmacist	human	1.7	druggist, chemist
+philosopher	human	1.7	
+photographer	human	1.7	camera operator
+physical therapist	human	1.7	physiotherapist, pt
+pianist	human	1.7	piano player
+pickpocket	human	1.7	pick pocket, thief, cutpurse
+pied piper	human	1.7	pied piper of hamelin
+pilgrim	human	1.7	pilgrim father
+pirate	human	1.7	buccaneer
+plastic surgeon	human	1.7	cosmetic surgeon
+plumber	human	1.7	pipe fitter
+poison ivy	human	1.7	pamela isley
+police officer	human	1.75	
+policeman	human	1.75	police officer, cop, police man
+policewoman	human	1.65	police officer, female cop, female police
+politician	human	1.75	political figure, lawmaker
+pool boy	human	1.75	pool maintenance guy
+pool shark	human	1.7	hustler, billiard shark
+poseidon	human	1.7	neptune
+postman	human	1.7	mailman, mail carrier, letter carrier
+president	human	1.75	leader
+priest	human	1.75	clergyman, minister
+prince	human	1.7	
+princess	human	1.65	
+princess peach	human	1.6	peach
+principal	human	1.7	headmaster, headteacher
+prisoner	human	1.7	inmate, convict
+prisoner of war	human	1.7	pow
+professional	human	1.7	pro
+professor	human	1.7	professor, lecturer
+programmer	human	1.7	coder, developer
+protester	human	1.7	demonstrator
+psychologist	human	1.7	therapist, counselor
+punk rocker	human	1.7	punk rock musician
+puppet	humanoid	0.6	marionette
+queen	human	1.7	
+racecar driver	human	1.75	racer, race car driver
+radiologist	human	1.7	
+real estate agent	human	1.7	realtor
+rebel	human	1.7	insurgent
+redcoat	human	1.7	lobsterback
+referee	human	1.75	ref, umpire
+revolutionary	human	1.7	rebel, insurgent
+robot	humanoid	1.7	android, droid, bot
+rock star	human	1.75	rockstar
+rocket scientist	human	1.75	aerospace engineer
+rogue	human	1.7	scoundrel, knave
+roller skater	human	1.7	
+rumpelstiltskin	human	1.5	
+sailor	human	1.7	seaman, navy man
+samurai	human	1.7	
+sandman	humanoid	1.7	sand man
+santa	human	1.8	santa claus, father christmas
+saxophonist	human	1.7	sax player
+school boy	human	1.4	schoolboy
+school girl	human	1.5	schoolgirl
+science teacher	human	1.7	physics teacher, chemistry teacher
+scientist	human	1.7	researcher
+scuba diver	human	1.7	scuba diver
+sculptor	human	1.7	
+secret agent	human	1.7	spy
+secretary	human	1.65	admin assistant
+security guard	human	1.75	bouncer, watchman
+sergeant	human	1.75	sarge
+serial killer	human	1.75	
+shakespeare	human	1.7	william shakespeare
+sheik	human	1.7	sheikh
+shepherd	human	1.7	sheepherder
+sheriff	human	1.7	
+ship captain	human	1.75	captain
+shoemaker	human	1.75	cobbler
+shogun	human	1.7	general, warlord
+shopkeeper	human	1.7	storekeeper, retailer, merchant
+showgirl	human	1.7	show girl
+singer	human	1.7	vocalist
+siren (monster)	humanoid	1.7	mermaid monster, sea siren
+skater	human	1.7	skateboarder
+skier	human	1.7	
+skydiver	human	1.7	parachutist
+slacker	human	1.7	loafer, idler
+snake charmer	human	1.7	
+sniper	human	1.7	
+snow suit kid	human	1.3	child in snowsuit
+snowman	humanoid	1.5	frosty
+soccer player	human	1.75	footballer
+socialist	human	1.7	
+socrates	human	1.7	
+softball player	human	1.7	
+soldier	human	1.75	trooper
+sorceress	humanoid	1.7	witch
+special force	human	1.75	special forces, navy seal
+sphinx (creature)	humanoid	2.0	gynosphinx
+sports fan	human	1.7	fanatic, supporter
+spy	human	1.7	agent, operative
+squire	human	1.7	
+stalker	human	1.7	
+starlet	human	1.65	
+steward	human	1.7	flight attendant
+stock trader	human	1.7	broker, day trader
+stonemason	human	1.7	mason, stone worker
+street vendor	human	1.7	street seller
+strongman	human	1.9	strong man
+student	human	1.7	pupil, learner
+sultan	human	1.7	sultanate ruler
+sumo	human	1.85	sumo wrestler
+sunbather	human	1.7	
+superman	human	1.9	man of steel, clark kent
+supermodel	human	1.78	top model, fashion model
+surfer	human	1.75	wave rider
+surgeon	human	1.72	doctor, operating surgeon
+tap dancer	human	1.7	tap dance performer
+teacher	human	1.7	educator, professor, instructor
+teen	human	1.65	teenager
+teenager	human	1.65	teen
+tennis player	human	1.75	tennis athlete
+terracotta warrior	humanoid	1.85	terracotta soldier
+thor	human	1.98	
+time traveler	humanoid	1.7	
+titan	humanoid	12.0	titan
+tom jones	human	1.83	
+tooth fairy	humanoid	1.2	
+tots	human	1.0	toddlers, little kids
+tour guide	human	1.7	tourist guide
+tourist	human	1.7	traveler, visitor
+train conductor	human	1.7	railroad conductor
+train engineer	human	1.7	locomotive engineer, railroad engineer
+transformer	humanoid	6.0	autobot, decepticon
+troll	humanoid	2.5	
+trucker	human	1.75	truck driver
+trumpeter	human	1.7	trumpet player
+tsar	human	1.7	czar, tsar, emperor
+twin (person)	human	1.7	
+twins	human	1.7	
+umpire	human	1.75	referee
+unicorn	humanoid	1.6	mythical horse
+used car salesman	human	1.75	car dealer
+used car saleswoman	human	1.65	car dealer
+valentine	human	1.7	sweetheart, lover
+valet	human	1.75	parking attendant
+vampire	humanoid	1.75	dracula
+vegan	human	1.75	
+vegetarian	human	1.7	veggie eater, plant-based
+vet	human	1.7	veterinarian
+vice president	human	1.7	vp
+vigilante	human	1.75	
+viking	human	1.75	norse warrior
+villain	human	1.75	bad guy, antagonist
+violinist	human	1.7	fiddler
+volleyball player	human	1.9	
+waiter	human	1.75	server, waitstaff
+warrior	human	1.7	fighter, soldier
+waterboy	human	1.7	
+weaver	human	1.7	
+wedding planner	human	1.7	
+werewolf	humanoid	2.0	wolfman, lycanthrope
+windsurfer (human)	human	1.75	
+witch	humanoid	1.65	crone, hag
+wizard	human	1.75	mage, sorcerer
+wonder woman	human	1.8	
+wrestler	human	1.8	
+yoshi	humanoid	1.5	
+young bruce wayne	human	1.4	
+zelda	human	1.6	princess zelda
+zoey	human	1.65	
+zombie	humanoid	1.75	undead, walker
+zookeeper	human	1.7	

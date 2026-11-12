@@ -14,6 +14,7 @@ import type { Expr, Pose } from '../../../shared/figure/anim';
 import type { FigPart, Figure, Vec3 } from '../../../shared/figure/types';
 import { drawFace } from './face';
 import { chainShaderHook, tinted } from '../tint';
+import { labelFace } from './label';
 
 const DEG = Math.PI / 180;
 export type SolidMode = 'toon' | 'origami';
@@ -265,6 +266,11 @@ export class ToonFigure {
       if (p.role === 'eye') {
         mesh.userData.baseY = mesh.scale.y;
         this.eyes.push(mesh);
+      }
+      if (p.role === 'label' && p.text) {
+        const face = labelFace(p.text, p.color, p.size);
+        this.mats.push(face.material as THREE.Material);
+        holder.add(face);
       }
       if (origami) {
         // creases: every fold drawn as a faint darker line

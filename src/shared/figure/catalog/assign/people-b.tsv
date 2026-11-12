@@ -1,0 +1,172 @@
+word	type	height_m	tags
+football player	human	1.85	gridiron player
+forest ranger	human	1.75	park ranger, game warden
+fortune teller	human	1.7	palm reader, psychic
+fraternity brother	human	1.75	frat brother, frat bro
+galileo	human	1.6	
+gambler	human	1.7	betting man, punter
+game developer	human	1.7	game dev, video game developer
+game show host	human	1.75	quiz show host, tv host
+gamer	human	1.7	player, gamer, video gamer
+gangster	human	1.75	mobster, gang member
+garbage man	human	1.75	sanitation worker, trash collector
+garbage woman	human	1.65	sanitation worker, trash collector
+garden gnome	humanoid	0.4	lawn gnome
+gardener	human	1.7	
+gargoyle	humanoid	1.5	
+geek	human	1.7	nerd, dork
+geisha	human	1.6	
+general	human	1.7	
+genghis khan	human	1.7	
+genie	humanoid	1.7	djinn
+geologist	human	1.7	
+george washington	human	1.88	
+ghoul (monster)	humanoid	1.8	zombie, undead, ghul
+giant	humanoid	6.0	titan
+girlfriend	human	1.65	gf
+glutton (person)	human	1.7	overeater
+gnome	humanoid	0.3	garden gnome
+goalie	human	1.8	goalkeeper
+goblin	humanoid	1.2	
+god	humanoid	1.7	deity
+goddess	humanoid	1.7	deity
+golfer	human	1.75	golf player
+goth	human	1.7	gothic
+governor	human	1.7	
+graduate	human	1.7	alum, alumna
+grandfather	human	1.7	grandpa, gramps
+grandmother	human	1.6	grandma, nana, granny
+gravedigger	human	1.7	undertaker
+groom	human	1.75	bridegroom
+groomsman	human	1.75	best man
+groupie	human	1.7	
+guerilla	human	1.7	guerrilla
+guidance counselor	human	1.7	school counselor
+guitarist	human	1.7	guitar player
+guy	human	1.75	man, dude, fellow
+hades	human	1.9	
+hairdresser	human	1.7	hair stylist, stylist
+harlequin	humanoid	1.7	clown, jester
+harley quinn	human	1.7	
+hazmat worker	human	1.75	hazardous material worker
+head coach	human	1.75	head trainer
+headless horseman	humanoid	1.8	sleepy hollow horseman
+hector	human	1.75	
+hercules	human	2.0	
+hero (person)	human	1.75	hero
+heroine	human	1.65	
+hillbilly	human	1.7	redneck, country bumpkin
+hippie	human	1.7	hippy
+hipster	human	1.7	
+historian	human	1.7	
+hobo	human	1.7	bum, tramp
+hockey player	human	1.8	ice hockey player
+hostage	human	1.7	
+hula dancer	human	1.7	
+human	human	1.7	person, human being
+humpty dumpty	humanoid	1.7	
+hunchback	human	1.6	
+hunk	human	1.85	
+hunter	human	1.75	
+icarus	human	1.7	
+ice cream man	human	1.75	icecream man
+illustrator	human	1.7	artist
+invisible man	human	1.75	
+invisible woman	human	1.65	
+jack (brother)	human	1.7	
+jack frost	humanoid	1.7	frost man
+janitor	human	1.7	custodian, janitress, caretaker
+jockey	human	1.6	horse rider, race rider
+joker (dc)	human	1.75	clown prince of crime
+journalist	human	1.7	reporter, news writer
+jouster	human	1.75	lance fighter, knight rider
+judge	human	1.7	justice, magistrate
+julie	human	1.65	
+julius caesar	human	1.7	
+justice league	humanoid	1.9	
+king	human	1.75	ruler, monarch
+king arthur	human	1.75	arthur pendragon
+king henry	human	1.75	henry viii, henry v
+landlord	human	1.7	
+landscaper	human	1.7	gardener
+lawyer	human	1.7	attorney
+leon	human	1.75	
+leonardo da vinci	human	1.69	
+leprechaun	humanoid	0.9	little people, irish fairy
+lex luthor	human	1.85	
+liberal	human	1.7	progressive
+libertarian	human	1.7	classical liberal
+librarian	human	1.7	
+lieutenant	human	1.7	lt
+lifeguard	human	1.75	
+lighthouse keeper	human	1.7	lightkeeper
+linguist	human	1.7	language expert
+link (nintendo)	humanoid	1.65	link zelda
+lion tamer	human	1.75	animal trainer
+little red riding hood	human	1.3	
+lobbyist	human	1.7	
+locksmith	human	1.7	
+luigi	human	1.7	
+lumberjack	human	1.75	logger
+mad hatter	human	1.7	hatter
+mad scientist	human	1.7	crazy scientist
+magician	human	1.7	illusionist, wizard, conjurer
+magicians assistant	human	1.65	magician's assistant
+maid	human	1.65	housemaid
+major	human	1.75	
+manicurist	human	1.65	nail technician
+mannequin	humanoid	1.75	manikin, model dummy
+marine biologist	human	1.7	
+mario	human	1.55	super mario
+massage therapist	human	1.7	masseuse, masseur
+mathematician	human	1.7	
+maxwell	human	1.7	
+mechanic	human	1.7	auto mechanic, garage mechanic
+mercenary	human	1.7	soldier of fortune
+merchant	human	1.7	trader, shopkeeper
+mermaid	humanoid	1.7	siren
+meteorologist	human	1.7	weather forecaster
+midget	human	1.2	little person, dwarf
+milk man	human	1.75	milkman, milk delivery man
+milkmaid	human	1.65	dairy maid
+millionaire	human	1.75	billionaire
+mime	human	1.7	pantomimist
+miner	human	1.7	coal miner
+minotaur	humanoid	2.5	
+miser	human	1.7	scrooge
+mister hyde	human	1.8	mr. hyde
+mohawk	human	0.2	mohican
+monster	humanoid	2.5	
+mother	human	1.65	mom, mum
+mountain climber	human	1.7	alpinist, mountaineer
+movie star	human	1.7	film star, celebrity
+mozart	human	1.7	
+mummy	humanoid	1.7	bandaged corpse
+musician	human	1.7	
+musketeer (person)	human	1.7	three musketeers
+mutant	humanoid	1.8	x-men
+mute	human	1.7	
+napoleon bonaparte	human	1.68	
+neanderthal	human	1.65	neandertal
+ninja	human	1.7	shinobi
+nobleman	human	1.75	lord, baron, peer
+noblewoman	human	1.65	lady, baroness, peeress
+nomad	human	1.7	wanderer, bedouin, rover
+novelist	human	1.7	author, writer
+nun	human	1.65	sister
+nurse	human	1.65	registered nurse
+nutritionist	human	1.65	dietitian
+odin	human	1.9	wotan
+opera singer	human	1.7	opera vocalist
+optician	human	1.7	
+optometrist	human	1.7	eye doctor
+orc	humanoid	2.0	
+orphan	human	1.4	
+page boy	human	1.4	ring bearer
+paleontologist	human	1.7	dinosaur scientist
+paparazzi	human	1.7	paparazzo
+paperboy	human	1.6	paper carrier, newsboy
+paramedic	human	1.7	emt
+paratrooper	human	1.7	airborne soldier
+patient	human	1.7	
+peasant	human	1.7	serf, villager

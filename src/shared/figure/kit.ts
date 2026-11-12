@@ -5,6 +5,7 @@
  */
 import type { FaceSpec, FigPart, Figure, Rig, Vec3 } from './types';
 import { measure } from './math';
+import { hexColors } from './colors';
 
 export class Parts {
   readonly list: FigPart[] = [];
@@ -89,6 +90,7 @@ export interface PersonDims {
 /** A person, about three and a half heads tall like a paper craft doll. Joint names: hips, torso, head, armL/R,
  *  foreL/R, handL/R, legL/R, shinL/R, footL/R. */
 export function person(key: string, o: PersonOpts): Figure {
+  o = hexColors(o);
   const H = o.height;
   const kid = o.headScale ?? 1;
   const headH = H * 0.235 * kid;
@@ -187,6 +189,7 @@ export interface QuadOpts {
 
 /** An animal on four legs, body along z, head forward. Joint names: body, neck, head, legFL/FR/BL/BR, tail, earL/R. */
 export function quadruped(key: string, o: QuadOpts): Figure {
+  o = hexColors(o);
   const [L, Hb, W] = o.body;
   const p = new Parts();
   const shape = o.bodyShape ?? 'capsule';
@@ -254,6 +257,7 @@ export interface BirdOpts {
 
 /** A plump bird standing on two legs. Joints: body, head, wingL/R, legL/R, tail. */
 export function bird(key: string, o: BirdOpts): Figure {
+  o = hexColors(o);
   const H = o.height;
   const p = new Parts();
   const legL = H * 0.28;
@@ -306,6 +310,7 @@ export interface DragonOpts {
  * Joints: body, neck1, neck2, head, jaw, tail1-4, wingL/R, wingTipL/R, legFL/FR/BL/BR, flame, flameCore.
  */
 export function dragon(key: string, o: DragonOpts): Figure {
+  o = hexColors(o);
   const k = o.size / 1.7;
   const m = (v: number) => v * k;
   const p = new Parts();

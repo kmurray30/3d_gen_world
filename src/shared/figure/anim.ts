@@ -400,12 +400,63 @@ const DRAGON: Clip[] = [
   },
 ];
 
+/* ----- fish, bugs, snakes ----- */
+
+const FISH: Clip[] = [
+  { name: 'idle', dur: 1, loop: true, fn: (t, k) => ({ j: { tail: [0, 22 * S(t * 3.2), 0], finL: [0, 0, 18 * S(t * 5)], finR: [0, 0, -18 * S(t * 5)], body: [0, 5 * S(t * 3.2 + 1.5), 0] }, root: [0, k.H * 0.06 * S(t * 1.3), 0] }) },
+  { name: 'walk', dur: 1, loop: true, fn: (t) => ({ j: { tail: [0, 32 * S(t * 6), 0], body: [0, 8 * S(t * 6 + 1.5), 0], finL: [0, 0, 25 * S(t * 8)], finR: [0, 0, -25 * S(t * 8)] } }) },
+  { name: 'run', dur: 1, loop: true, fn: (t) => ({ j: { tail: [0, 40 * S(t * 10), 0], body: [0, 10 * S(t * 10 + 1.5), 0] } }) },
+  { name: 'flip', dur: 1.2, fn: (t, k) => ({ j: { tail: [0, 40 * S(t * 12), 0] }, root: [0, k.H * 1.2 * S(clamp01(t / 1.2) * Math.PI), 0], rootRot: [-360 * smooth(0.1, 1.0, t), 0, 0] }) },
+  { name: 'dart', dur: 1.2, fn: (t, k) => ({ j: { tail: [0, 45 * S(t * 16), 0] }, root: [0, 0, k.H * 2 * S(clamp01(t / 1.2) * Math.PI)] }) },
+  { name: 'spin', dur: 1.2, fn: (t) => ({ j: { tail: [0, 30 * S(t * 10), 0] }, rootRot: [0, 360 * smooth(0.1, 1.1, t), 0] }) },
+];
+
+const wingBeat = (t: number, hz: number, amp: number): Record<string, Vec3> => ({ wingL: [0, 0, amp * S(t * PI2 * hz)], wingR: [0, 0, -amp * S(t * PI2 * hz)] });
+const legsScurry = (t: number, hz: number, amp: number): Record<string, Vec3> => {
+  const j: Record<string, Vec3> = {};
+  for (let i = 0; i < 4; i++) {
+    const ph = (i % 2) * Math.PI;
+    j[`leg${i}L`] = [0, amp * S(t * PI2 * hz + ph), 0];
+    j[`leg${i}R`] = [0, -amp * S(t * PI2 * hz + ph + Math.PI), 0];
+  }
+  return j;
+};
+const BUG: Clip[] = [
+  { name: 'idle', dur: 1, loop: true, fn: (t) => ({ j: { ...wingBeat(t, 0.7, 8), antennaL: [6 * S(t * 2), 0, 0], antennaR: [6 * S(t * 2 + 1), 0, 0], abdomen: [3 * S(t * 1.5), 0, 0] } }) },
+  { name: 'walk', dur: 1, loop: true, fn: (t) => ({ j: { ...legsScurry(t, 3, 20), ...wingBeat(t, 0.7, 6) } }) },
+  { name: 'run', dur: 1, loop: true, fn: (t) => ({ j: { ...legsScurry(t, 6, 25) } }) },
+  { name: 'hop', dur: 0.9, fn: (t, k) => ({ j: { ...wingBeat(t, 12, 35) }, root: [0, k.H * 1.2 * S(clamp01(t / 0.9) * Math.PI), 0] }) },
+  { name: 'flutter', dur: 1.6, fn: (t, k) => ({ j: { ...wingBeat(t, 14, 45 * env(t, 1.6, 0.2)) }, root: [0, k.H * 1.6 * S(clamp01(t / 1.6) * Math.PI), 0] }) },
+  { name: 'spin', dur: 1.2, fn: (t) => ({ j: { ...legsScurry(t, 8, 25) }, rootRot: [0, 360 * smooth(0.1, 1.1, t), 0] }) },
+];
+
+const slither = (t: number, amp: number, hz: number): Record<string, Vec3> => {
+  const j: Record<string, Vec3> = {};
+  for (let i = 0; i < 8; i++) j[`seg${i}`] = [0, 0, amp * S(t * PI2 * hz - i * 0.8)];
+  return j;
+};
+const SNAKE: Clip[] = [
+  { name: 'idle', dur: 1, loop: true, fn: (t) => ({ j: { ...slither(t, 6, 0.4), head: [4 * S(t * 1.1), 12 * S(t * 0.5), 0] }, sc: { tongue: S(t * 2.3) > 0.85 ? 1 : 0.25 } }) },
+  { name: 'walk', dur: 1, loop: true, fn: (t) => ({ j: slither(t, 14, 1.2), sc: { tongue: 0.25 } }) },
+  { name: 'run', dur: 1, loop: true, fn: (t) => ({ j: slither(t, 18, 2.2), sc: { tongue: 0.25 } }) },
+  {
+    name: 'strike', dur: 1.4,
+    fn: (t) => {
+      const e = smooth(0.15, 0.3, t) * (1 - smooth(0.5, 1.2, t));
+      return { j: { seg6: [-20 * e, 0, 0], seg7: [-25 * e, 0, 0], head: [30 * e, 0, 0] }, sc: { tongue: 0.3 + 0.7 * e } };
+    },
+  },
+  { name: 'hiss', dur: 1.8, fn: (t) => ({ j: { seg6: [-15 * env(t, 1.8), 0, 0], seg7: [-20 * env(t, 1.8), 0, 0], head: [-10 * env(t, 1.8), 0, 0] }, sc: { tongue: S(t * 30) > 0 ? 1 : 0.4 } }) },
+];
+
 /* ----- props ----- */
 
 const sway = (t: number, amp: number): Record<string, Vec3> => ({ top: [0, 0, amp * S(t * 0.9)], head: [0, 0, amp * 1.5 * S(t * 1.3)], stem: [0, 0, amp * 0.8 * S(t * 1.1)] });
 
 const PROP: Clip[] = [
-  { name: 'idle', dur: 1, loop: true, fn: (t, k) => ({ j: k.key === 'tree' || k.key === 'pine tree' || k.key === 'bush' || k.key === 'flower' ? sway(t, 1.5) : {} }) },
+  // plants sway; parts named rotor (spins flat: helicopter, ceiling fan) and fan (spins facing you: windmill,
+  // propeller, pinwheel) always turn
+  { name: 'idle', dur: 1, loop: true, fn: (t, k) => ({ j: { ...(k.key === 'tree' || k.key === 'pine tree' || k.key === 'bush' || k.key === 'flower' ? sway(t, 1.5) : { top: [0, 0, 1.2 * S(t * 0.9)] }), rotor: [0, t * 420, 0], fan: [0, 0, t * 300] } }) },
   { name: 'walk', dur: 1, loop: true, fn: (t) => ({ j: { wheel: [t * 360, 0, 0] } }) },
   { name: 'run', dur: 1, loop: true, fn: (t) => ({ j: { wheel: [t * 900, 0, 0] } }) },
   {
@@ -421,6 +472,10 @@ const PROP: Clip[] = [
       const e = env(t, 2.6, 0.5);
       return { j: { door: [0, -100 * e, 0] } };
     },
+  },
+  {
+    name: 'lid', dur: 2.2,
+    fn: (t) => ({ j: { lid: [-95 * env(t, 2.2, 0.4), 0, 0] } }),
   },
   {
     name: 'crank', dur: 2.8,
@@ -442,7 +497,7 @@ const PROP: Clip[] = [
   },
 ];
 
-const CLIPS: Record<Rig, Clip[]> = { biped: BIPED, quad: QUAD, bird: BIRD, dragon: DRAGON, prop: PROP };
+const CLIPS: Record<Rig, Clip[]> = { biped: BIPED, quad: QUAD, bird: BIRD, dragon: DRAGON, fish: FISH, bug: BUG, snake: SNAKE, prop: PROP };
 
 /** Reactions a click can trigger, by rig (props pick per kind). */
 export function reactionsFor(fig: Figure): string[] {
@@ -455,11 +510,18 @@ export function reactionsFor(fig: Figure): string[] {
       return ['flap', 'peck', 'crow', 'peck'];
     case 'dragon':
       return ['roar', 'breathe', 'breathe', 'flap', 'roll'];
+    case 'fish':
+      return ['flip', 'dart', 'spin'];
+    case 'bug':
+      return fig.parts.some((p) => p.name === 'wingL') ? ['flutter', 'hop', 'spin'] : ['hop', 'spin'];
+    case 'snake':
+      return ['strike', 'hiss'];
     case 'prop':
-      if (fig.key === 'house') return ['door'];
-      if (fig.key === 'well') return ['crank'];
-      if (fig.key === 'wheelbarrow') return ['roll'];
-      if (fig.key === 'sword' || fig.key === 'apple') return ['spin', 'jiggle'];
+      if (fig.parts.some((p) => p.name === 'door')) return ['door'];
+      if (fig.parts.some((p) => p.name === 'crank')) return ['crank'];
+      if (fig.parts.some((p) => p.name === 'lid')) return ['lid', 'jiggle'];
+      if (fig.parts.some((p) => p.name === 'wheel')) return ['roll', 'jiggle'];
+      if (fig.heightM < 1.2) return ['spin', 'jiggle', 'jiggle'];
       return ['jiggle'];
   }
 }

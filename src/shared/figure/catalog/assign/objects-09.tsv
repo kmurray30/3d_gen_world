@@ -1,0 +1,263 @@
+word	type	height_m	tags
+sledgehammer	object	1.0	maul
+sleeping bag	object	2.0	
+sleeping pill	object	0.1	hypnotic
+sleeping powder	object	0.1	
+slide (toy)	object	2.0	playground slide
+sliding glass door	object	2.1	patio door
+sling shot	object	0.3	slingshot
+slippers	object	0.1	house shoes
+slop	object	0.1	swill, muck
+slot machine	object	1.8	one-armed bandit
+slotted spoon	object	0.3	perforated spoon
+slush	object	0.1	sludge
+slushy	object	0.15	slurpee, icee
+small bullet	object	0.1	mini bullet, small caliber bullet
+small rocket	object	0.3	model rocket, mini rocket
+smart phone	object	0.15	smartphone, mobile phone
+smart watch	object	0.1	smartwatch, fitness watch
+smoke bomb	object	0.1	smoke grenade, smoke pellet
+smoke detector	object	0.15	smoke alarm, fire detector
+smore	object	0.1	s'more, graham marshmallow chocolate
+snorkeler (mask)	object	0.2	snorkel mask
+snorkeling fins	object	0.7	snorkel fins, dive fins
+snow	object	0.3	
+snow blower	object	1.5	snow thrower
+snow globe	object	0.15	
+snow pants	object	1.0	snowsuit pants, ski pants
+snow sculpture	object	2.0	ice sculpture, snow statue
+snowball	object	0.1	
+snowboard	object	1.6	
+snowflake	object	0.1	
+snowmobile	object	1.4	snowmachine
+snowplow	object	3.0	snowplough
+soap	object	0.1	bar soap
+soap dish	object	0.1	soap holder
+soccer ball	object	0.22	football
+socks	object	0.3	hose
+soda	object	0.35	pop, soft drink, cola
+soda machine	object	1.8	vending machine, soda dispenser
+sofa	object	0.85	couch, settee
+solar panel	object	1.6	solar cell
+sombrero	object	0.25	
+soup	object	0.1	
+sour cream	object	0.1	
+sour milk	object	0.2	
+souvenir	object	0.15	
+souvenir shop	object	3.0	gift shop
+soy sauce	object	0.2	soya sauce
+spa (place)	object	5.0	day spa
+space station	object	12.0	orbital station
+space suit	object	1.8	spacesuit
+spaceship	object	12.0	spacecraft, starship
+spade	object	1.2	shovel
+spare ribs	object	0.1	spareribs
+spark plugs	object	0.1	sparkplug
+sparklers	object	0.3	
+spatula	object	0.3	turner, fish slice
+speaker	object	0.3	loudspeaker, sound box
+spear	object	1.8	lance
+speech bubble	object	0.1	speech balloon, comic bubble, thought bubble
+speed bump	object	0.1	speed hump, road bump
+speed camera	object	1.0	traffic camera, speed trap
+speedway	object	0.1	racetrack, motor speedway
+sphere	object	0.1	ball, orb
+sphinx (structure)	object	12.0	great sphinx
+spice rack	object	0.3	spice rack
+spike	object	0.15	nail, point
+spinach	object	0.3	
+spine	object	0.45	backbone
+spinning top	object	0.1	top, spinning top
+spinning wheel	object	1.0	spinning wheel
+spiral staircase	object	3.0	helical staircase, twisting stairs
+spire	object	1.0	steeple, tower top
+spit (cooking)	object	1.0	rotisserie rod, roasting spit
+spitball	object	0.1	paper wad, wet paper ball
+sponge	object	0.1	sea sponge, kitchen sponge
+spoon	object	0.15	tablespoon, teaspoon
+spoons	object	0.15	cutlery, silverware
+sporting goods store	object	5.0	sports shop, athletic store
+sports car	object	1.3	race car, performance car
+spotlight	object	0.3	floodlight
+spray bottle	object	0.25	spray mister
+spray paint	object	0.25	aerosol paint
+spring roll	object	0.1	
+sprinkler	object	0.4	lawn sprinkler
+sprinkles	object	0.1	jimmies, hundreds and thousands
+spyglass	object	0.3	telescope, monocular
+square (shape)	object	0.5	quadrilateral
+squash	object	0.3	pumpkin
+squeegee	object	0.4	squeege
+stable	object	4.0	barn, stall
+stable door	object	2.2	barn door
+stadium	object	5.0	arena, coliseum
+staff	object	1.5	pole, rod, walking stick
+stage (place)	object	1.0	platform, podium
+stained glass	object	3.0	stained glass window
+stairs	object	3.0	staircase, steps
+stairwell	object	4.0	stair shaft
+stake	object	1.0	post, pole
+stalactite	object	2.0	
+stalagmite	object	1.5	
+stamp (postage)	object	0.1	postage stamp
+stands	object	1.0	lectern, podium
+staple gun	object	0.2	
+stapler	object	0.12	
+staples	object	0.1	paper staples, office staples
+star (space)	object	12.0	sun
+station wagon	object	1.5	estate car, wagon
+statue	object	3.0	sculpture, monument
+statuette	object	0.3	figurine, miniature statue
+steak	object	0.1	
+stealth aircraft	object	12.0	stealth bomber, stealth fighter
+steam	object	0.1	
+steamboat	object	12.0	paddle steamer
+steel (material)	object	0.1	
+steel cage	object	4.0	
+steel gate	object	3.0	metal gate
+steering wheel	object	0.35	steering wheel
+stem	object	0.2	plant stem
+stencil	object	0.3	stencil
+step stool	object	0.5	step stool
+stepladder	object	2.5	step ladder
+stereo	object	0.3	stereo system, hi-fi
+stethoscope	object	0.7	stethoscope
+stew	object	0.2	stew
+stick	object	0.3	rod, branch, cane
+sticker	object	0.1	decal, label, bumper sticker
+stilts	object	2.5	pogos, walkers
+stink bomb	object	0.1	stinkbomb
+stitches (body)	object	0.1	sutures
+stomach	object	0.2	belly, gut, abdomen
+stonehenge	object	8.0	
+stool	object	0.45	footstool, step stool
+stop sign	object	0.75	stop signpost
+store	object	5.0	shop, retail store
+storm drain	object	1.0	storm sewer
+stove	object	0.85	cooker, range
+straightjacket	object	1.5	straitjacket
+straw (drinking)	object	0.2	drinking straw, sipper
+strawberry	object	0.1	
+strawberry plant	object	0.3	
+streamer	object	2.0	live streamer
+street sweeper	object	3.0	street cleaning truck
+stretcher	object	2.0	gurney
+string (guitar)	object	0.65	guitar string
+string cheese	object	0.2	
+strobe light	object	0.2	strobe lamp
+stroller	object	1.0	baby carriage, pram, pushchair
+strongbox	object	0.3	safe, safbox
+studio	object	3.0	atelier
+stuffing	object	0.1	dressing
+stump	object	0.5	
+stumps	object	0.5	tree stumps
+stun gun	object	0.2	taser
+stylus	object	0.15	stylus pen
+submarine (boat)	object	12.0	sub, submarine
+subway	object	4.0	metro, underground
+subway car	object	3.5	
+subway train	object	3.5	
+suction cup	object	0.1	sucker
+sugar	object	0.1	
+sugar cube	object	0.1	
+suit of armor (clothes)	object	1.8	plate armor, chainmail
+suit of armor (decor)	object	1.8	plate armor, chainmail
+suitcase	object	0.7	luggage, travel bag
+sulfur	object	0.1	sulphur
+sundial	object	0.5	
+sunflower	object	3.0	
+sunflower seed	object	0.1	
+sunglasses	object	0.1	shades, sun glasses
+sunscreen	object	0.15	sun block, suntan lotion
+supercomputer	object	2.0	cray, mainframe
+superhero costume	object	1.7	superhero suit, cape outfit
+surfboard	object	2.8	longboard, shortboard
+surge protector	object	0.15	power strip, surge suppressor
+surgical mask	object	0.2	face mask, medical mask
+survival knife	object	0.3	bushcraft knife, tactical knife
+sushi	object	0.1	nigiri, maki
+suspenders	object	1.0	braces
+suspension bridge	object	1.0	
+suv	object	1.8	sport utility vehicle
+swat van	object	2.8	tactical van, police van
+sweater	object	0.7	jumper, pullover
+sweatpants	object	1.0	joggers, track pants
+swim trunks	object	0.6	swimming trunks, bathingsuit shorts
+swimfin	object	0.6	fin, flippers, swim fins
+swimsuit	object	0.7	bathing suit, swimwear
+swing	object	2.5	swing set
+swiss cheese	object	0.2	emmental
+swiss roll	object	0.3	jelly roll
+switch	object	0.1	light switch, toggle
+synagogue	object	12.0	temple
+syringe	object	0.15	hypodermic, needle
+tablecloth	object	1.5	
+tablet (electronics)	object	0.25	ipad, tablet computer
+tabloid	object	0.4	gossip paper
+tack	object	0.1	thumbtack, drawing pin
+tackle box	object	0.25	fishing box
+taco	object	0.15	
+taffy	object	0.1	taffy candy, salt water taffy
+tag (clothes)	object	0.1	clothing tag, garment label
+tail	object	0.3	animal tail
+tambourine	object	0.3	tamberine
+tank	object	3.0	military tank, army tank
+tanktop	object	0.7	tank top, sleeveless shirt
+tanning bed	object	1.5	sunbed, tanning booth
+tanning lotion	object	0.2	self-tanner, bronzer lotion
+tape (sticky)	object	0.1	sticky tape, adhesive tape, duct tape
+tape dispenser	object	0.15	tape gun, scotch tape dispenser
+tape measure	object	0.1	measuring tape
+tapestry	object	1.5	wall hanging
+tar (material)	object	0.1	bitumen, asphalt
+target	object	0.9	bullseye
+tarp	object	3.0	tarpaulin
+tart	object	0.1	pie
+tassel	object	0.2	tassle
+tattoo	object	0.15	ink, tatt
+taxi stand	object	3.0	cab rank, taxi rank
+tea	object	0.1	black tea
+teabag	object	0.1	tea bag
+tear gas	object	0.5	cs gas
+teddy bear	object	0.4	teddy, stuffed bear
+tee	object	0.1	golf tee
+teeth	object	0.1	
+telegraph	object	2.0	telegraph pole
+telephone pole	object	12.0	utility pole, telegraph pole
+telescope	object	1.5	
+temple	object	12.0	
+tenderizer	object	0.3	meat tenderizer
+tennis ball	object	0.1	
+tennis court	object	1.2	tennis pitch
+tennis net	object	1.07	
+tent	object	2.5	camping tent
+tentacle	object	0.5	
+tepee	object	5.0	tipi
+test tube	object	0.15	testtube
+tetherball	object	0.66	
+textbook	object	0.28	
+theater	object	10.0	theatre
+thermos	object	0.25	vacuum flask
+thermostat	object	0.12	
+thimble	object	0.1	
+thong	object	0.1	flip flop, g-string
+thorn	object	0.1	
+thorn bush	object	1.5	blackberry bush
+three d printer	object	0.5	3d printer
+three hole punch	object	0.1	3-hole punch
+throne	object	1.5	
+thumbprint scanner	object	0.1	fingerprint scanner
+thunderbolt	object	0.5	lightning bolt
+tiara	object	0.15	crown, diadem
+tide pool	object	0.3	tidal pool
+tie	object	1.4	necktie
+tie dye shirt	object	0.7	tie-dye shirt, tiedye shirt
+tilde	object	0.1	squiggle
+time machine	object	2.0	time travel device
+tin foil	object	0.1	aluminium foil
+tinsel	object	2.0	christmas garland
+tire	object	0.65	tyre
+tire iron	object	0.6	lug wrench
+tire swing	object	1.0	tyre swing
+tissue	object	0.1	kleenex
+tissue box	object	0.12	tissue box, kleenex box

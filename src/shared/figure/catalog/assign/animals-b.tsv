@@ -1,0 +1,174 @@
+word	type	height_m	tags
+ladybug	animal	0.1	ladybird
+lamb (animal)	animal	0.7	lamb
+larvae	animal	0.1	maggots, grubs
+leech	animal	0.1	
+lemming	animal	0.15	lemming
+lemur	animal	0.6	
+lice	animal	0.1	head lice
+lion	animal	1.2	big cat
+lion cub	animal	0.5	
+lioness	animal	1.2	female lion
+lizard	animal	0.25	gecko, iguana, skink
+llama	animal	1.2	alpaca
+lobster	animal	0.25	crayfish
+locust	animal	0.1	grasshopper
+lynx	animal	0.6	
+macaw	animal	0.9	
+maggot	animal	0.1	
+magpie	animal	0.45	
+maltese	animal	0.25	maltese dog, maltese terrier
+mammoth	animal	4.0	woolly mammoth
+manatee	animal	4.0	sea cow
+manta ray	animal	2.0	devil ray
+mantis	animal	0.1	praying mantis
+mare	animal	1.5	female horse
+mastiff	animal	0.8	english mastiff
+megalodon	animal	12.0	
+moby dick	animal	12.0	white whale
+monkey	animal	0.6	
+moose	animal	2.1	elk
+moose calf	animal	1.2	
+mosquito	animal	0.1	skeeter
+moth	animal	0.1	
+mountain goat	animal	0.9	rock goat, mountain ibex
+mountain lion	animal	0.8	cougar, puma
+mouse	animal	0.1	
+mussel	animal	0.1	
+mutt	animal	0.6	mongrel
+naked mole rat	animal	0.1	sand puppy
+narwhal	animal	5.0	unicorn whale
+nautilus	animal	0.2	chambered nautilus
+octopus	animal	3.0	devilfish
+opossum	animal	0.8	possum
+orangutan	animal	1.5	
+orca	animal	9.0	killer whale
+ostrich	animal	2.5	ostrich bird
+otter	animal	1.2	river otter, sea otter
+owl	animal	0.6	
+owlet	animal	0.25	baby owl
+ox	animal	1.7	bullock
+panda	animal	1.5	giant panda
+panda cub	animal	0.3	
+panther	animal	0.9	black panther
+panther cub	animal	0.3	
+parrot	animal	0.35	parakeet, macaw
+peacock	animal	2.0	peafowl
+pelican	animal	1.2	
+penguin (animal)	animal	1.0	emperor penguin
+pet	animal	0.3	animal companion
+pets	animal	0.3	pet animals
+pigeon	animal	0.35	rock dove
+piglet	animal	0.5	
+piranha	animal	0.3	
+plankton	animal	0.1	
+platypus	animal	0.5	duck-billed platypus
+polar bear	animal	2.6	polar bear
+polar bear cub	animal	1.0	polar bear cub
+pomeranian	animal	0.25	pom, pom dog
+poodle	animal	0.4	standard poodle, toy poodle
+porcupine	animal	0.7	hedgehog
+porpoise	animal	1.5	dolphin
+poultry	animal	0.6	chicken, hen, rooster
+prairie dog	animal	0.3	
+pterodactyl	animal	0.5	pterosaur
+puffin	animal	0.3	sea parrot
+pug	animal	0.3	pug dog
+puppy	animal	0.3	
+rabbit	animal	0.3	bunny, hare
+raccoon	animal	0.6	raccoon
+ram	animal	0.8	male sheep
+raptor	animal	0.7	bird of prey
+rat	animal	0.2	brown rat
+rattlesnake	animal	1.2	diamondback
+red panda	animal	0.5	firefox, lesser panda
+redbird	animal	0.25	cardinal
+reindeer	animal	1.4	caribou
+rhinoceros	animal	1.8	rhino
+roadrunner	animal	0.6	chaparral bird
+robin (bird)	animal	0.2	american robin
+rodent	animal	0.2	rat, mouse
+rottweiler	animal	0.65	
+sabre toothed tiger	animal	1.1	sabertooth tiger, smilodon
+salamander	animal	0.15	newt
+salmon	animal	0.7	
+scallop	animal	0.1	scallop shell
+schnauzer	animal	0.5	miniature schnauzer, standard schnauzer, giant schnauzer
+scorpion	animal	0.15	scorpion
+sea anemone	animal	0.2	
+sea cucumber	animal	0.3	
+sea snail	animal	0.1	
+sea snake	animal	1.5	
+sea sponge	animal	0.2	
+sea turtle	animal	1.0	marine turtle
+sea urchin	animal	0.1	
+seagull	animal	0.4	gull
+seahorse	animal	0.15	
+seal	animal	1.8	
+seal pup	animal	0.8	
+shark	animal	2.5	great white
+sheepdog	animal	0.6	herding dog, border collie
+shetland sheepdog	animal	0.35	sheltie
+shiba inu	animal	0.4	
+shih tzu	animal	0.25	
+shrimp	animal	0.2	prawn
+silkworm	animal	0.1	silk worm
+silverback gorilla	animal	1.75	silverback
+skunk	animal	0.4	
+sloth	animal	0.6	
+slug	animal	0.1	
+snail	animal	0.1	slug, garden snail
+snake	animal	1.5	serpent
+snapping turtle	animal	0.5	
+snow leopard	animal	1.2	
+sparrow	animal	0.15	house sparrow
+sperm whale	animal	12.0	cachalot
+spider	animal	0.1	arachnid
+squid	animal	0.3	cuttlefish
+squirrel	animal	0.25	chipmunk
+st bernard	animal	0.75	saint bernard
+stag	animal	1.2	male deer, buck
+starfish	animal	0.15	sea star
+steed	animal	1.6	horse, mount
+stegosaurus	animal	4.0	stegosaurus
+stingray	animal	1.5	sting ray
+stork	animal	1.0	white stork
+sunfish	animal	4.0	mola mola
+swan	animal	1.2	
+swordfish	animal	3.0	
+tabby	animal	0.25	tabby cat
+tadpole	animal	0.1	polliwog
+tarantula	animal	0.15	wolf spider
+tasmanian devil	animal	0.3	
+termite	animal	0.1	
+terrier	animal	0.4	terrier dog
+tick	animal	0.1	
+tiger	animal	1.0	
+tiger cub	animal	0.5	
+tilapia	animal	0.4	
+toucan	animal	0.6	
+tree frog	animal	0.1	treefrog
+triceratops	animal	3.0	
+tsetse fly	animal	0.1	tsetse
+tuna (fish)	animal	1.5	tuna fish
+turkey (bird)	animal	1.0	turkey bird
+turtle	animal	0.3	tortoise
+turtle hatchling	animal	0.1	baby turtle, turtle baby
+viper	animal	1.0	pit viper
+vulture	animal	0.8	
+walrus	animal	3.5	sea cow
+wasp	animal	0.1	yellowjacket
+weasel	animal	0.3	least weasel
+whale	animal	12.0	blue whale
+whale shark	animal	12.0	
+wildebeest	animal	1.4	gnu
+wolf	animal	0.8	gray wolf, timber wolf
+wolf cub	animal	0.3	
+wolverine	animal	0.35	glutton
+wombat	animal	0.75	
+woodpecker	animal	0.45	
+worm	animal	0.15	earthworm
+yak	animal	2.0	
+yorkie	animal	0.25	yorkshire terrier
+zebra	animal	1.3	
+zebra foal	animal	0.8	

@@ -14,6 +14,7 @@ import { bindPose, sculpt, type Sculpt } from '../../../shared/figure/sculpt';
 import { chainShaderHook, tinted } from '../tint';
 import { drawFace } from './face';
 import { shadeOf, smoothGeometry } from './toon';
+import { labelFace } from './label';
 
 const DEG = Math.PI / 180;
 
@@ -246,6 +247,11 @@ export class CelFigure {
       if (p.role === 'eye') {
         mesh.userData.baseY = mesh.scale.y;
         this.eyes.push(mesh);
+      }
+      if (p.role === 'label' && p.text) {
+        const face = labelFace(p.text, p.color, p.size);
+        this.mats.push(face.material as THREE.Material);
+        holder.add(face);
       }
       if (!p.noInk && p.role !== 'glow') {
         const omat = tinted(new THREE.MeshBasicMaterial({ color: shadeOf(p.color, 0.3), side: THREE.BackSide }));

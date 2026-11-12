@@ -1,0 +1,263 @@
+word	type	height_m	tags
+office	object	3.0	office space
+office building	object	1.0	
+office supply store	object	5.0	staples store
+oil (cooking)	object	0.25	cooking oil
+oil (motor)	object	0.25	motor oil
+oil barrel	object	0.9	petroleum barrel
+oil lamp	object	0.3	kerosene lamp
+oil rig	object	12.0	drilling rig
+oil well	object	12.0	oil rig, oil derrick
+oilslick	object	0.1	oil spill
+olive	object	0.1	
+olive branch	object	0.6	peace offering
+olive tree	object	8.0	
+omelet	object	0.1	omelette
+onion	object	0.1	
+onion rings	object	0.1	
+orange	object	0.1	
+orange juice	object	0.2	
+orange tree	object	6.0	
+orb	object	0.1	sphere, globe
+orchard	object	5.0	fruit grove, apple orchard
+ore	object	0.1	iron ore, mineral ore
+organ (music)	object	4.0	pipe organ, church organ
+ornament	object	0.2	christmas ornament, tree ornament, decorative ornament
+orphanage	object	10.0	children's home, orphan home
+ottoman	object	0.45	footstool, pouffe
+outfit	object	1.7	clothing, ensemble, getup
+outhouse	object	2.5	privy, latrine
+outpost	object	8.0	fort, station
+oval	object	0.2	ellipse
+oven mitts	object	0.3	oven gloves
+overalls	object	1.7	coveralls, boiler suit
+pacifier	object	0.1	dummy, soother, binky
+package	object	0.2	parcel, box, bundle
+packet	object	0.15	pouch, sachet
+packing peanut	object	0.1	
+paddle	object	0.6	oar
+padlock	object	0.1	lock
+pads	object	0.1	brake pads
+pager	object	0.1	beeper
+pagoda	object	12.0	
+paint	object	0.1	
+paint brush	object	0.3	paintbrush
+paint roller	object	0.3	roller
+paintball gun	object	0.8	paintgun
+pajamas	object	1.7	pjs, pyjamas
+palace	object	12.0	castle
+palette	object	0.3	color palette
+palm tree	object	12.0	palmtree
+pan	object	0.1	frying pan, skillet
+pancake	object	0.1	flapjack, griddle cake
+pancake mix	object	0.2	
+pancreas	object	0.15	
+pansy	object	0.2	heartsease
+pants	object	1.0	trousers, slacks
+panty hose	object	0.9	pantyhose, tights
+papaya	object	0.2	
+paper	object	0.1	stationery
+paper airplane	object	0.2	paper plane
+paper bag (container)	object	0.3	grocery bag
+paper cutter	object	0.4	guillotine cutter, paper trimmer
+paper towels	object	0.1	kitchen roll
+paperclip	object	0.1	paper clip, gem clip
+paperweight	object	0.1	
+paprika	object	0.1	paprika powder, sweet paprika
+papyrus	object	2.0	papyrus plant
+parachute	object	7.0	parachute canopy
+parallelogram	object	0.5	
+parcel	object	0.2	package, parcel post
+park	object	12.0	public park
+parking lot	object	2.0	car park, parking area
+parking meter	object	1.5	parking metre
+parking structure	object	12.0	parking garage, parking lot multi-level
+parking ticket	object	0.1	parking fine, parking violation notice
+party favor	object	0.1	party favour, goodie bag item
+party hat	object	0.3	cone hat, birthday hat
+pasta	object	0.25	noodles, spaghetti
+pastry	object	0.1	danish, croissant
+patches	object	0.1	fabric patches, iron-on patches
+patio	object	0.1	deck, terrace
+patrol boat	object	8.0	police boat
+pawnshop	object	4.0	pawn shop, pawn store
+pay phone	object	2.5	payphone, public phone
+pda	object	0.15	personal digital assistant, palm pilot
+pea	object	0.1	
+pea shooter	object	0.5	peashooter
+peach (fruit)	object	0.1	
+peach tree	object	5.0	
+peacock feather	object	1.5	
+peanut	object	0.1	groundnut
+peanut butter	object	0.1	peanut spread
+peanuts	object	0.1	groundnuts
+pear	object	0.1	
+pear tree	object	8.0	pear-tree
+pearl	object	0.1	
+pebble	object	0.1	small stone
+pecan	object	0.2	pecan nut
+pedestal	object	1.0	plinth, base
+peeler	object	0.2	potato peeler, vegetable peeler
+peg leg	object	0.9	wooden leg
+pellet	object	0.1	bb, airgun pellet
+pelt	object	1.5	animal skin, fur
+pelvis	object	0.25	hip bone
+pen	object	0.15	ballpoint, fountain pen
+pencil	object	0.19	lead pencil, mechanical pencil
+pencil sharpener	object	0.1	sharpening tool
+pendulum	object	0.5	clock pendulum
+penguin costume	object	1.7	penguin suit
+penny	object	0.1	one cent
+pentagon	object	0.1	five-sided shape
+pepper (condiment)	object	0.15	black pepper, ground pepper
+pepper (vegetable)	object	0.7	bell pepper, capsicum
+pepper spray	object	0.15	oc spray
+pepperoni	object	0.1	pepperoni sausage
+percent sign	object	0.1	%, percentage sign
+perfume	object	0.15	cologne, fragrance
+periscope	object	1.0	submarine scope
+permit (paper)	object	0.1	license, pass
+peroxide	object	0.2	hydrogen peroxide
+personal planner	object	0.2	day planner, agenda, organizer
+pesto	object	0.5	
+pet carrier	object	0.4	pet crate, pet travel bag
+pet food	object	0.2	animal food, pet chow
+pet house	object	0.6	dog house, kennel
+pet store	object	3.0	pet shop
+pew	object	1.1	church bench
+pharmacy	object	3.0	drugstore
+phone	object	0.15	telephone
+phone book	object	0.1	telephone directory
+phone booth	object	2.5	telephone booth, phone box
+phonograph	object	0.4	record player, gramophone
+photo album	object	0.3	picture album, photo book
+photo booth	object	2.0	photobooth
+photograph	object	0.2	photo, picture
+piano	object	1.0	upright piano, grand piano
+pick (guitar)	object	0.1	guitar pick, plectrum, plec
+pick (tool)	object	0.6	pickaxe, mattock
+pickle	object	0.1	gherkin, dill pickle
+picnic table	object	0.75	picnic bench
+pie	object	0.1	
+piggy bank	object	0.2	pig bank
+pigpen	object	1.2	pig sty, pigpen
+pigs in a blanket	object	0.1	
+pilgrim hat	object	0.25	buckle hat
+pill	object	0.1	tablet
+pill box	object	0.1	pillbox, pill container
+pillar	object	3.0	column
+pipe cleaner	object	0.2	chenille stem
+pirate hat	object	0.25	tricorn
+pirate ship	object	12.0	pirate vessel, pirate boat
+pistachio	object	0.1	
+pit (hole)	object	2.0	hole, trench
+pitchfork	object	1.7	fork, hayfork
+pixie dust	object	0.5	fairy dust
+pizza	object	0.1	pie
+pizza box	object	0.1	pizza carton
+pizza cutter	object	0.25	pizza wheel, pizza slicer
+pizza oven	object	1.5	pizza furnace
+piñata	object	0.6	
+placemat	object	0.1	place mat
+planet	object	12.0	
+plant	object	0.6	
+plastic	object	0.1	
+plate	object	0.1	dish
+platform	object	1.0	stage
+platinum	object	0.1	
+platter	object	0.1	tray, serving plate
+playground	object	3.0	play area, park
+playhouse (toy)	object	1.5	kids playhouse, toy house
+playpen	object	0.7	baby pen, play yard
+playroom	object	2.5	game room, kids room
+pliers	object	0.18	slip joint pliers, needle nose pliers
+plow	object	1.8	snowplow, tractor plow
+plum	object	0.1	
+plum tree	object	5.0	plum tree
+plunger	object	0.35	toilet plunger, bathroom plunger
+plus sign	object	0.1	addition sign
+pocket knife	object	0.1	foldable knife, jackknife
+pocket watch	object	0.1	watch, pocket timepiece
+pod	object	0.1	pea pod, seed pod
+pogo stick	object	1.1	pogo
+poinsettia	object	0.45	christmas flower, poinsettia plant
+polarised sunglasses	object	0.1	polarized sunglasses
+pole	object	3.0	pole vault, flagpole
+police cap	object	0.15	police hat
+police car	object	1.5	police vehicle, paddy wagon, squad car
+police station	object	10.0	police headquarters, cop shop, station house
+policeman uniform	object	1.7	police uniform, cop uniform
+pollen	object	0.1	
+polo shirt	object	0.7	polo, collared shirt
+polystyrene	object	0.1	styrofoam, ps foam
+pomegranate	object	0.1	
+pompom	object	0.15	pom-pom, cheerleader pompon
+poncho	object	1.0	poncho cape
+pond	object	2.0	small pond, koi pond
+pool	object	1.5	swimming pool
+pool ball	object	0.1	billiard ball, snooker ball
+pool balls	object	0.1	billiard balls, snooker balls
+pool chair	object	0.9	poolside chair, lounger
+pool cue	object	1.45	billiard cue, snooker cue
+pool house	object	3.0	changing room, pool cabana
+pool table	object	0.85	billiard table, snooker table
+pop gun	object	0.6	toy gun, cap gun
+popcorn	object	0.2	
+popcorn kernel	object	0.1	
+porch	object	2.5	veranda, deck
+pork	object	0.1	pig meat
+pork rinds	object	0.1	pork scratchings, chicharrones
+port (place)	object	12.0	
+port hole	object	0.5	porthole
+portable toilet	object	2.3	porta potty, portable restroom
+post office	object	8.0	
+postcard	object	0.1	
+poster	object	1.0	
+pot (kitchen)	object	0.2	saucepan, cooking pot
+pot of gold	object	0.25	leprechaun gold
+pot sticker	object	0.1	dumpling, gyoza
+potato	object	0.1	spud
+potato chips	object	0.1	crisps
+potato masher	object	0.3	masher
+potato salad	object	0.1	
+potion	object	0.2	elixir
+potpourri	object	0.15	sachetmix
+potted plant	object	0.4	houseplant
+pottery	object	0.25	ceramics
+power boat	object	2.0	speedboat, motorboat
+power lines	object	12.0	electric lines, transmission lines
+power plant	object	12.0	power station
+power supply	object	0.15	psu
+pretzel	object	0.15	
+printer	object	0.4	inkjet, laser printer
+printing press	object	2.0	
+prison	object	12.0	jail, penitentiary
+prison uniform	object	1.7	jumpsuit, inmate uniform
+projector	object	0.3	
+projector screen	object	2.0	projection screen
+propane tank	object	1.2	gas cylinder, propane cylinder
+propeller	object	2.0	prop
+protest sign	object	0.6	picketing sign
+protractor	object	0.15	angle finder
+public address system	object	0.3	pa system, speaker system
+pudding	object	0.1	custard
+puddle	object	0.1	
+pulley	object	0.1	
+pump	object	0.4	water pump
+pumpkin	object	0.4	jack-o-lantern
+pumpkin pie	object	0.1	
+punching bag	object	1.2	punch bag, heavy bag
+purse	object	0.2	handbag
+push broom	object	1.4	deck brush
+putty	object	0.1	
+pyramid (landmark)	object	1.46	great pyramid, giza pyramid
+pyramid (shape)	object	0.1	tetrahedron
+rabbits foot	object	0.1	rabbit's foot, rabbit foot
+race car	object	1.2	racecar, racing car
+rack	object	1.8	shelf, spice rack
+racket	object	0.7	racquet, tennis racket
+radar	object	0.5	
+radar detector	object	0.1	radar gun detector
+radioactive material sign	object	0.3	radiation sign, hazardous material sign
+radish	object	0.1	
+raffle ticket	object	0.1	lottery ticket

@@ -48,6 +48,8 @@ interface Shape {
   hi: Vec3;
   rgb: Vec3;
   sdf: Sdf;
+  /** Thickening for preview sheets (subtracted from the distance). */
+  grow: number;
 }
 
 type Sdf = (x: number, y: number, z: number) => number;
@@ -160,11 +162,13 @@ export interface SculptOptions {
   resolution?: number;
   /** Multiplier on the default resolution (phones use less). */
   detail?: number;
+  /** Melt every visible part into the skin, thickening thin ones to show at grid size (for preview sheets). */
+  preview?: boolean;
 }
 
 /** Which parts melt into the skin. */
 function melts(p: FigPart, cell: number): boolean {
-  if (p.scale === 0 || p.role === 'eye' || p.role === 'glow' || p.role === 'face' || p.only === 'paper') return false;
+  if (p.scale === 0 || p.role === 'eye' || p.role === 'glow' || p.role === 'face' || p.role === 'label' || p.only === 'paper') return false;
   return Math.min(...p.size) >= cell * 2.2;
 }
 
@@ -197,11 +201,12 @@ export function sculpt(fig: Figure, opts: SculptOptions = {}): Sculpt {
       lo[i] = Math.min(lo[i], bl[i]);
       hi[i] = Math.max(hi[i], bh[i]);
     }
-    all.push({ part: p, index, Rt: transpose(R), o, lo: bl, hi: bh, rgb: hexToLinear(p.color), sdf: partSdf(p) });
+    all.push({ part: p, index, Rt: transpose(R), o, lo: bl, hi: bh, rgb: hexToLinear(p.color), sdf: partSdf(p), grow: 0 });
   });
   const span = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
   const cell = span / (opts.resolution ?? (fig.rig === 'prop' ? 64 : fig.rig === 'dragon' ? 120 : 84) * (opts.detail ?? 1));
-  const melted = all.filter((s) => melts(s.part, cell));
+  const melted = opts.preview ? all : all.filter((s) => melts(s.part, cell));
+  if (opts.preview) for (const s of melted) s.grow = Math.max(0, (cell * 1.6 - Math.min(...s.part.size)) / 2);
   const separate = fig.parts.filter((p) => !melted.some((s) => s.part === p)).map((p) => p.name);
   const pad = 3;
   const org: Vec3 = [lo[0] - pad * cell, lo[1] - pad * cell, lo[2] - pad * cell];
@@ -214,7 +219,7 @@ export function sculpt(fig: Figure, opts: SculptOptions = {}): Sculpt {
   const local = (s: Shape, x: number, y: number, z: number): number => {
     const dx = x - s.o[0], dy = y - s.o[1], dz = z - s.o[2];
     const R = s.Rt;
-    return s.sdf(R[0] * dx + R[1] * dy + R[2] * dz, R[3] * dx + R[4] * dy + R[5] * dz, R[6] * dx + R[7] * dy + R[8] * dz);
+    return s.sdf(R[0] * dx + R[1] * dy + R[2] * dz, R[3] * dx + R[4] * dy + R[5] * dz, R[6] * dx + R[7] * dy + R[8] * dz) - s.grow;
   };
   const box = (l: Vec3, h: Vec3, margin: number) => {
     const i0 = Math.max(0, Math.floor((l[0] - margin - org[0]) / cell)), i1 = Math.min(nx - 1, Math.ceil((h[0] + margin - org[0]) / cell));
