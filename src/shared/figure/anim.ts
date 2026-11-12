@@ -14,6 +14,8 @@ export interface Pose {
   j: Record<string, Vec3>;
   /** Joint position deltas in metres. */
   t?: Record<string, Vec3>;
+  /** Absolute size of a part's solid (not its children): grows a hidden flame. */
+  sc?: Record<string, number>;
   root: Vec3;
   rootRot: Vec3;
   expr?: Expr;
@@ -317,6 +319,87 @@ const BIRD: Clip[] = [
   },
 ];
 
+/* ----- dragons ----- */
+
+/** Wings in flight: a flap at `hz` with amplitude `amp`; the outer panel lags so the tips fold on the upstroke. */
+const flapWings = (t: number, hz: number, amp: number): Record<string, Vec3> => {
+  const f = t * PI2 * hz;
+  return { wingL: [0, 0, amp * S(f)], wingR: [0, 0, -amp * S(f)], wingTipL: [0, 0, amp * 0.7 * S(f - 0.9)], wingTipR: [0, 0, -amp * 0.7 * S(f - 0.9)] };
+};
+/** Tail and neck swaying in a travelling wave. */
+const sinuous = (t: number, amp: number): Record<string, Vec3> => ({
+  tail1: [amp * 0.4 * S(t * 1.6), amp * S(t * 1.2), 0],
+  tail2: [amp * 0.4 * S(t * 1.6 - 0.7), amp * 1.2 * S(t * 1.2 - 0.7), 0],
+  tail3: [amp * 0.4 * S(t * 1.6 - 1.4), amp * 1.4 * S(t * 1.2 - 1.4), 0],
+  tail4: [amp * 0.4 * S(t * 1.6 - 2.1), amp * 1.6 * S(t * 1.2 - 2.1), 0],
+  neck1: [amp * 0.25 * S(t * 0.8), amp * 0.3 * S(t * 0.6), 0],
+  head: [-amp * 0.2 * S(t * 0.8), amp * 0.6 * S(t * 0.5 + 1), 0],
+});
+/** Wings folded along the back, for standing and walking. */
+const folded: Record<string, Vec3> = { wingL: [0, 62, -46], wingR: [0, -62, 46], wingTipL: [0, 70, -10], wingTipR: [0, -70, 10] };
+const tucked: Record<string, Vec3> = { legFL: [38, 0, 0], legFR: [38, 0, 0], legBL: [52, 0, 0], legBR: [52, 0, 0] };
+
+const DRAGON: Clip[] = [
+  { name: 'idle', dur: 1, loop: true, fn: (t) => ({ j: { ...sinuous(t, 6), ...folded, body: [1 * S(t * 1.8), 0, 0], jaw: [2 + 2 * S(t * 1.8), 0, 0] } }) },
+  {
+    name: 'walk', dur: 1 / 1.3, loop: true,
+    fn: (t, k) => {
+      const s = S(t * PI2 * 1.3);
+      return { j: { ...sinuous(t, 8), ...folded, legFL: [-22 * s, 0, 0], legBR: [-22 * s, 0, 0], legFR: [22 * s, 0, 0], legBL: [22 * s, 0, 0], body: [0, 0, 2 * s] }, root: [0, k.H * 0.01 * Math.abs(Math.cos(t * PI2 * 1.3)), 0] };
+    },
+  },
+  {
+    name: 'run', dur: 1 / 2, loop: true,
+    fn: (t, k) => {
+      const f = t * PI2 * 2;
+      return { j: { ...sinuous(t, 10), ...folded, legFL: [-38 * S(f), 0, 0], legFR: [-38 * S(f + 0.4), 0, 0], legBL: [-38 * S(f - 1.9), 0, 0], legBR: [-38 * S(f - 1.5), 0, 0], body: [5 * S(f), 0, 0] }, root: [0, k.H * 0.03 * Math.abs(S(f)), 0] };
+    },
+  },
+  {
+    // in the air and nearly still: slow deep flaps, the body rising on each downstroke
+    name: 'hover', dur: 1, loop: true,
+    fn: (t, k) => ({ j: { ...sinuous(t, 9), ...flapWings(t, 1.25, 40), ...tucked, body: [-4 + 3 * S(t * PI2 * 1.25 + 1.6), 0, 0] }, root: [0, -k.H * 0.05 * Math.cos(t * PI2 * 1.25), 0] }),
+  },
+  {
+    // flying somewhere: quicker flaps, nose down a little, legs and tail streaming behind
+    name: 'fly', dur: 1, loop: true,
+    fn: (t, k) => ({ j: { ...sinuous(t, 6), ...flapWings(t, 1.7, 46), legFL: [55, 0, 0], legFR: [55, 0, 0], legBL: [70, 0, 0], legBR: [70, 0, 0], body: [7, 0, 2 * S(t * 1.7)], neck1: [12, 0, 0] }, root: [0, -k.H * 0.035 * Math.cos(t * PI2 * 1.7), 0] }),
+  },
+  {
+    name: 'roar', dur: 2.0,
+    fn: (t, k) => {
+      const e = env(t, 2.0, 0.3);
+      const shake = S(t * 34) * e;
+      return { j: { neck1: [-26 * e, 0, 0], neck2: [-16 * e, 0, 0], head: [-18 * e + 4 * shake, 0, 0], jaw: [38 * e, 0, 0], wingL: [0, 0, 28 * e + 6 * shake], wingR: [0, 0, -28 * e - 6 * shake], tail1: [-18 * e, 0, 0], tail2: [-10 * e, 14 * shake, 0] }, root: [0, k.H * 0.02 * e, 0] };
+    },
+  },
+  {
+    name: 'breathe', dur: 2.6,
+    fn: (t) => {
+      const e = env(t, 2.6, 0.35);
+      const fire = smooth(0.3, 0.6, t) * (1 - smooth(2.1, 2.5, t));
+      return {
+        j: { neck1: [14 * e, 0, 0], neck2: [-6 * e, 0, 0], head: [6 * e + 2 * S(t * 25) * fire, 0, 0], jaw: [32 * e, 0, 0], body: [-6 * e, 0, 0] },
+        sc: { flame: fire * (0.85 + 0.15 * S(t * 41)), flameCore: fire * (0.8 + 0.2 * S(t * 33 + 1)) },
+      };
+    },
+  },
+  {
+    name: 'flap', dur: 1.8,
+    fn: (t, k) => {
+      const e = env(t, 1.8, 0.2);
+      return { j: { ...flapWings(t, 2.8, 58 * e), tail1: [-15 * e, 0, 0], head: [-12 * e, 0, 0], jaw: [12 * e, 0, 0] }, root: [0, k.H * 0.22 * S(clamp01(t / 1.8) * Math.PI), 0] };
+    },
+  },
+  {
+    name: 'roll', dur: 1.6,
+    fn: (t) => {
+      const e = env(t, 1.6, 0.25);
+      return { j: { wingL: [0, 0, 30 * e], wingR: [0, 0, -30 * e], tail1: [-10 * e, 0, 0] }, rootRot: [0, 0, 360 * smooth(0.2, 1.35, t)] };
+    },
+  },
+];
+
 /* ----- props ----- */
 
 const sway = (t: number, amp: number): Record<string, Vec3> => ({ top: [0, 0, amp * S(t * 0.9)], head: [0, 0, amp * 1.5 * S(t * 1.3)], stem: [0, 0, amp * 0.8 * S(t * 1.1)] });
@@ -359,7 +442,7 @@ const PROP: Clip[] = [
   },
 ];
 
-const CLIPS: Record<Rig, Clip[]> = { biped: BIPED, quad: QUAD, bird: BIRD, prop: PROP };
+const CLIPS: Record<Rig, Clip[]> = { biped: BIPED, quad: QUAD, bird: BIRD, dragon: DRAGON, prop: PROP };
 
 /** Reactions a click can trigger, by rig (props pick per kind). */
 export function reactionsFor(fig: Figure): string[] {
@@ -370,6 +453,8 @@ export function reactionsFor(fig: Figure): string[] {
       return fig.key === 'horse' ? ['rear', 'hop', 'look', 'shake', 'graze'] : fig.key === 'dog' ? ['wag', 'hop', 'look', 'shake'] : ['hop', 'look', 'shake', 'graze', 'wag'];
     case 'bird':
       return ['flap', 'peck', 'crow', 'peck'];
+    case 'dragon':
+      return ['roar', 'breathe', 'breathe', 'flap', 'roll'];
     case 'prop':
       if (fig.key === 'house') return ['door'];
       if (fig.key === 'well') return ['crank'];
@@ -389,9 +474,10 @@ function findClip(rig: Rig, name: string): Clip | undefined {
 
 export function samplePose(fig: Figure, name: string, t: number): Pose {
   const clip = findClip(fig.rig, name) ?? CLIPS[fig.rig][0];
-  const time = clip.loop ? t % clip.dur : Math.min(t, clip.dur);
+  // loops run on continuous time (wrapping would jump any sine that is not a whole number of cycles per loop)
+  const time = clip.loop ? t : Math.min(t, clip.dur);
   const p = clip.fn(time, { H: fig.heightM, key: fig.key });
-  return { j: p.j ?? {}, t: p.t, root: p.root ?? [0, 0, 0], rootRot: p.rootRot ?? [0, 0, 0], expr: p.expr };
+  return { j: p.j ?? {}, t: p.t, sc: p.sc, root: p.root ?? [0, 0, 0], rootRot: p.rootRot ?? [0, 0, 0], expr: p.expr };
 }
 
 function blend(a: Pose, b: Pose, w: number): Pose {
@@ -409,10 +495,19 @@ function blend(a: Pose, b: Pose, w: number): Pose {
     t = {};
     for (const k of new Set([...Object.keys(a.t ?? {}), ...Object.keys(b.t ?? {})])) t[k] = lerp3(a.t?.[k], b.t?.[k]);
   }
-  return { j, t, root: lerp3(a.root, b.root), rootRot: lerp3(a.rootRot, b.rootRot), expr: w > 0.5 ? b.expr : a.expr };
+  let sc: Record<string, number> | undefined;
+  if (a.sc || b.sc) {
+    sc = {};
+    for (const k of new Set([...Object.keys(a.sc ?? {}), ...Object.keys(b.sc ?? {})])) {
+      const x = a.sc?.[k] ?? b.sc?.[k] ?? 1;
+      const y = b.sc?.[k] ?? a.sc?.[k] ?? 1;
+      sc[k] = x + (y - x) * w;
+    }
+  }
+  return { j, t, sc, root: lerp3(a.root, b.root), rootRot: lerp3(a.rootRot, b.rootRot), expr: w > 0.5 ? b.expr : a.expr };
 }
 
-export type Locomotion = 'idle' | 'walk' | 'run';
+export type Locomotion = 'idle' | 'walk' | 'run' | 'hover' | 'fly';
 
 /** Drives one figure: a looping locomotion clip, cross-faded when it changes, plus one-shot reactions. */
 export class Animator {
@@ -426,6 +521,8 @@ export class Animator {
   private blinkLeft = 0;
   private talkLeft = 0;
   private clock = 0;
+  private air = false;
+  private speedNow = 0;
   /** Resting expression when nothing else is going on. */
   mood: Expr = 'neutral';
 
@@ -441,10 +538,19 @@ export class Animator {
     return this.react?.name ?? null;
   }
 
-  /** Pick idle / walk / run from ground speed in m/s (scaled for small things). */
+  /** Off the ground: figures that can fly (a 'hover' clip) hover and fly instead of standing and walking. */
+  setAirborne(air: boolean): void {
+    if (air === this.air) return;
+    this.air = air;
+    this.setSpeed(this.speedNow);
+  }
+
+  /** Pick idle / walk / run (or hover / fly in the air) from speed in m/s (scaled for small things). */
   setSpeed(speed: number): void {
+    this.speedNow = speed;
     const rel = speed / Math.max(0.35, Math.min(1.8, this.fig.heightM));
-    const next: Locomotion = speed < 0.12 ? 'idle' : rel > 1.7 || speed > 3.2 ? 'run' : 'walk';
+    const flies = this.air && !!findClip(this.fig.rig, 'hover');
+    const next: Locomotion = flies ? (speed < 0.6 ? 'hover' : 'fly') : speed < 0.12 ? 'idle' : rel > 1.7 || speed > 3.2 ? 'run' : 'walk';
     if (next === this.base) return;
     this.prev = this.base;
     this.prevT = this.baseT;

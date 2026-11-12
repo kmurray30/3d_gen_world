@@ -3,7 +3,7 @@
  * part lists. `figureFor(word)` maps vocabulary words (and a few synonyms) to these.
  */
 import type { Figure, Vec3 } from './types';
-import { Parts, bird, figure, person, quadruped, shadeHex } from './kit';
+import { Parts, bird, dragon, figure, person, quadruped, shadeHex } from './kit';
 
 const SKIN = { light: '#f6d2b4', fair: '#f0c39f', tan: '#d9a173', brown: '#a8714a', deep: '#7a4b2e' };
 
@@ -74,6 +74,9 @@ const builders: Record<string, () => Figure> = {
       p.add({ name: 'topknot', parent: 'head', at: [0, 0.12, -0.02], shape: 'ball', size: [0.16, 0.1, 0.14], color: '#f6f2e6', layer: 3 });
     } }),
   rooster: () => bird('rooster', { height: 0.62, color: '#c8572e', wing: '#8a3b22', beak: '#f2b134', legs: '#f2b134', comb: '#e63b2e', tail: ['#1f4a3a', '#2c6e52', '#173a2d', '#2c6e52'] }),
+
+  /* ---------- fantasy ---------- */
+  dragon: () => dragon('dragon', { size: 1.9, scales: '#3f9a6e', belly: '#f2d58a', wing: '#e0634a', spikes: '#f2a33a', horns: '#f6ecd2' }),
 
   /* ---------- nature ---------- */
   tree: () => {
@@ -244,6 +247,8 @@ const ALIASES: Record<string, string> = {
   'street lamp': 'lamppost',
   streetlight: 'lamppost',
   puppy: 'dog',
+  wyvern: 'dragon',
+  'baby dragon': 'dragon',
   kitten: 'cat',
   pony: 'horse',
   stone: 'rock',

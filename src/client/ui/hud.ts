@@ -61,7 +61,7 @@ export class Hud {
         <button type="button" data-view="view" title="Switch between first person, third person and a free camera (V)"><span class="k">View</span><span class="v"></span></button>
         <button type="button" data-view="angle" title="Cycle the camera angle: behind, high, bird, top (R)"><span class="k">Angle</span><span class="v"></span></button>
         <button type="button" data-view="walls" title="Fade walls that hide you (B)"><span class="k">Walls</span><span class="v"></span></button>
-        <button type="button" data-view="look" title="How code-drawn things look: the original sprites, paper cutouts or 3D (L)"><span class="k">Look</span><span class="v"></span></button>
+        <button type="button" data-view="look" title="How code-drawn things look: the original sprites, paper cutouts, origami or 3D (L)"><span class="k">Look</span><span class="v"></span></button>
         <button type="button" data-view="time" title="Time of day: dawn, day, sunset, night (T)"><span class="k">Time</span><span class="v"></span></button>
         <button type="button" data-view="sound" title="Sound: on, effects without music, off (M)"><span class="k">Sound</span><span class="v"></span></button>
       </div>

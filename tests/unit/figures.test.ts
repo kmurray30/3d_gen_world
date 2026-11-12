@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FIGURE_KEYS, figureFor, getFigure } from '../../src/shared/figure/items';
 import { Animator, clipNames, reactionsFor, samplePose } from '../../src/shared/figure/anim';
 import { hull, shapePoints, solve, viewMatrix, apply, mul } from '../../src/shared/figure/math';
-import { galleryWorld } from '../../src/shared/engine/presets';
+import { GALLERY_LOOKS, galleryWorld } from '../../src/shared/engine/presets';
 import { defaultSprite } from '../../src/shared/engine/sizing';
 import { generate } from '../../src/shared/structure/index';
 
@@ -12,7 +12,7 @@ describe('figure specs', () => {
   it('has a sample set of 25+ things across people, animals, nature, village and things', () => {
     expect(FIGURE_KEYS.length).toBeGreaterThanOrEqual(25);
     const groups = new Set(FIGURE_KEYS.map((k) => getFigure(k)!.group));
-    expect([...groups].sort()).toEqual(['animals', 'nature', 'people', 'things', 'village']);
+    expect([...groups].sort()).toEqual(['animals', 'fantasy', 'nature', 'people', 'things', 'village']);
   });
 
   it('every figure is a well-formed part tree with sensible size', () => {
@@ -145,13 +145,71 @@ describe('figure animation', () => {
   });
 });
 
+describe('the dragon', () => {
+  it('has wings, a jaw, a tail and a hidden flame that does not count toward its size', () => {
+    const d = getFigure('dragon')!;
+    expect(d.rig).toBe('dragon');
+    for (const j of ['wingL', 'wingR', 'wingTipL', 'wingTipR', 'jaw', 'tail4', 'flame']) expect(d.parts.some((p) => p.name === j), j).toBe(true);
+    expect(d.parts.find((p) => p.name === 'flame')!.scale).toBe(0);
+    const f = solve(d);
+    const flameTip = f.get('flame')!.T[2] + 1.5;
+    expect(d.halfD).toBeLessThan(flameTip + 1); // measured without the flame
+    expect(figureFor('wyvern')?.key).toBe('dragon');
+    // on paper the wings stand in the paper's plane
+    expect(d.parts.find((p) => p.name === 'wingL')!.paperRot).toBeDefined();
+    expect(d.parts.find((p) => p.name === 'wingR')!.paperFlap!.k).toBe(-1);
+  });
+
+  it('hovers with flapping wings in the air, flies when moving, and walks with folded wings on the ground', () => {
+    const a = new Animator(getFigure('dragon')!, () => 0.5);
+    a.setAirborne(true);
+    const wing = (t: number) => {
+      a.update(t);
+      return a.pose().j.wingL![2];
+    };
+    wing(0.6);
+    const seen = new Set<number>();
+    for (let i = 0; i < 20; i++) seen.add(Math.round(wing(0.05)));
+    expect(Math.max(...seen) - Math.min(...seen)).toBeGreaterThan(40); // the wings flap
+    a.setSpeed(4);
+    a.update(0.5);
+    expect(a.pose().j.legBL![0]).toBeGreaterThan(50); // legs streaming behind in flight
+    a.setAirborne(false);
+    a.setSpeed(0);
+    a.update(0.5);
+    expect(a.pose().j.wingL![1]).toBeGreaterThan(40); // folded back along the body
+  });
+
+  it('breathes fire: the flame grows out of the mouth and goes away again', () => {
+    const d = getFigure('dragon')!;
+    expect(samplePose(d, 'breathe', 1.2).sc!.flame).toBeGreaterThan(0.6);
+    expect(samplePose(d, 'breathe', 1.2).j.jaw![0]).toBeGreaterThan(20);
+    expect(samplePose(d, 'breathe', 2.59).sc!.flame).toBeLessThan(0.05);
+    expect(reactionsFor(d)).toContain('breathe');
+  });
+
+  it('looping clips run on continuous time (no jump once a second)', () => {
+    const man = getFigure('man')!;
+    const a = samplePose(man, 'idle', 0.9999).j.head!;
+    const b = samplePose(man, 'idle', 1.0001).j.head!;
+    for (let i = 0; i < 3; i++) expect(Math.abs(a[i] - b[i])).toBeLessThan(0.1);
+  });
+});
+
 describe('visuals gallery', () => {
-  it('shows every figure as sprite, paper and 3D in labelled rows, without overlaps', () => {
+  it('shows every figure as sprite, paper, origami and 3D in labelled rows, without overlaps', () => {
     const w = galleryWorld('g', (_w, kind) => defaultSprite(kind), () => null, 0);
-    const figs = w.entities.filter((e) => e.look);
-    expect(figs.length).toBe(FIGURE_KEYS.length * 3);
+    expect(GALLERY_LOOKS).toEqual(['sprite', 'paper', 'origami', 'toon']);
+    const flyers = w.entities.filter((e) => typeof e.state.orbit === 'number');
+    const figs = w.entities.filter((e) => e.look && !flyers.includes(e));
+    expect(figs.length).toBe(FIGURE_KEYS.length * 4);
+    // three dragons circle overhead, one per code-drawn style
+    expect(flyers.map((e) => e.look).sort()).toEqual(['origami', 'paper', 'toon']);
+    for (const e of flyers) expect(e.pos[1]).toBeGreaterThan(5);
+    // the gallery's own dragons hover off the ground
+    for (const e of figs.filter((x) => x.word === 'dragon')) expect(e.pos[1]).toBeGreaterThan(1);
     expect(new Set(w.entities.map((e) => e.id)).size).toBe(w.entities.length);
-    expect(w.entities.filter((e) => e.structure?.gen === 'signboard').length).toBe(6);
+    expect(w.entities.filter((e) => e.structure?.gen === 'signboard').length).toBe(7);
     for (const e of figs) {
       expect(e.state.stay).toBe(true);
       expect(e.yaw).toBe(0);

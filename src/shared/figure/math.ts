@@ -133,7 +133,7 @@ export function shapePoints(p: FigPart): Vec3[] {
       break;
     }
     case 'wedge':
-      for (const z of [-d / 2, d / 2]) pts.push([-w / 2, -h / 2, z], [w / 2, -h / 2, z], [0, h / 2, z]);
+      for (const z of [-d / 2, d / 2]) pts.push([-w / 2, -h / 2, z], [w / 2, -h / 2, z], [(p.apex ?? 0) * w, h / 2, z]);
       break;
   }
   const off = p.off ?? [0, 0, 0];
@@ -175,6 +175,7 @@ export function measure(fig: Omit<Figure, 'heightM' | 'halfW' | 'halfD'> & Parti
   let mx = 0;
   let mz = 0;
   for (const p of fig.parts) {
+    if (p.scale === 0) continue;
     const f = frames.get(p.name)!;
     for (const q of shapePoints(p)) {
       const w = add(f.T, apply(f.R, q));

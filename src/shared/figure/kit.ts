@@ -24,6 +24,9 @@ export class Parts {
         rot: p.rot ? [p.rot[0], p.rot[1] * k, p.rot[2] * k] : undefined,
         off: p.off ? [p.off[0] * k, p.off[1], p.off[2]] : undefined,
         srot: p.srot ? [p.srot[0], p.srot[1] * k, p.srot[2] * k] : undefined,
+        apex: p.apex !== undefined ? p.apex * k : undefined,
+        paperRot: p.paperRot ? [p.paperRot[0], p.paperRot[1] * k, p.paperRot[2] * k] : undefined,
+        paperFlap: p.paperFlap ? { axis: p.paperFlap.axis, k: p.paperFlap.k * k } : undefined,
       });
     }
     return this;
@@ -280,4 +283,78 @@ export function shadeHex(hex: string, k: number): string {
   const n = parseInt(hex.slice(1), 16);
   const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.max(0, Math.min(255, Math.round(v * k))));
   return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/* ----------------------------------------------------------------------------------------------------------- */
+/* dragons                                                                                                      */
+/* ----------------------------------------------------------------------------------------------------------- */
+
+export interface DragonOpts {
+  /** Body length in metres; everything else scales from it. */
+  size: number;
+  scales: string;
+  belly: string;
+  wing: string;
+  spikes: string;
+  horns: string;
+}
+
+/**
+ * A dragon: body along z, an S-curved neck, a jaw that opens, a four-part tail ending in a spade, four short legs
+ * and bat wings in two panels that fold at the elbow. The wings rest half raised so the paper cutout shows them
+ * in profile. A flame hides inside the mouth (scale 0) until a clip breathes it out.
+ * Joints: body, neck1, neck2, head, jaw, tail1-4, wingL/R, wingTipL/R, legFL/FR/BL/BR, flame, flameCore.
+ */
+export function dragon(key: string, o: DragonOpts): Figure {
+  const k = o.size / 1.7;
+  const m = (v: number) => v * k;
+  const p = new Parts();
+  const L = m(1.7), Hb = m(0.95), W = m(0.88), legL = m(0.42);
+  p.add({ name: 'body', at: [0, legL + Hb * 0.42, 0], shape: 'capsule', size: [W, L, Hb], srot: [90, 0, 0], color: o.scales });
+  p.add({ name: 'belly', parent: 'body', at: [0, -Hb * 0.18, m(0.05)], shape: 'ball', size: [W * 0.8, Hb * 0.62, L * 0.74], color: o.belly, layer: -1, noInk: true });
+  // spikes down the back
+  for (let i = 0; i < 4; i++) p.add({ name: `spike${i}`, parent: 'body', at: [0, Hb * 0.44, L * (0.28 - i * 0.2)], rot: [-20, 0, 0], shape: 'cyl', taper: 0, segs: 4, size: [m(0.12), m(0.24), m(0.2)], off: [0, m(0.1), 0], color: o.spikes, layer: -1 });
+  // neck in two bends, head held level
+  p.add({ name: 'neck1', parent: 'body', at: [0, Hb * 0.18, L * 0.4], rot: [40, 0, 0], shape: 'capsule', size: [m(0.46), m(0.75), m(0.48)], off: [0, m(0.32), 0], color: o.scales, layer: 1 });
+  p.add({ name: 'neck2', parent: 'neck1', at: [0, m(0.62), 0], rot: [-28, 0, 0], shape: 'capsule', size: [m(0.4), m(0.62), m(0.42)], off: [0, m(0.26), 0], color: o.scales, layer: 1 });
+  p.add({ name: 'neckBelly', parent: 'neck1', at: [0, m(0.3), m(0.12)], shape: 'capsule', size: [m(0.26), m(0.7), m(0.12)], color: o.belly, layer: 2, noInk: true });
+  p.add({ name: 'head', parent: 'neck2', at: [0, m(0.55), 0], rot: [-12, 0, 0], shape: 'ball', size: [m(0.52), m(0.48), m(0.66)], off: [0, m(0.08), m(0.14)], color: o.scales, layer: 2 });
+  p.add({ name: 'snout', parent: 'head', at: [0, 0, 0], shape: 'box', size: [m(0.32), m(0.22), m(0.42)], off: [0, m(0.04), m(0.5)], round: 0.7, color: o.scales, layer: 3 });
+  p.add({ name: 'jaw', parent: 'head', at: [0, m(-0.08), m(0.24)], shape: 'box', size: [m(0.28), m(0.09), m(0.5)], off: [0, m(-0.03), m(0.22)], round: 0.7, color: o.belly, layer: 2 });
+  p.pair({ name: 'tooth', parent: 'snout', at: [m(0.1), m(-0.11), m(0.17)], rot: [180, 0, 0], shape: 'cyl', taper: 0, segs: 4, size: [m(0.05), m(0.08), m(0.05)], off: [0, m(0.03), 0], color: '#fffaf0', layer: 4 });
+  p.pair({ name: 'nostril', parent: 'snout', at: [m(0.08), m(0.09), m(0.19)], shape: 'ball', size: [m(0.06), m(0.04), m(0.05)], color: '#2b2420', layer: 5, noInk: true });
+  p.pair({ name: 'eye', parent: 'head', at: [m(0.17), m(0.16), m(0.24)], shape: 'ball', size: [m(0.1), m(0.12), m(0.08)], color: '#1d1a17', role: 'eye', layer: 5, noInk: true });
+  p.pair({ name: 'glint', parent: 'eye', at: [m(0.02), m(0.03), m(0.025)], shape: 'ball', size: [m(0.035), m(0.04), m(0.02)], color: '#ffffff', role: 'eye', layer: 6, noInk: true }, true);
+  p.pair({ name: 'brow', parent: 'head', at: [m(0.15), m(0.25), m(0.2)], rot: [0, 0, -12], shape: 'box', size: [m(0.14), m(0.05), m(0.16)], round: 0.8, color: o.spikes, layer: 6 });
+  p.pair({ name: 'horn', parent: 'head', at: [m(0.12), m(0.24), m(-0.06)], rot: [-62, 0, -12], shape: 'cyl', taper: 0, segs: 6, size: [m(0.1), m(0.42), m(0.1)], off: [0, m(0.2), 0], color: o.horns, layer: 1 });
+  p.pair({ name: 'frill', parent: 'head', at: [m(0.2), m(0.06), m(-0.12)], rot: [-10, -30, -55], shape: 'wedge', size: [m(0.26), m(0.3), m(0.03)], off: [0, m(0.13), 0], color: o.wing, layer: 0 });
+  // the flame: a cone from the mouth, hidden until a clip grows it
+  p.add({ name: 'flame', parent: 'head', at: [0, m(0.02), m(0.68)], shape: 'cyl', taper: 0, segs: 8, size: [m(0.62), m(1.6), m(0.62)], srot: [-90, 0, 0], off: [0, 0, m(0.8)], color: '#ff8a2a', role: 'glow', scale: 0, layer: 8, noInk: true });
+  p.add({ name: 'flameCore', parent: 'head', at: [0, m(0.02), m(0.68)], shape: 'cyl', taper: 0, segs: 8, size: [m(0.3), m(1.05), m(0.3)], srot: [-90, 0, 0], off: [0, 0, m(0.53)], color: '#ffe066', role: 'glow', scale: 0, layer: 9, noInk: true });
+  // tail: four tapering segments and a spade
+  const seg: Array<[number, number]> = [[0.5, 0.68], [0.38, 0.62], [0.27, 0.58], [0.17, 0.52]];
+  seg.forEach(([d, len], i) => {
+    p.add({ name: `tail${i + 1}`, parent: i ? `tail${i}` : 'body', at: i ? [0, m(seg[i - 1][1] - 0.06), 0] : [0, Hb * 0.08, -L * 0.45], rot: [i ? 6 : -100, 0, 0], shape: 'capsule', size: [m(d), m(len), m(d)], off: [0, m(len * 0.46), 0], color: o.scales, layer: -1 });
+  });
+  p.add({ name: 'spade', parent: 'tail4', at: [0, m(0.48), 0], shape: 'cyl', taper: 0, segs: 4, size: [m(0.42), m(0.5), m(0.06)], off: [0, m(0.18), 0], color: o.spikes, layer: -1 });
+  p.add({ name: 'spadeBase', parent: 'tail4', at: [0, m(0.48), 0], rot: [180, 0, 0], shape: 'cyl', taper: 0, segs: 4, size: [m(0.42), m(0.16), m(0.06)], off: [0, m(0.06), 0], color: o.spikes, layer: -1 });
+  // legs: short and sturdy, with pale claws
+  for (const [n, z, len, w] of [['F', L * 0.3, legL + Hb * 0.25, m(0.24)], ['B', -L * 0.26, legL + Hb * 0.3, m(0.32)]] as const)
+    for (const [s, kx] of [['L', 1], ['R', -1]] as const) {
+      p.add({ name: `leg${n}${s}`, parent: 'body', at: [kx * W * 0.32, -Hb * 0.15, z], shape: 'capsule', size: [w, len, w], off: [0, -len / 2, 0], color: o.scales, layer: kx < 0 ? -2 : 1 });
+      p.add({ name: `claw${n}${s}`, parent: `leg${n}${s}`, at: [0, -len + m(0.04), m(0.05)], shape: 'ball', size: [w * 1.25, m(0.1), w * 1.5], color: o.horns, layer: kx < 0 ? -2 : 1 });
+    }
+  // wings: arm bone and a membrane, then the outer bone and its membrane; the elbow carries a claw
+  // each panel is a right triangle from its bone back toward the body, so the trailing edge is scalloped
+  const span1 = m(1.25), span2 = m(1.45), chord1 = m(1.25), chord2 = m(1.3);
+  // on paper the wings stand in the paper's plane, bone up and back, membranes trailing toward the tail, and a
+  // flap swings them within the plane; the far wing is set at a different angle so it peeks out behind
+  p.pair({ name: 'wing', parent: 'body', at: [W * 0.3, Hb * 0.36, L * 0.2], rot: [0, 20, 42], paperRot: [-30, 0, 90], paperFlap: { axis: 0, k: 1 }, shape: 'capsule', size: [m(0.14), span1, m(0.14)], srot: [0, 0, 90], off: [span1 / 2, 0, 0], color: o.scales, layer: 2 });
+  p.pair({ name: 'membrane', parent: 'wing', at: [0, 0, 0], shape: 'wedge', apex: -0.5, size: [span1, chord1, m(0.03)], srot: [-90, 0, 0], off: [span1 / 2, 0, -chord1 / 2 + m(0.03)], color: o.wing, layer: 1 }, true);
+  p.pair({ name: 'wingTip', parent: 'wing', at: [span1, 0, 0], rot: [0, 28, -16], paperRot: [0, 32, 0], paperFlap: { axis: 1, k: -1 }, shape: 'capsule', size: [m(0.1), span2, m(0.1)], srot: [0, 0, 90], off: [span2 / 2, 0, 0], color: o.scales, layer: 2 }, true);
+  p.pair({ name: 'membraneTip', parent: 'wingTip', at: [0, 0, 0], shape: 'wedge', apex: -0.5, size: [span2, chord2, m(0.03)], srot: [-90, 0, 0], off: [span2 / 2, 0, -chord2 / 2 + m(0.03)], color: o.wing, layer: 1 }, true);
+  p.pair({ name: 'elbowClaw', parent: 'wingTip', at: [0, m(0.06), 0], rot: [0, 0, 30], shape: 'cyl', taper: 0, segs: 4, size: [m(0.08), m(0.2), m(0.08)], off: [0, m(0.08), 0], color: o.horns, layer: 3 }, true);
+  const far = p.list.find((q) => q.name === 'wingR');
+  if (far) far.paperRot = [-5, 0, -90];
+  return figure(key, 'fantasy', 'dragon', 'side', p);
 }

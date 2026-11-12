@@ -38,6 +38,32 @@ interface Drawn {
   textures: Map<string, THREE.Texture>;
 }
 const drawnCache = new Map<string, Drawn>();
+const paperFigCache = new Map<string, Figure>();
+
+/** The figure as the paper renderer poses it: parts with a paper rest rotation use it. */
+function paperFigure(fig: Figure): Figure {
+  if (!fig.parts.some((p) => p.paperRot)) return fig;
+  const hit = paperFigCache.get(fig.key);
+  if (hit) return hit;
+  const f: Figure = { ...fig, parts: fig.parts.map((p) => (p.paperRot ? { ...p, rot: p.paperRot } : p)) };
+  paperFigCache.set(fig.key, f);
+  return f;
+}
+
+/** Clip rotations re-aimed for paper: a part's flap about z becomes a swing within the paper's plane. */
+function paperPose(fig: Figure, pose: Pose): Pose {
+  let j: Record<string, Vec3> | null = null;
+  for (const p of fig.parts) {
+    if (!p.paperFlap) continue;
+    const d = pose.j[p.name];
+    if (!d) continue;
+    j ??= { ...pose.j };
+    const v: Vec3 = [0, 0, 0];
+    v[p.paperFlap.axis] = d[2] * p.paperFlap.k;
+    j[p.name] = v;
+  }
+  return j ? { ...pose, j } : pose;
+}
 
 function rowOf(m: M3, r: number): Vec3 {
   return [m[r * 3], m[r * 3 + 1], m[r * 3 + 2]];
@@ -156,10 +182,11 @@ export class PaperFigure {
   private expr: Expr = 'neutral';
   private readonly order: number[] = [];
 
-  constructor(
-    readonly fig: Figure,
-    entityId: string,
-  ) {
+  readonly fig: Figure;
+
+  constructor(fig: Figure, entityId: string) {
+    fig = paperFigure(fig);
+    this.fig = fig;
     this.drawn = layoutFigure(fig);
     this.V = viewMatrix(fig.view);
     for (const p of fig.parts) {
@@ -191,15 +218,19 @@ export class PaperFigure {
       this.expr = expr;
       for (const p of this.pieces) if (p.part.role === 'face') p.mesh.material.map = pieceTexture(this.fig, this.drawn, p.part, expr);
     }
+    pose = paperPose(this.fig, pose);
     const frames = solve(this.fig, pose);
     const V = this.V;
     const depth = new Array<number>(this.pieces.length);
     const layerStep = this.fig.heightM * 0.004;
     this.pieces.forEach((pc, i) => {
       const f = frames.get(pc.part.name)!;
+      // a part can be sized by the pose (a flame grows out of a mouth); size 0 hides it
+      const k = pose.sc?.[pc.part.name] ?? pc.part.scale ?? 1;
+      pc.mesh.visible = k > 0.001;
       const M = mul(V, f.R);
-      const A = apply(M, pc.a);
-      const B = apply(M, pc.b);
+      const A = apply(M, pc.a).map((v) => v * k) as Vec3;
+      const B = apply(M, pc.b).map((v) => v * k) as Vec3;
       const O = apply(V, f.T);
       const c = apply(M, pc.centroid);
       depth[i] = O[2] + c[2] + (pc.part.layer ?? 0) * layerStep;

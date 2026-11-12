@@ -42,11 +42,12 @@ no command is using it, favouring orientations you can see. Buildings can be cha
 and the structure regenerates with the rest kept.
 
 **Look.** The Look button (or `L`) switches how things that have a code-drawn figure are shown:
-the original sprites, layered paper cutouts, or 3D. Your own character follows it in third person
+the original sprites, layered paper cutouts (2D), folded origami (2.5D), or 3D. Your own character follows it in third person
 and walks and runs with real leg and arm motion in paper and 3D.
 
-**Visuals demo.** Every code-drawn figure stands three times in labelled rows: its old sprite, the
-paper cutout and the 3D model. Click or tap one to make it react.
+**Visuals demo.** Every code-drawn figure stands four times in labelled rows: its old sprite, the
+paper cutout, the origami and the 3D model. Click or tap one to make it react. The dragons hover
+over their row, and three more circle high overhead, one in each code-drawn style.
 
 **Village.** Worlds -> "+ New village" (or `?preset=village`) generates a new village from a random
 seed: rolling hills, a river with a bridge where the road crosses it, a lake with a lighthouse on its
@@ -57,8 +58,8 @@ woods at the end of a winding path, trees, lamps and villagers. Reset rebuilds t
 ## Code-drawn figures
 
 The sprites are AI-drawn images. Figures are drawn by code instead: a small tree of parts, each a
-joint carrying one simple solid (ball, capsule, rounded box, cylinder or cone, ring, gable prism).
-The same spec renders two ways.
+joint carrying one simple solid (ball, capsule, rounded box, cylinder or cone, ring, triangular
+prism). The same spec renders three ways.
 
 - **Paper** (`src/client/render/figure/paper.ts`): every part is flattened to its outline on the
   paper plane, coloured with the crayon grain and inked. The pieces are re-laid every frame from
@@ -66,24 +67,36 @@ The same spec renders two ways.
   the layers reverse, the face disappears and the back of the hair shows. People are drawn from the
   front and animals in profile, like the cutouts. Round things (trees, rocks, barrels) stand as two
   crossed cutouts so they never go edge-on.
+- **Origami** (`toon.ts`, origami mode): the solids folded from paper. A ball is an icosahedron
+  and a rod a five-sided spindle. Every facet is flat-shaded with a slightly different tone, folds
+  show as faint crease lines, and the face is a drawn paper sticker on the head.
 - **3D** (`src/client/render/figure/toon.ts`): the solids themselves, with a three-band toon ramp,
   a soft rim light, outlines in a darker shade of each part's colour, and the face painted onto the
   head. Joints are real pivots, so the same animation clips pose it.
 
+A part can be posed differently on paper. The dragon's wings stick out sideways in 3D, which on a
+profile cutout would collapse to slivers, so on paper they stand in the paper's plane and their
+flap swings within it. Parts can also be sized by a clip: the dragon's flame is hidden in its mouth
+until it breathes fire. Anything in the air with a hover clip hovers and flies instead of standing
+and walking, and a figure whose entity has `state.orbit` (a radius) flies circles around its spot,
+banking into the turn.
+
 `src/shared/figure/` holds the spec and needs no browser: `kit.ts` has parametric builders (a
 person from height, skin, hair style and clothes; a four-legged animal from proportions, ears and
-tail; a bird), `items.ts` has the 27 sample figures (5 people, 7 animals, 5 nature, 6 village, 4
-things), and `anim.ts` has the clips. People have idle, walk and run loops, 16 reactions (wave,
+tail; a bird; a dragon with jointed wings), `items.ts` has the 27 sample figures (5 people, 7 animals, 5 nature, 6 village, 4
+things) plus a dragon, and `anim.ts` has the clips. People have idle, walk and run loops, 16 reactions (wave,
 cheer, ta-da, point, shrug, jump, dance, think, scared, clap, bow, facepalm, stomp, laugh, love,
 yawn) and 12 facial expressions, plus blinking and talking. Animals hop, wag, look, shake, graze
-and rear. Props jiggle, and some do more: the house door opens, the well crank lowers its bucket,
+and rear. The dragon hovers, flies, roars, breathes fire, flaps and barrel-rolls in the air, and walks with
+its wings folded on the ground. Props jiggle, and some do more: the house door opens, the well crank lowers its bucket,
 the wheelbarrow rolls. A click plays a random reaction with a face that suits it. Walking and
 running are picked from how fast the thing moves.
 
 Figures are stored as code and rendered on demand (drawings are cached per figure), so a style is
 just a renderer. Screenshot scripts for checking them: `scripts/shots-figures.mjs` (every trio,
 close up and from the side), `scripts/shots-anims.mjs` (reaction clips) and
-`scripts/shots-look.mjs` (the village under each Look, and the avatar walking).
+`scripts/shots-look.mjs` (the village under each Look, and the avatar walking) and
+`scripts/shots-dragon.mjs` (the dragon in every style, mid-flap and breathing fire).
 
 ## Run locally
 

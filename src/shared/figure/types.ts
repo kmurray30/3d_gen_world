@@ -37,6 +37,8 @@ export interface FigPart {
   taper?: number;
   /** cyl: number of sides (default smooth). */
   segs?: number;
+  /** wedge: where the apex sits along the base, -0.5 (over the left end: a right triangle) to 0.5. */
+  apex?: number;
   /** torus: tube thickness as a fraction of the outer radius. */
   tube?: number;
   /** Paper: draw order nudge when parts sit at the same depth (higher = in front). */
@@ -45,13 +47,20 @@ export interface FigPart {
   side?: 'front' | 'back';
   /** head: the face is painted on it in 3D. face: drawn face features (paper only). eye: blinks. glow: unlit. */
   role?: 'head' | 'face' | 'eye' | 'glow';
+  /** Rest size of the solid (not its children); 0 hides it until a clip grows it (a dragon's flame). */
+  scale?: number;
+  /** Paper: rest rotation used instead of `rot` when flattened (a dragon's wings lie in the paper's plane). */
+  paperRot?: Vec3;
+  /** Paper: turn the clip's rotation about z (a wing flap) into a rotation about this axis, times k, so a flap
+   *  that swings toward the viewer in 3D swings within the paper. */
+  paperFlap?: { axis: 0 | 1 | 2; k: number };
   /** Skip in one renderer: details that only make sense flat or only in 3D. */
   only?: 'paper' | 'toon';
   /** No ink outline / no toon outline. */
   noInk?: boolean;
 }
 
-export type Rig = 'biped' | 'quad' | 'bird' | 'prop';
+export type Rig = 'biped' | 'quad' | 'bird' | 'dragon' | 'prop';
 
 export interface FaceSpec {
   skin: string;
@@ -81,7 +90,7 @@ export interface Figure {
   halfD: number;
   face?: FaceSpec;
   /** Category for the gallery. */
-  group: 'people' | 'animals' | 'nature' | 'village' | 'things';
+  group: 'people' | 'animals' | 'fantasy' | 'nature' | 'village' | 'things';
   /** Paper: round things (trees, rocks, barrels) stand as two crossed cutouts so they never go edge-on. */
   paperCross?: boolean;
 }

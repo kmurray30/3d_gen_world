@@ -10,12 +10,12 @@ import * as THREE from 'three';
 import type { Entity, Vec3 } from '../../../shared/types';
 import type { Figure } from '../../../shared/figure/types';
 import { Animator, type Expr } from '../../../shared/figure/anim';
-import { lerpAngle } from '../../../shared/engine/facing';
+import { flipFor, lerpAngle, yawAlong } from '../../../shared/engine/facing';
 import { PaperFigure } from './paper';
 import type { GroundView } from '../sprites';
 import { ToonFigure } from './toon';
 
-export type FigureStyle = 'paper' | 'toon';
+export type FigureStyle = 'paper' | 'origami' | 'toon';
 const DEG = Math.PI / 180;
 const SHADOW = new THREE.CircleGeometry(0.5, 28).rotateX(-Math.PI / 2);
 const UP = new THREE.Vector3(0, 1, 0);
@@ -40,6 +40,8 @@ export class FigureView {
   private seenYaw: number | undefined;
   private seenFlip: boolean | undefined;
   private alpha = 1;
+  private orbitT = 0;
+  private bank = 0;
   /** 3D: adopt the entity's yaw whenever it changes (off for the player's own character, which faces where it
    *  last walked). */
   followYaw = true;
@@ -62,7 +64,7 @@ export class FigureView {
         this.inner.add(this.paper2.group);
       }
     } else {
-      this.toon = new ToonFigure(fig, id);
+      this.toon = new ToonFigure(fig, id, style === 'origami' ? 'origami' : 'toon');
       this.inner.add(this.toon.group);
     }
     this.pivot.add(this.inner);
@@ -92,6 +94,17 @@ export class FigureView {
   update(e: Entity, pos: Vec3, camYaw: number, camPitch: number, flip: boolean, sq: number, dt: number, lookAt: [number, number] | null, ground?: GroundView): void {
     void camYaw;
     void camPitch;
+    // a figure set to orbit (state.orbit = radius) flies circles around its spot: a display piece, drawn here
+    // only, so it costs the engine nothing
+    const orbit = typeof e.state.orbit === 'number' && e.state.orbit > 0 ? e.state.orbit : 0;
+    let flyDir: [number, number] | null = null;
+    if (orbit) {
+      this.orbitT += dt;
+      const speed = typeof e.state.orbitSpeed === 'number' ? e.state.orbitSpeed : 4;
+      const a = (typeof e.state.orbitPhase === 'number' ? e.state.orbitPhase : 0) + (this.orbitT * speed) / orbit;
+      pos = [pos[0] + Math.cos(a) * orbit, pos[1] + Math.sin(this.orbitT * 0.8) * 0.6, pos[2] - Math.sin(a) * orbit];
+      flyDir = [-Math.sin(a), -Math.cos(a)];
+    }
     this.root.position.set(pos[0], pos[1], pos[2]);
     this.root.visible = !e.hidden;
     // ground speed from how far the entity moved since last frame (smoothed so a stop does not flicker)
@@ -103,6 +116,9 @@ export class FigureView {
       if (Math.hypot(dx, dz) > 1e-4) this.dir = [dx, dz];
     }
     this.last = [...pos];
+    // off the ground (a dragon in the sky) flying figures hover and fly instead of standing and walking
+    const groundY = ground ? ground.height(pos[0], pos[2]) : 0;
+    this.animator.setAirborne(pos[1] - groundY > 0.35);
     this.animator.setSpeed(this.speed);
     this.animator.update(dt);
     const pose = this.animator.pose();
@@ -115,7 +131,14 @@ export class FigureView {
       this.paper2?.setOpacity(alpha);
       this.toon?.setOpacity(alpha);
     }
-    const yawDeg = e.yaw ?? 0;
+    let yawDeg = e.yaw ?? 0;
+    if (flyDir) {
+      // on paper the cutout stands along its flight path, mirrored to face the way it flies
+      yawDeg = yawAlong(flyDir[0], flyDir[1]);
+      flip = flipFor(yawDeg, flyDir[0], flyDir[1]);
+    }
+    // bank into turns: lean toward the centre of the circle
+    this.bank += ((orbit ? -18 : 0) - this.bank) * Math.min(1, dt * 3);
     if (this.paper) {
       this.paper.update(pose, expr);
       if (this.paper2) {
@@ -146,18 +169,18 @@ export class FigureView {
       // tilts (pouring, falling over) rotate about the middle
       const h = this.fig.heightM * s;
       this.inner.position.set(0, h / 2, 0);
-      this.inner.rotation.set(0, 0, (e.tilt * Math.PI) / 180);
+      this.inner.rotation.set(0, 0, ((e.tilt + this.bank) * Math.PI) / 180);
       this.inner.scale.set(s, s * sq, s);
       this.toon.group.position.y += -this.fig.heightM / 2;
     }
     // shadow: an oval the size of the footprint on the ground under the thing, tilted with the slope, fading as
     // the thing rises
-    const g = ground ? ground.height(pos[0], pos[2]) : 0;
+    const g = groundY;
     const rw = Math.max(0.15, this.fig.halfW * 2.2) * s;
     const rd = Math.max(0.15, this.fig.halfD * 2.2) * s;
     const lift = Math.max(0, pos[1] - g);
     const k = 1 / (1 + lift * 0.6);
-    const along = this.style === 'toon' ? (this.facing ?? 0) * DEG : yawDeg * DEG + (this.fig.view === 'side' ? Math.PI / 2 : 0);
+    const along = this.style !== 'paper' ? (this.facing ?? 0) * DEG : yawDeg * DEG + (this.fig.view === 'side' ? Math.PI / 2 : 0);
     this.shadow.rotation.y = along;
     this.shadow.scale.set(rw * k, 1, rd * k);
     this.shadow.material.opacity = 0.9 * k * alpha;

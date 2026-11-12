@@ -134,7 +134,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   rig.setMode(settings.mode, engine.world.player);
   scene.fadeWalls = settings.fade;
   scene.look = settings.look;
-  const LOOK_NAMES = { sprites: 'sprites', paper: 'paper', toon: '3D' } as const;
+  const LOOK_NAMES = { sprites: 'sprites', paper: 'paper', origami: 'origami', toon: '3D' } as const;
   const refreshViewLabels = () => {
     const sound = sounds!.mixer.soundMode;
     hud.setViewLabels({ view: VIEW_NAMES[rig.mode], angle: rig.mode === 'third' ? ANGLES[rig.angle].name : '-', walls: scene.fadeWalls ? 'fade' : 'solid', look: LOOK_NAMES[scene.look], time: engine.world.sky, sound: sound === 'all' ? 'on' : sound === 'off' ? 'off' : 'no music' });
@@ -143,7 +143,13 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   const cycleLook = () => {
     scene.look = LOOKS[(LOOKS.indexOf(scene.look) + 1) % LOOKS.length];
     hud.toast(
-      scene.look === 'sprites' ? 'Look: the original sprites.' : scene.look === 'paper' ? 'Look: code-drawn paper cutouts, for the things that have one so far.' : 'Look: code-drawn 3D, for the things that have one so far.',
+      scene.look === 'sprites'
+        ? 'Look: the original sprites.'
+        : scene.look === 'paper'
+          ? 'Look: code-drawn paper cutouts, for the things that have one so far.'
+          : scene.look === 'origami'
+            ? 'Look: folded origami, for the things that have one so far.'
+            : 'Look: code-drawn 3D, for the things that have one so far.',
       'info',
       2500,
     );

@@ -186,14 +186,14 @@ export class CameraRig {
   }
 }
 
-export type LookSetting = 'sprites' | 'paper' | 'toon';
-export const LOOKS: LookSetting[] = ['sprites', 'paper', 'toon'];
+export type LookSetting = 'sprites' | 'paper' | 'origami' | 'toon';
+export const LOOKS: LookSetting[] = ['sprites', 'paper', 'origami', 'toon'];
 
 export interface ViewSettings {
   mode: ViewMode;
   angle: number;
   fade: boolean;
-  /** How code-drawn things show: original sprites, paper cutouts or 3D. */
+  /** How code-drawn things show: original sprites, paper cutouts, folded origami or 3D. */
   look: LookSetting;
 }
 
