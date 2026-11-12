@@ -21,6 +21,8 @@ await page.waitForURL(/\/w\//);
 await page.waitForFunction(() => !!window.__game);
 await page.waitForTimeout(1500);
 await page.addStyleTag({ content: '.lock-overlay, .hint, .cmd, .toast { display: none !important; }' });
+// sculpted (cel) models arrive from a worker; wait until none is still a stand-in
+await page.waitForFunction(() => [...window.__game.scene.figures.values()].every((v) => !v.celPending), null, { timeout: 60000 }).catch(() => console.log('cel models still pending'));
 const shot = async (name) => { await page.waitForTimeout(700); await page.screenshot({ path: `${out}/${name}.png` }); console.log('saved', name); };
 const look = (pos, yaw, pitch) => page.evaluate(([p, y, pt]) => { const g = window.__game; g.camera.teleport(p, y, pt, g.engine.world.player); }, [pos, yaw, pitch]);
 const ents = await page.evaluate(() => window.__game.engine.world.list().map((e) => ({ id: e.id, word: e.word, pos: e.pos, h: e.heightM, look: e.look })));
@@ -37,7 +39,8 @@ for (const k of keys) {
   await look([cx, h * 0.55 + 0.2, z + d], 0, -Math.atan2(0.15 * h + 0.1, d));
   await shot(`item-${k.replace(/\s+/g, '_')}`);
   // close up on the paper and 3D pair, then from three-quarters to the side
-  const pair = trio.filter((e) => e.look !== 'sprite');
+  // the 3D and cel versions side by side
+  const pair = trio.filter((e) => e.look === 'toon' || e.look === 'cel');
   const px = (pair[0].pos[0] + pair[1].pos[0]) / 2;
   const pd = Math.max(Math.abs(pair[1].pos[0] - pair[0].pos[0]) * 1.1, h * 1.15) + 0.4;
   await look([px, h * 0.55, z + pd], 0, -0.06);

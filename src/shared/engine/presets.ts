@@ -50,7 +50,7 @@ const GALLERY_ROWS: Array<{ group: Figure['group']; title: string; z: number; li
 ];
 
 /** Each figure stands as its old sprite, a paper cutout, folded origami and 3D. */
-export const GALLERY_LOOKS: Array<NonNullable<Entity['look']>> = ['sprite', 'paper', 'origami', 'toon'];
+export const GALLERY_LOOKS: Array<NonNullable<Entity['look']>> = ['sprite', 'paper', 'origami', 'toon', 'cel'];
 
 const KIND_OF_RIG: Record<Figure['rig'], Kind> = { biped: 'human', quad: 'animal', bird: 'animal', dragon: 'other', prop: 'object' };
 
@@ -60,7 +60,7 @@ export function galleryWorld(slug: string, resolve: SpriteResolver, decals: Deca
     const s = generate('signboard', { text }, 1, decals);
     if (s) entities.push(structureEntity(id, 'sign', s, pos, 0, now, text.toLowerCase()));
   };
-  sign('sign_styles', 'SPRITE PAPER ORIGAMI 3D', [-2.5, 0, -2.5]);
+  sign('sign_styles', 'SPRITE PAPER ORIGAMI 3D CEL', [-2.5, 0, -2.5]);
   for (const row of GALLERY_ROWS) {
     const figs = FIGURE_KEYS.map((k) => getFigure(k)!).filter((f) => f.group === row.group);
     const widthOf = (f: Figure) => Math.max(0.5, 2 * (f.view === 'side' ? f.halfD : f.halfW));
@@ -83,13 +83,14 @@ export function galleryWorld(slug: string, resolve: SpriteResolver, decals: Deca
       x += trio(f) + 2.2;
     }
     if (row.group === 'fantasy') {
-      // and three more dragons circling high overhead, one in each code-drawn style
+      // and more dragons circling high overhead, one in each code-drawn style
       const f = getFigure('dragon')!;
-      (['paper', 'origami', 'toon'] as const).forEach((look, i) => {
+      const flyers = ['paper', 'origami', 'toon', 'cel'] as const;
+      flyers.forEach((look, i) => {
         const e = makeEntity({ id: `dragon_flying_${look}`, word: 'dragon', kind: KIND_OF_RIG[f.rig], heightM: Math.round(f.heightM * 100) / 100, pos: [0, 7.5 + i * 0.8, row.z] }, resolve, now);
         e.look = look;
         e.yaw = 0;
-        e.state = { stay: true, orbit: 11, orbitSpeed: 5.5, orbitPhase: (i * 2 * Math.PI) / 3 };
+        e.state = { stay: true, orbit: 11, orbitSpeed: 5.5, orbitPhase: (i * 2 * Math.PI) / flyers.length };
         entities.push(e);
       });
     }

@@ -21,7 +21,7 @@ import { FigureView } from './figure/view';
 import { figureFor } from '../../shared/figure/items';
 
 /** How things with a code-drawn figure are shown: the original sprite, layered paper, folded origami, or 3D. */
-export type Look = 'sprites' | 'paper' | 'origami' | 'toon';
+export type Look = 'sprites' | 'paper' | 'origami' | 'toon' | 'cel';
 
 export const SKY_TOP = '#6db3ff';
 export const SKY_HORIZON = '#d9efff';
@@ -331,7 +331,7 @@ export class SceneView {
         this.avatarFigure = null;
       }
       if (!this.avatarFigure) {
-        this.avatarFigure = new FigureView('player', fig, this.look as 'paper' | 'origami' | 'toon', this.shadowTex);
+        this.avatarFigure = new FigureView('player', fig, this.look as 'paper' | 'origami' | 'toon' | 'cel', this.shadowTex);
         this.avatarFigure.followYaw = false;
         this.scene.add(this.avatarFigure.root);
       }

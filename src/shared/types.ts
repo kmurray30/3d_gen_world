@@ -61,7 +61,7 @@ export interface Entity {
   structure?: Structure;
   /** Force how this thing is drawn when it has a code-drawn figure (the gallery shows all three side by side);
    *  undefined follows the viewer's Look setting. */
-  look?: 'sprite' | 'paper' | 'origami' | 'toon';
+  look?: 'sprite' | 'paper' | 'origami' | 'toon' | 'cel';
 }
 
 export interface PlayerState {

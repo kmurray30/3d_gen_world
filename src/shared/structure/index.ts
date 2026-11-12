@@ -181,7 +181,7 @@ export function coerceParams(gen: GenName, raw: Params): Params {
     case 'bunker':
       return clean({ w: num(p.w ?? p.width), d: num(p.d ?? p.depth), levels: num(p.levels ?? p.stories ?? p.floors), color: colorOf(p.color ?? p.colour) });
     case 'signboard':
-      return clean({ text: typeof (p.text ?? p.sign ?? p.label) === 'string' ? String(p.text ?? p.sign ?? p.label).slice(0, 24) : undefined, color: colorOf(p.color ?? p.colour) });
+      return clean({ text: typeof (p.text ?? p.sign ?? p.label) === 'string' ? String(p.text ?? p.sign ?? p.label).slice(0, 28) : undefined, color: colorOf(p.color ?? p.colour) });
     case 'bridge':
       return clean({ len: num(p.len ?? p.length), w: num(p.w ?? p.width), drop: num(p.drop), color: colorOf(p.color ?? p.colour) });
     case 'fountain':

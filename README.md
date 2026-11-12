@@ -42,11 +42,12 @@ no command is using it, favouring orientations you can see. Buildings can be cha
 and the structure regenerates with the rest kept.
 
 **Look.** The Look button (or `L`) switches how things that have a code-drawn figure are shown:
-the original sprites, layered paper cutouts (2D), folded origami (2.5D), or 3D. Your own character follows it in third person
+the original sprites, layered paper cutouts (2D), folded origami (2.5D), 3D, or sculpted cel-shaded
+models. Your own character follows it in third person
 and walks and runs with real leg and arm motion in paper and 3D.
 
-**Visuals demo.** Every code-drawn figure stands four times in labelled rows: its old sprite, the
-paper cutout, the origami and the 3D model. Click or tap one to make it react. The dragons hover
+**Visuals demo.** Every code-drawn figure stands five times in labelled rows: its old sprite, the
+paper cutout, the origami, the 3D model and the sculpted cel model. Click or tap one to make it react. The dragons hover
 over their row, and three more circle high overhead, one in each code-drawn style.
 
 **Village.** Worlds -> "+ New village" (or `?preset=village`) generates a new village from a random
@@ -59,7 +60,7 @@ woods at the end of a winding path, trees, lamps and villagers. Reset rebuilds t
 
 The sprites are AI-drawn images. Figures are drawn by code instead: a small tree of parts, each a
 joint carrying one simple solid (ball, capsule, rounded box, cylinder or cone, ring, triangular
-prism). The same spec renders three ways.
+prism). The same spec renders four ways.
 
 - **Paper** (`src/client/render/figure/paper.ts`): every part is flattened to its outline on the
   paper plane, coloured with the crayon grain and inked. The pieces are re-laid every frame from
@@ -73,6 +74,18 @@ prism). The same spec renders three ways.
 - **3D** (`src/client/render/figure/toon.ts`): the solids themselves, with a three-band toon ramp,
   a soft rim light, outlines in a darker shade of each part's colour, and the face painted onto the
   head. Joints are real pivots, so the same animation clips pose it.
+
+- **Cel** (`src/client/render/figure/cel.ts`, built by `src/shared/figure/sculpt.ts`): a proper
+  model instead of stitched solids. Every part becomes a signed distance function; the field is
+  their union, with smooth fillets only where a part meets its parent and only near the joint between
+  them (a neck flows into the head, but a hanging arm does not web onto the body). Surface nets turn
+  the field into one closed mesh, and skin weights come from distance, so it bends at elbows, knees
+  and necks as one skin. Figures are sculpted in an A-pose (arms out, like a modeller would) and the
+  bones bring the arms down. Shading is cel: sun or shadow with a crisp edge, cool-tinted shadows,
+  a thin rim light, and an ink outline that follows the skin. Thin, glowing or tiny details (eyes,
+  claws, wing membranes, blades, the flame) ride on their bones as separate smooth pieces. Sculpting
+  takes 5 to 170 ms per figure, so it runs in a web worker (lighter on phones) and the 3D style
+  stands in until each model arrives.
 
 A part can be posed differently on paper. The dragon's wings stick out sideways in 3D, which on a
 profile cutout would collapse to slivers, so on paper they stand in the paper's plane and their

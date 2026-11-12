@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-test('start screen -> visuals demo: figures in paper and 3D, clicks make them react, the Look setting switches styles', async ({ page, isMobile }) => {
+test('start screen -> visuals demo: figures in every style, clicks make them react, the Look setting switches styles', async ({ page, isMobile }) => {
+  // the gallery is the heaviest page (about 150 figures, 30 of them sculpted in a worker) under software rendering
+  test.setTimeout(180_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto('/');
@@ -15,15 +17,18 @@ test('start screen -> visuals demo: figures in paper and 3D, clicks make them re
   const counts = await page.evaluate(() => {
     const list = (window as any).__game.engine.world.list();
     const n = (look: string) => list.filter((e: any) => e.look === look).length;
-    return { sprite: n('sprite'), paper: n('paper'), origami: n('origami'), toon: n('toon'), dragons: list.filter((e: any) => e.word === 'dragon').length };
+    return { sprite: n('sprite'), paper: n('paper'), origami: n('origami'), toon: n('toon'), cel: n('cel'), dragons: list.filter((e: any) => e.word === 'dragon').length };
   });
   expect(counts.sprite).toBeGreaterThanOrEqual(25);
-  // paper, origami and 3D each have one more than the sprites: a dragon circling overhead
+  // each code-drawn style has one more than the sprites: a dragon circling overhead
   expect(counts.paper).toBe(counts.sprite + 1);
   expect(counts.origami).toBe(counts.paper);
   expect(counts.toon).toBe(counts.paper);
-  expect(counts.dragons).toBe(7);
-  await page.waitForFunction((n) => (window as any).__game.scene.figures.size === n, counts.paper * 3);
+  expect(counts.cel).toBe(counts.paper);
+  expect(counts.dragons).toBe(9);
+  await page.waitForFunction((n) => (window as any).__game.scene.figures.size === n, counts.paper * 4);
+  // the sculpted cel models arrive from a worker and replace their stand-ins
+  await page.waitForFunction(() => [...(window as any).__game.scene.figures.values()].every((v: any) => !v.celPending), null, { timeout: 45000 });
   // the dragons in the air hover and fly: their animators run flight loops
   await page.waitForTimeout(500);
   const flying = await page.evaluate(() => (window as any).__game.scene.figures.get('dragon_toon').animator.pose().j.wingL);
@@ -48,6 +53,8 @@ test('start screen -> visuals demo: figures in paper and 3D, clicks make them re
     await page.click('button[data-view=look]');
     await expect(page.locator('button[data-view=look] .v')).toHaveText('3D');
     expect(await page.evaluate(() => (window as any).__game.scene.look)).toBe('toon');
+    await page.click('button[data-view=look]');
+    await expect(page.locator('button[data-view=look] .v')).toHaveText('cel');
     await page.click('button[data-view=look]');
     await expect(page.locator('button[data-view=look] .v')).toHaveText('sprites');
   }

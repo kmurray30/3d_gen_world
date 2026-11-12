@@ -14,8 +14,9 @@ import { flipFor, lerpAngle, yawAlong } from '../../../shared/engine/facing';
 import { PaperFigure } from './paper';
 import type { GroundView } from '../sprites';
 import { ToonFigure } from './toon';
+import { CelFigure, sculptFor } from './cel';
 
-export type FigureStyle = 'paper' | 'origami' | 'toon';
+export type FigureStyle = 'paper' | 'origami' | 'toon' | 'cel';
 const DEG = Math.PI / 180;
 const SHADOW = new THREE.CircleGeometry(0.5, 28).rotateX(-Math.PI / 2);
 const UP = new THREE.Vector3(0, 1, 0);
@@ -30,7 +31,9 @@ export class FigureView {
   private readonly paper: PaperFigure | null = null;
   /** The second, crossed cutout of a round thing. */
   private readonly paper2: PaperFigure | null = null;
-  private readonly toon: ToonFigure | null = null;
+  /** The solid styles (origami, 3D, cel). A cel figure starts as the 3D one until its sculpted model is ready. */
+  private toon: ToonFigure | CelFigure | null = null;
+  private celPending = false;
   private last: Vec3 | null = null;
   private speed = 0;
   private dir: [number, number] | null = null;
@@ -64,7 +67,9 @@ export class FigureView {
         this.inner.add(this.paper2.group);
       }
     } else {
-      this.toon = new ToonFigure(fig, id, style === 'origami' ? 'origami' : 'toon');
+      const s = style === 'cel' ? sculptFor(fig.key) : null;
+      this.toon = s ? new CelFigure(fig, id, s) : new ToonFigure(fig, id, style === 'origami' ? 'origami' : 'toon');
+      this.celPending = style === 'cel' && !s;
       this.inner.add(this.toon.group);
     }
     this.pivot.add(this.inner);
@@ -154,6 +159,18 @@ export class FigureView {
       this.paper.group.position.y = -this.fig.heightM / 2;
       this.inner.scale.set(flip ? -s : s, s * sq, s);
     } else if (this.toon) {
+      if (this.celPending) {
+        // the sculpted model arrived from the worker: swap it in for the stand-in
+        const s = sculptFor(this.fig.key);
+        if (s) {
+          this.inner.remove(this.toon.group);
+          this.toon.dispose();
+          this.toon = new CelFigure(this.fig, this.id, s);
+          this.inner.add(this.toon.group);
+          if (this.alpha !== 1) this.toon.setOpacity(this.alpha);
+          this.celPending = false;
+        }
+      }
       this.toon.update(pose, expr);
       const moving = this.speed > 0.15 && this.dir;
       if (moving) this.wantFacing = Math.atan2(this.dir![0], this.dir![1]) / DEG;

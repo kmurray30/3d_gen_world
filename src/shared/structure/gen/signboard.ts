@@ -11,7 +11,7 @@ export interface SignboardParams {
 }
 
 export function signboard(params: Partial<SignboardParams>, _ctx: GenContext, decals: Parts['decals']): Structure {
-  const text = (params.text ?? 'HELLO').toUpperCase().slice(0, 24);
+  const text = (params.text ?? 'HELLO').toUpperCase().slice(0, 28);
   const color = params.color ?? '#c8955a';
   const textH = 0.42;
   const chars = Math.max(4, text.length);

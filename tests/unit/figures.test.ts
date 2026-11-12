@@ -197,14 +197,14 @@ describe('the dragon', () => {
 });
 
 describe('visuals gallery', () => {
-  it('shows every figure as sprite, paper, origami and 3D in labelled rows, without overlaps', () => {
+  it('shows every figure as sprite, paper, origami, 3D and cel in labelled rows, without overlaps', () => {
     const w = galleryWorld('g', (_w, kind) => defaultSprite(kind), () => null, 0);
-    expect(GALLERY_LOOKS).toEqual(['sprite', 'paper', 'origami', 'toon']);
+    expect(GALLERY_LOOKS).toEqual(['sprite', 'paper', 'origami', 'toon', 'cel']);
     const flyers = w.entities.filter((e) => typeof e.state.orbit === 'number');
     const figs = w.entities.filter((e) => e.look && !flyers.includes(e));
-    expect(figs.length).toBe(FIGURE_KEYS.length * 4);
-    // three dragons circle overhead, one per code-drawn style
-    expect(flyers.map((e) => e.look).sort()).toEqual(['origami', 'paper', 'toon']);
+    expect(figs.length).toBe(FIGURE_KEYS.length * 5);
+    // dragons circle overhead, one per code-drawn style
+    expect(flyers.map((e) => e.look).sort()).toEqual(['cel', 'origami', 'paper', 'toon']);
     for (const e of flyers) expect(e.pos[1]).toBeGreaterThan(5);
     // the gallery's own dragons hover off the ground
     for (const e of figs.filter((x) => x.word === 'dragon')) expect(e.pos[1]).toBeGreaterThan(1);

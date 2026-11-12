@@ -29,7 +29,7 @@ function gradientMap(): THREE.DataTexture {
   return ramp;
 }
 
-function toonMaterial(color: string, map?: THREE.Texture): THREE.MeshToonMaterial {
+export function toonMaterial(color: string, map?: THREE.Texture): THREE.MeshToonMaterial {
   const mat = new THREE.MeshToonMaterial({ color: map ? '#ffffff' : color, map: map ?? null, gradientMap: gradientMap() });
   // a soft rim of light on edges facing away from the camera, like painted highlights; then the time-of-day tint
   chainShaderHook(mat, 'toon-rim', (shader) => {
@@ -41,7 +41,7 @@ function toonMaterial(color: string, map?: THREE.Texture): THREE.MeshToonMateria
   return tinted(mat);
 }
 
-function shadeOf(hex: string, l: number, s = 0.9): THREE.Color {
+export function shadeOf(hex: string, l: number, s = 0.9): THREE.Color {
   const c = new THREE.Color(hex);
   const hsl = { h: 0, s: 0, l: 0 };
   c.getHSL(hsl);
@@ -61,7 +61,7 @@ function wedgeGeometry(w: number, h: number, d: number, apex = 0): THREE.BufferG
 }
 
 /** Geometry for a part at its actual size, plus the extra scale that sizes it. */
-function smoothGeometry(p: FigPart): { geo: THREE.BufferGeometry; scale: Vec3 } {
+export function smoothGeometry(p: FigPart): { geo: THREE.BufferGeometry; scale: Vec3 } {
   const [w, h, d] = p.size;
   switch (p.shape) {
     case 'ball':

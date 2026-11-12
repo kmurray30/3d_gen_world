@@ -2,7 +2,8 @@
 //   node scripts/shots-anims.mjs http://localhost:8793 out-dir man wave,cheer,point
 import { chromium } from 'playwright';
 import fs from 'node:fs';
-const [base = 'http://localhost:8787', out = 'test-results/anims', key = 'man', list] = process.argv.slice(2);
+const [base = 'http://localhost:8787', out = 'test-results/anims', key = 'man', list, styles = 'paper,toon'] = process.argv.slice(2);
+const [styleA, styleB] = styles.split(',');
 fs.mkdirSync(out, { recursive: true });
 const executablePath = process.env.PW_CHROMIUM ?? (fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
 const browser = await chromium.launch({ executablePath, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -17,11 +18,13 @@ if (await page.locator('input[name=passcode]').count()) {
 await page.waitForURL(/\/w\//);
 await page.waitForFunction(() => !!window.__game);
 await page.addStyleTag({ content: '.lock-overlay, .hint, .cmd, .toast, .viewbar, .topbar { display: none !important; }' });
+await page.waitForFunction(() => [...window.__game.scene.figures.values()].every((v) => !v.celPending), null, { timeout: 60000 }).catch(() => undefined);
 await page.waitForTimeout(1000);
 const id = key.replace(/\s+/g, '_');
+await page.evaluate((st) => { window.__styles = st; }, [styleA, styleB]);
 const info = await page.evaluate((id) => {
   const w = window.__game.engine.world;
-  const a = w.get(`${id}_paper`), b = w.get(`${id}_toon`);
+  const a = w.get(`${id}_${window.__styles[0]}`), b = w.get(`${id}_${window.__styles[1]}`);
   return { a: a.pos, b: b.pos, h: a.heightM };
 }, id);
 const cx = (info.a[0] + info.b[0]) / 2;
@@ -31,8 +34,8 @@ const clips = (list ?? 'wave,cheer,tada,point,shrug,jump,dance,think,scared,clap
 for (const clip of clips) {
   await page.evaluate(([id, clip]) => {
     const s = window.__game.scene;
-    s.react(`${id}_paper`, clip);
-    s.react(`${id}_toon`, clip);
+    s.react(`${id}_${window.__styles[0]}`, clip);
+    s.react(`${id}_${window.__styles[1]}`, clip);
   }, [id, clip]);
   await page.waitForTimeout(clip === 'jump' ? 550 : 850);
   await page.screenshot({ path: `${out}/${id}-${clip}.png` });
