@@ -46,6 +46,10 @@ const ORBIT_SMOOTH = 10;
 export class CameraRig {
   mode: ViewMode = 'first';
   angle = 1;
+  /** Ground height under a point, so the camera never dips into a hill. */
+  ground: (x: number, z: number) => number = () => 0;
+  /** Pitch the third-person camera is easing toward after an angle change (null = the player steers it). */
+  private pitchGoal: number | null = null;
   readonly pose: CameraPose = { pos: [0, PLAYER_EYE_HEIGHT, 0], yaw: 0, pitch: 0 };
   /** The free camera's own state, kept between visits. */
   private readonly free: CameraPose = { pos: [0, 3, 6], yaw: 0, pitch: -0.3 };
@@ -75,8 +79,8 @@ export class CameraRig {
       this.free.pitch = this.pose.pitch;
     }
     if (mode === 'third' && this.mode === 'first') {
-      // look down at the preset angle instead of keeping a first-person stare at the sky
-      player.pitch = -this.down;
+      // swing out from the head and ease down to the preset angle
+      this.pitchGoal = -this.down;
       this.dist = 0.5;
     }
     if (mode === 'first') player.pitch = clamp(player.pitch, -PITCH_LIMIT_FIRST, PITCH_LIMIT_FIRST);
@@ -101,7 +105,8 @@ export class CameraRig {
     this.angle = ((index % ANGLES.length) + ANGLES.length) % ANGLES.length;
     const a = ANGLES[this.angle];
     this.down = a.down * DEG;
-    if (this.mode === 'third') player.pitch = -this.down;
+    if (this.mode === 'third') this.pitchGoal = -this.down;
+    void player;
     return a;
   }
 
@@ -110,16 +115,30 @@ export class CameraRig {
     return this.setAngle(this.angle + 1, player);
   }
 
-  /** Advance the camera. `look` is the mouse/touch delta for the free camera; the player already consumed it otherwise. */
+  /**
+   * Advance the camera. `look` is this frame's mouse/touch delta: the free camera steers with it; in third person
+   * the player already turned with it, and any vertical look cancels an angle change still easing in.
+   */
   update(dt: number, player: PlayerState, look: [number, number], lookSens: number, fly: FlyInput): CameraPose {
     const p = this.pose;
     if (this.mode === 'first') {
+      this.pitchGoal = null;
       p.pos = [player.pos[0], player.pos[1] + PLAYER_EYE_HEIGHT, player.pos[2]];
       p.yaw = player.yaw;
       p.pitch = player.pitch;
       return p;
     }
     if (this.mode === 'third') {
+      if (this.pitchGoal !== null) {
+        if (look[1] !== 0) this.pitchGoal = null;
+        else {
+          player.pitch += (this.pitchGoal - player.pitch) * Math.min(1, dt * 6);
+          if (Math.abs(this.pitchGoal - player.pitch) < 0.002) {
+            player.pitch = this.pitchGoal;
+            this.pitchGoal = null;
+          }
+        }
+      }
       const target: Vec3 = [player.pos[0], player.pos[1] + 1.25, player.pos[2]];
       const want = ANGLES[this.angle].dist;
       this.dist = lerp(this.dist, want, Math.min(1, dt * ORBIT_SMOOTH));
@@ -128,7 +147,9 @@ export class CameraRig {
       const fx = -Math.sin(yaw) * Math.cos(pitch);
       const fy = Math.sin(pitch);
       const fz = -Math.cos(yaw) * Math.cos(pitch);
-      p.pos = [target[0] - fx * this.dist, Math.max(MIN_Y, target[1] - fy * this.dist), target[2] - fz * this.dist];
+      const cx = target[0] - fx * this.dist;
+      const cz = target[2] - fz * this.dist;
+      p.pos = [cx, Math.max(this.ground(cx, cz) + MIN_Y, target[1] - fy * this.dist), cz];
       p.yaw = yaw;
       p.pitch = pitch;
       return p;
@@ -152,7 +173,7 @@ export class CameraRig {
     f.pos[0] += (rx * ax + fx * ay) * speed * dt;
     f.pos[1] += (fy * ay + fly.up) * speed * dt;
     f.pos[2] += (rz * ax + fz * ay) * speed * dt;
-    f.pos[1] = clamp(f.pos[1], MIN_Y, 80);
+    f.pos[1] = clamp(f.pos[1], this.ground(f.pos[0], f.pos[2]) + MIN_Y, 90);
     const r = Math.hypot(f.pos[0], f.pos[2]);
     if (r > WORLD_RADIUS + 20) {
       f.pos[0] *= (WORLD_RADIUS + 20) / r;

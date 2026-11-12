@@ -22,6 +22,9 @@ export interface HouseParams {
   doorColor: string;
   chimney: boolean;
   windows: boolean;
+  /** Wooden shutters beside the windows that swing shut over them. */
+  shutters?: boolean;
+  shutterColor?: string;
   /** Offset of the door along the front wall. */
   doorAt: number;
   floorH: number;
@@ -86,7 +89,7 @@ export function houseBody(b: Parts, p: HouseParams, ox = 0, oz = 0): { H: number
   const sticker = b.decals('door');
   if (sticker?.file) {
     const dw = Math.min(DOOR_W - 0.04, (DOOR_H - 0.05) * (sticker.w / Math.max(1, sticker.h)));
-    b.decal(ox + p.doorAt, 0, oz + hd + 0.01, sticker, dw, DOOR_H - 0.05, 0, { role: 'door' });
+    b.decal(ox + p.doorAt, 0, oz + hd + 0.01, sticker, dw, DOOR_H - 0.05, 0, { role: 'door', name: 'door' });
   } else {
     b.box(ox + p.doorAt, 0, oz + hd - t / 2, DOOR_W - 0.05, DOOR_H - 0.05, 0.06, 'plank', p.doorColor, { ghost: true });
   }
@@ -102,11 +105,12 @@ export function houseBody(b: Parts, p: HouseParams, ox = 0, oz = 0): { H: number
     for (let s = 0; s < p.stories; s++) {
       const y = s * p.floorH + 0.95;
       const front = slots(p.w, 2.4, 1.0, [p.doorAt - DOOR_W / 2 - 0.75, p.doorAt + DOOR_W / 2 + 0.75]);
-      for (const x of front) window(b, ox + x, y, oz + hd, 0, winH, p.trimColor);
-      for (const x of slots(p.w, 2.6, 1.0)) window(b, ox + x, y, oz - hd, 180, winH, p.trimColor);
+      const shutter = p.shutters ? (p.shutterColor ?? p.doorColor) : undefined;
+      for (const x of front) window(b, ox + x, y, oz + hd, 0, winH, p.trimColor, shutter);
+      for (const x of slots(p.w, 2.6, 1.0)) window(b, ox + x, y, oz - hd, 180, winH, p.trimColor, shutter);
       for (const z of slots(p.d, 2.6, 1.0)) {
-        window(b, ox + hw, y, oz + z, 90, winH, p.trimColor);
-        window(b, ox - hw, y, oz + z, -90, winH, p.trimColor);
+        window(b, ox + hw, y, oz + z, 90, winH, p.trimColor, shutter);
+        window(b, ox - hw, y, oz + z, -90, winH, p.trimColor, shutter);
       }
     }
   }
@@ -115,25 +119,31 @@ export function houseBody(b: Parts, p: HouseParams, ox = 0, oz = 0): { H: number
 
   // roof
   const roofY = H - 0.12;
+  const named = { name: 'roof' };
   if (p.roof === 'flat') {
-    b.box(ox, H, oz, p.w + 0.5, 0.3, p.d + 0.5, p.roofMat, p.roofColor);
-    for (const sz of [-1, 1]) b.box(ox, H + 0.3, oz + sz * (hd + 0.15), p.w + 0.5, 0.35, 0.2, p.wallMat, p.wallColor);
-    for (const sx of [-1, 1]) b.box(ox + sx * (hw + 0.15), H + 0.3, oz, 0.2, 0.35, p.d + 0.1, p.wallMat, p.wallColor);
+    b.box(ox, H, oz, p.w + 0.5, 0.3, p.d + 0.5, p.roofMat, p.roofColor, named);
+    for (const sz of [-1, 1]) b.box(ox, H + 0.3, oz + sz * (hd + 0.15), p.w + 0.5, 0.35, 0.2, p.wallMat, p.wallColor, named);
+    for (const sx of [-1, 1]) b.box(ox + sx * (hw + 0.15), H + 0.3, oz, 0.2, 0.35, p.d + 0.1, p.wallMat, p.wallColor, named);
   } else if (p.roof === 'gable') {
     const roof = b.roof(ox, roofY, oz, 'gable', p.w + 0.08, (hd + OVERHANG) * p.pitch, p.d + OVERHANG * 2, p.roofMat, p.roofColor, {
       endMat: p.wallMat,
       endColor: p.wallColor,
+      ...named,
     });
     if (p.chimney) chimney(b, roof, ox + hw * 0.45, oz - hd * 0.35, roofY);
   } else {
-    const roof = b.roof(ox, roofY, oz, 'hip', p.w + OVERHANG * 2, (Math.min(hw, hd) + OVERHANG) * p.pitch, p.d + OVERHANG * 2, p.roofMat, p.roofColor);
+    const roof = b.roof(ox, roofY, oz, 'hip', p.w + OVERHANG * 2, (Math.min(hw, hd) + OVERHANG) * p.pitch, p.d + OVERHANG * 2, p.roofMat, p.roofColor, named);
     if (p.chimney) chimney(b, roof, ox + hw * 0.4, oz - hd * 0.2, roofY);
   }
   return { H, roofY };
 }
 
-function window(b: Parts, x: number, y: number, z: number, rot: number, h: number, trim: string): void {
-  if (b.sticker('window', x, y, z, h, rot)) return;
+function window(b: Parts, x: number, y: number, z: number, rot: number, h: number, trim: string, shutter?: string): void {
+  const sticker = b.sticker('window', x, y, z, h, rot);
+  if (sticker) {
+    if (shutter) shutters(b, sticker.w, x, y, z, rot, h, shutter);
+    return;
+  }
   // no sprite: a framed pane
   const w = h * 0.85;
   const f = (ox: number, oz: number) => {
@@ -147,12 +157,40 @@ function window(b: Parts, x: number, y: number, z: number, rot: number, h: numbe
   b.box(gx, y + 0.08, gz, w, h, 0.04, 'glass', '#bfe9ff', { rot, ghost: true, noInk: true });
 }
 
+/**
+ * A pair of plank shutters folded back against the wall either side of a window, each hinged at the window's
+ * edge so it swings out and round to cover its half. Window n's pair answers to `shutters_n` (and "shutters").
+ */
+function shutters(b: Parts, ww: number, x: number, y: number, z: number, rot: number, h: number, color: string): void {
+  const n = b.parts.filter((q) => q.t === 'decal' && q.role === 'window').length - 1;
+  const sw = ww / 2;
+  const t = 0.04;
+  const sh = h * 0.92;
+  const sy = y + (h - sh) / 2;
+  const r = (rot * Math.PI) / 180;
+  // window-local (across, out) -> structure-local x, z
+  const at = (across: number, out: number): [number, number] => [x + across * Math.cos(r) + out * Math.sin(r), z - across * Math.sin(r) + out * Math.cos(r)];
+  const lead = `shutters_${n}`;
+  for (const side of [-1, 1]) {
+    const id = side < 0 ? lead : `${lead}_r`;
+    const [hx, hz] = at(side * (ww / 2), 0.02 + t);
+    b.joint({ id, kind: 'hinge', at: [hx, sy, hz], axis: [0, 1, 0], amount: side < 0 ? Math.PI : -Math.PI, states: ['open', 'closed'], ...(side < 0 ? { group: 'shutters' } : { follow: lead }), secs: 0.8 });
+    const [cx, cz] = at(side * (ww / 2 + sw / 2), 0.02 + t / 2);
+    b.box(cx, sy, cz, sw - 0.02, sh, t, 'plank', color, { rot, ghost: true, joint: id });
+    // two battens across each shutter, inked in the shutter's own colour so each shutter stays one mesh
+    for (const k of [0.22, 0.78]) {
+      const [bx, bz] = at(side * (ww / 2 + sw / 2), 0.02 + t + 0.01);
+      b.box(bx, sy + sh * k - 0.04, bz, sw - 0.1, 0.08, 0.02, 'plank', color, { rot, ghost: true, joint: id });
+    }
+  }
+}
+
 function chimney(b: Parts, roof: { style: 'gable' | 'hip' | 'shed'; w: number; d: number; h: number }, x: number, z: number, roofY: number): void {
   const surface = roofY + roofHeightAt({ ...roof, t: 'roof', pos: [0, 0, 0], mat: 'shingle', color: '' }, x, z);
   const base = roofY - 0.4;
   const top = surface + 1.1;
-  b.box(x, base, z, 0.7, top - base, 0.7, 'brick', '#c96a4b');
-  b.box(x, top, z, 0.9, 0.18, 0.9, 'flat', '#8f5a45');
+  b.box(x, base, z, 0.7, top - base, 0.7, 'brick', '#c96a4b', { name: 'chimney' });
+  b.box(x, top, z, 0.9, 0.18, 0.9, 'flat', '#8f5a45', { name: 'chimney' });
 }
 
 export function house(params: Partial<HouseParams>, _ctx: GenContext, decals: Parts['decals']): Structure {
@@ -187,6 +225,8 @@ export function randomHouse(ctx: GenContext, decals: Parts['decals'], overrides:
     trimColor: pick(rng, TRIM_COLORS),
     doorColor: pick(rng, DOOR_COLORS),
     chimney: rng() < 0.75,
+    shutters: rng() < 0.4,
+    shutterColor: pick(rng, DOOR_COLORS),
     doorAt: range(rng, -1, 1, 0.5),
     ...overrides,
   };
@@ -219,14 +259,14 @@ export function gingerbreadHouse(ctx: GenContext, decals: Parts['decals'], overr
   const roofH = (hd + OVERHANG) * p.pitch;
   const roofSpec = { t: 'roof' as const, style: 'gable' as const, w: p.w + 0.08, d: p.d + OVERHANG * 2, h: roofH, pos: [0, 0, 0] as [number, number, number], mat: 'icing' as const, color: '' };
   // icing drips along both eaves
-  for (const sz of [-1, 1]) b.box(0, roofY - 0.05, sz * (hd + OVERHANG - 0.12), p.w + 0.1, 0.22, 0.34, 'icing', '#fffdf7', { noInk: true, ghost: true });
+  for (const sz of [-1, 1]) b.box(0, roofY - 0.05, sz * (hd + OVERHANG - 0.12), p.w + 0.1, 0.22, 0.34, 'icing', '#fffdf7', { noInk: true, ghost: true, name: 'roof' });
   // gumdrops on the slopes and along the path
   const drops = 10;
   for (let i = 0; i < drops; i++) {
     const x = -hw + 0.6 + (i % 5) * ((p.w - 1.2) / 4) + range(rng, -0.2, 0.2);
     const z = (i < 5 ? 1 : -1) * (hd * 0.45 + range(rng, -0.3, 0.3));
     const y = roofY + roofHeightAt(roofSpec, x, z) - 0.05;
-    b.prism(x, y, z, 8, 0.24, 0.32, 'flat', pick(rng, CANDY), { rTop: 0.16 });
+    b.prism(x, y, z, 8, 0.24, 0.32, 'flat', pick(rng, CANDY), { rTop: 0.16, name: 'roof' });
   }
   for (let i = 0; i < 4; i++) {
     const side = i % 2 ? 1 : -1;

@@ -1,0 +1,918 @@
+{
+ "v": 1,
+ "about": "What the game can play and where each sound comes from. fetch_audio.py turns this into assets/audio. Every source is CC0. A cue can name Kenney pack files (kenney: pack + filename globs), a Freesound search (freesound: query, how many, duration range, tags; needs FREESOUND_API_KEY), a direct URL (url, plus author and page), or a local file (file). gain is the cue's level in the mix; loop marks ambience and music.",
+ "cues": {
+  "step.grass": {
+   "gain": 0.35,
+   "kenney": {
+    "pack": "impact-sounds",
+    "files": [
+     "footstep_grass_00*"
+    ]
+   }
+  },
+  "step.wood": {
+   "gain": 0.4,
+   "kenney": {
+    "pack": "impact-sounds",
+    "files": [
+     "footstep_wood_00*"
+    ]
+   }
+  },
+  "step.stone": {
+   "gain": 0.35,
+   "kenney": {
+    "pack": "impact-sounds",
+    "files": [
+     "footstep_concrete_00*"
+    ]
+   }
+  },
+  "step.gravel": {
+   "gain": 0.35,
+   "freesound": {
+    "query": "footstep gravel single",
+    "n": 5,
+    "dur": [
+     0.15,
+     1.0
+    ]
+   }
+  },
+  "step.sand": {
+   "gain": 0.3,
+   "freesound": {
+    "query": "footstep sand single",
+    "n": 4,
+    "dur": [
+     0.15,
+     1.0
+    ]
+   }
+  },
+  "step.water": {
+   "gain": 0.4,
+   "freesound": {
+    "query": "footstep water splash shallow",
+    "n": 4,
+    "dur": [
+     0.2,
+     1.2
+    ]
+   }
+  },
+  "jump": {
+   "gain": 0.35,
+   "kenney": {
+    "pack": "rpg-audio",
+    "files": [
+     "cloth*"
+    ]
+   }
+  },
+  "land.soft": {
+   "gain": 0.5,
+   "kenney": {
+    "pack": "impact-sounds",
+    "files": [
+     "impactSoft_medium_00*"
+    ]
+   }
+  },
+  "land.thud": {
+   "gain": 0.6,
+   "kenney": {
+    "pack": "impact-sounds",
+    "files": [
+     "impactSoft_heavy_00*"
+    ]
+   }
+  },
+  "land.heavy": {
+   "gain": 0.7,
+   "kenney": {
+    "pack": "impact-sounds",
+    "files": [
+     "impactPunch_heavy_00*"
+    ]
+   }
+  },
+  "land.wood": {
+   "gain": 0.55,
+   "kenney": {
+    "pack": "impact-sounds",
+    "files": [
+     "impactPlank_medium_00*"
+    ]
+   }
+  },
+  "land.metal": {
+   "gain": 0.5,
+   "kenney": {
+    "pack": "impact-sounds",
+    "files": [
+     "impactMetal_medium_00*"
+    ]
+   }
+  },
+  "land.water": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "water splash object",
+    "n": 3,
+    "dur": [
+     0.3,
+     2.0
+    ]
+   }
+  },
+  "door.open": {
+   "gain": 0.6,
+   "kenney": {
+    "pack": "rpg-audio",
+    "files": [
+     "doorOpen_*"
+    ]
+   }
+  },
+  "door.close": {
+   "gain": 0.6,
+   "kenney": {
+    "pack": "rpg-audio",
+    "files": [
+     "doorClose_*"
+    ]
+   }
+  },
+  "window.open": {
+   "gain": 0.45,
+   "kenney": {
+    "pack": "rpg-audio",
+    "files": [
+     "creak*"
+    ]
+   }
+  },
+  "window.close": {
+   "gain": 0.45,
+   "kenney": {
+    "pack": "rpg-audio",
+    "files": [
+     "metalLatch*"
+    ]
+   }
+  },
+  "shutter": {
+   "gain": 0.5,
+   "kenney": {
+    "pack": "impact-sounds",
+    "files": [
+     "impactWood_light_00*"
+    ]
+   }
+  },
+  "metal.small": {
+   "gain": 0.5,
+   "kenney": {
+    "pack": "rpg-audio",
+    "files": [
+     "metalClick*"
+    ]
+   }
+  },
+  "lid": {
+   "gain": 0.55,
+   "kenney": {
+    "pack": "impact-sounds",
+    "files": [
+     "impactMetal_light_00*"
+    ]
+   }
+  },
+  "winch": {
+   "gain": 0.5,
+   "freesound": {
+    "query": "rope winch creak wooden",
+    "n": 2,
+    "dur": [
+     0.8,
+     3.5
+    ]
+   }
+  },
+  "switch": {
+   "gain": 0.5,
+   "kenney": {
+    "pack": "interface-sounds",
+    "files": [
+     "switch_00*"
+    ]
+   }
+  },
+  "water.on": {
+   "gain": 0.5,
+   "freesound": {
+    "query": "water tap turn on gush",
+    "n": 2,
+    "dur": [
+     0.5,
+     2.5
+    ]
+   }
+  },
+  "paper": {
+   "gain": 0.45,
+   "kenney": {
+    "pack": "rpg-audio",
+    "files": [
+     "bookFlip*"
+    ]
+   }
+  },
+  "poke": {
+   "gain": 0.45,
+   "kenney": {
+    "pack": "interface-sounds",
+    "files": [
+     "pluck_00*"
+    ]
+   }
+  },
+  "fx.explosion": {
+   "gain": 0.75,
+   "freesound": {
+    "query": "cartoon explosion boom",
+    "n": 3,
+    "dur": [
+     0.5,
+     3.0
+    ]
+   }
+  },
+  "fx.sparkle": {
+   "gain": 0.5,
+   "freesound": {
+    "query": "magic sparkle chime",
+    "n": 3,
+    "dur": [
+     0.4,
+     2.5
+    ]
+   }
+  },
+  "fx.hearts": {
+   "gain": 0.45,
+   "freesound": {
+    "query": "cute pop chime love",
+    "n": 2,
+    "dur": [
+     0.3,
+     2.0
+    ]
+   }
+  },
+  "fx.dust": {
+   "gain": 0.4,
+   "freesound": {
+    "query": "dust puff poof",
+    "n": 3,
+    "dur": [
+     0.2,
+     1.5
+    ]
+   }
+  },
+  "fx.steam": {
+   "gain": 0.4,
+   "freesound": {
+    "query": "steam hiss short",
+    "n": 2,
+    "dur": [
+     0.5,
+     3.0
+    ]
+   }
+  },
+  "fx.splash": {
+   "gain": 0.55,
+   "freesound": {
+    "query": "water splash",
+    "n": 3,
+    "dur": [
+     0.3,
+     2.0
+    ]
+   }
+  },
+  "gone.pop": {
+   "gain": 0.55,
+   "freesound": {
+    "query": "bubble pop cartoon",
+    "n": 3,
+    "dur": [
+     0.05,
+     0.8
+    ]
+   }
+  },
+  "gone.whoosh": {
+   "gain": 0.45,
+   "freesound": {
+    "query": "whoosh swoosh soft",
+    "n": 3,
+    "dur": [
+     0.2,
+     1.5
+    ]
+   }
+  },
+  "gone.sink": {
+   "gain": 0.45,
+   "freesound": {
+    "query": "bubbles gurgle water",
+    "n": 2,
+    "dur": [
+     0.5,
+     2.5
+    ]
+   }
+  },
+  "boing": {
+   "gain": 0.45,
+   "freesound": {
+    "query": "boing spring cartoon",
+    "n": 3,
+    "dur": [
+     0.2,
+     1.5
+    ]
+   }
+  },
+  "whoosh": {
+   "gain": 0.4,
+   "freesound": {
+    "query": "whoosh spin",
+    "n": 3,
+    "dur": [
+     0.2,
+     1.2
+    ]
+   }
+  },
+  "rattle": {
+   "gain": 0.45,
+   "freesound": {
+    "query": "wood rattle shake",
+    "n": 2,
+    "dur": [
+     0.3,
+     1.5
+    ]
+   }
+  },
+  "clap": {
+   "gain": 0.5,
+   "freesound": {
+    "query": "hand clap single",
+    "n": 3,
+    "dur": [
+     0.05,
+     0.6
+    ]
+   }
+  },
+  "flap": {
+   "gain": 0.45,
+   "freesound": {
+    "query": "wings flap bird",
+    "n": 3,
+    "dur": [
+     0.3,
+     1.5
+    ]
+   }
+  },
+  "swish": {
+   "gain": 0.3,
+   "kenney": {
+    "pack": "rpg-audio",
+    "files": [
+     "cloth*"
+    ]
+   }
+  },
+  "animal.cat": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "cat meow",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.dog": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "dog bark single",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.cow": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "cow moo",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.sheep": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "sheep baa",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.goat": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "goat bleat",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.pig": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "pig oink",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.horse": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "horse neigh",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.donkey": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "donkey bray",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.duck": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "duck quack",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.chicken": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "chicken cluck",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.rooster": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "rooster crow",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.bird": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "bird chirp single",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.owl": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "owl hoot",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.seagull": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "seagull call",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.crow": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "crow caw",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.parrot": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "parrot squawk",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.turkey": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "turkey gobble",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.frog": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "frog croak",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.mouse": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "mouse squeak",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.lion": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "lion roar",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.bear": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "bear growl",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.wolf": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "wolf howl",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.elephant": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "elephant trumpet",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.monkey": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "monkey chatter",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.snake": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "snake hiss",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.bee": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "bee buzz",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.seal": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "sea lion bark",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "animal.monster": {
+   "gain": 0.6,
+   "freesound": {
+    "query": "monster creature roar",
+    "n": 3,
+    "dur": [
+     0.3,
+     3.0
+    ]
+   }
+  },
+  "ui.send": {
+   "gain": 0.35,
+   "kenney": {
+    "pack": "interface-sounds",
+    "files": [
+     "select_00*"
+    ]
+   }
+  },
+  "ui.done": {
+   "gain": 0.35,
+   "kenney": {
+    "pack": "music-jingles",
+    "files": [
+     "jingles_PIZZI0*"
+    ]
+   }
+  },
+  "ui.error": {
+   "gain": 0.4,
+   "kenney": {
+    "pack": "interface-sounds",
+    "files": [
+     "error_00*"
+    ]
+   }
+  },
+  "ui.click": {
+   "gain": 0.3,
+   "kenney": {
+    "pack": "interface-sounds",
+    "files": [
+     "click_00*"
+    ]
+   }
+  },
+  "amb.birds": {
+   "gain": 0.35,
+   "freesound": {
+    "query": "birds chirping morning ambience",
+    "n": 2,
+    "dur": [
+     25,
+     180
+    ]
+   },
+   "loop": true,
+   "kind": "ambience"
+  },
+  "amb.crickets": {
+   "gain": 0.3,
+   "freesound": {
+    "query": "crickets night ambience",
+    "n": 2,
+    "dur": [
+     25,
+     180
+    ]
+   },
+   "loop": true,
+   "kind": "ambience"
+  },
+  "amb.water": {
+   "gain": 0.4,
+   "freesound": {
+    "query": "stream river water flowing ambience",
+    "n": 1,
+    "dur": [
+     25,
+     180
+    ]
+   },
+   "loop": true,
+   "kind": "ambience"
+  },
+  "amb.waves": {
+   "gain": 0.35,
+   "freesound": {
+    "query": "lake shore gentle waves ambience",
+    "n": 1,
+    "dur": [
+     25,
+     180
+    ]
+   },
+   "loop": true,
+   "kind": "ambience"
+  },
+  "amb.wind": {
+   "gain": 0.25,
+   "freesound": {
+    "query": "gentle wind ambience",
+    "n": 1,
+    "dur": [
+     25,
+     180
+    ]
+   },
+   "loop": true,
+   "kind": "ambience"
+  },
+  "amb.fountain": {
+   "gain": 0.45,
+   "freesound": {
+    "query": "fountain water splashing ambience",
+    "n": 1,
+    "dur": [
+     15,
+     120
+    ]
+   },
+   "loop": true,
+   "kind": "ambience"
+  },
+  "amb.fire": {
+   "gain": 0.5,
+   "freesound": {
+    "query": "fire crackling loop",
+    "n": 1,
+    "dur": [
+     10,
+     120
+    ]
+   },
+   "loop": true,
+   "kind": "ambience"
+  },
+  "amb.rain": {
+   "gain": 0.45,
+   "freesound": {
+    "query": "rain ambience loop",
+    "n": 1,
+    "dur": [
+     15,
+     120
+    ]
+   },
+   "loop": true,
+   "kind": "ambience"
+  },
+  "music.dawn": {
+   "gain": 0.5,
+   "freesound": {
+    "query": "gentle morning acoustic guitar",
+    "n": 1,
+    "dur": [
+     40,
+     300
+    ],
+    "tags": [
+     "music"
+    ]
+   },
+   "loop": true,
+   "kind": "music"
+  },
+  "music.day": {
+   "gain": 0.5,
+   "freesound": {
+    "query": "cheerful ukulele acoustic",
+    "n": 1,
+    "dur": [
+     40,
+     300
+    ],
+    "tags": [
+     "music"
+    ]
+   },
+   "loop": true,
+   "kind": "music"
+  },
+  "music.sunset": {
+   "gain": 0.5,
+   "freesound": {
+    "query": "calm piano melody",
+    "n": 1,
+    "dur": [
+     40,
+     300
+    ],
+    "tags": [
+     "music"
+    ]
+   },
+   "loop": true,
+   "kind": "music"
+  },
+  "music.night": {
+   "gain": 0.45,
+   "freesound": {
+    "query": "music box lullaby",
+    "n": 1,
+    "dur": [
+     40,
+     300
+    ],
+    "tags": [
+     "music"
+    ]
+   },
+   "loop": true,
+   "kind": "music"
+  }
+ }
+}

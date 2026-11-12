@@ -8,6 +8,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { Expr, Pose } from '../../../shared/figure/anim';
 import type { FigPart, Figure, Vec3 } from '../../../shared/figure/types';
 import { drawFace } from './face';
+import { chainShaderHook, tinted } from '../tint';
 
 const DEG = Math.PI / 180;
 
@@ -24,15 +25,14 @@ function gradientMap(): THREE.DataTexture {
 
 function toonMaterial(color: string, map?: THREE.Texture): THREE.MeshToonMaterial {
   const mat = new THREE.MeshToonMaterial({ color: map ? '#ffffff' : color, map: map ?? null, gradientMap: gradientMap() });
-  mat.onBeforeCompile = (shader) => {
-    // a soft rim of light on edges facing away from the camera, like painted highlights
+  // a soft rim of light on edges facing away from the camera, like painted highlights; then the time-of-day tint
+  chainShaderHook(mat, 'toon-rim', (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <opaque_fragment>',
       'float rimK = 1.0 - clamp(dot(normalize(vViewPosition), normal), 0.0, 1.0);\n outgoingLight += diffuseColor.rgb * 0.35 * pow(rimK, 3.0);\n#include <opaque_fragment>',
     );
-  };
-  mat.customProgramCacheKey = () => 'toon-rim';
-  return mat;
+  });
+  return tinted(mat);
 }
 
 function outlineColor(hex: string): THREE.Color {
@@ -152,7 +152,7 @@ export class ToonFigure {
       if (p.srot) holder.rotation.set(p.srot[0] * DEG, p.srot[1] * DEG, p.srot[2] * DEG, 'XYZ');
       node.add(holder);
       let mat: THREE.Material;
-      if (p.role === 'glow') mat = new THREE.MeshBasicMaterial({ color: p.color });
+      if (p.role === 'glow') mat = tinted(new THREE.MeshBasicMaterial({ color: p.color }), true);
       else if (p.role === 'head' && fig.face) {
         const m = toonMaterial(p.color, headTexture(fig, p.color, 'neutral', faceCache));
         this.head = { mat: m, skin: p.color };
@@ -170,7 +170,7 @@ export class ToonFigure {
       }
       const meshes = [mesh];
       if (!p.noInk) {
-        const omat = new THREE.MeshBasicMaterial({ color: outlineColor(p.color), side: THREE.BackSide });
+        const omat = tinted(new THREE.MeshBasicMaterial({ color: outlineColor(p.color), side: THREE.BackSide }));
         this.mats.push(omat);
         const shell = new THREE.Mesh(geo, omat);
         const real: Vec3 = [p.size[0], p.size[1], p.size[2]];

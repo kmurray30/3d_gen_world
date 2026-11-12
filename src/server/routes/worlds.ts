@@ -24,6 +24,9 @@ const WorldBody = z.object({
     entities: z.array(z.record(z.string(), z.unknown())).max(400),
     createdAt: z.number(),
     preset: z.string().max(24).optional(),
+    seed: z.number().optional(),
+    terrain: z.record(z.string(), z.unknown()).optional(),
+    sky: z.enum(['dawn', 'day', 'sunset', 'night']).optional(),
   }),
 });
 
@@ -37,7 +40,7 @@ export function worldsRoutes(db: Db, vocab: Vocab): Hono {
     const hit = vocab.resolveWord(word);
     return hit ? vocab.entry(hit).sprite : null;
   };
-  const fresh = (slug: string, preset?: string): World => presetWorld(preset, slug, resolver, decals);
+  const fresh = (slug: string, preset?: string, seed?: number): World => presetWorld(preset, slug, resolver, decals, seed);
 
   app.post('/', async (c) => {
     let preset = c.req.query('preset');
@@ -76,7 +79,7 @@ export function worldsRoutes(db: Db, vocab: Vocab): Hono {
     const slug = c.req.param('slug');
     if (!SLUG.test(slug)) return c.json({ error: 'bad slug' }, 400);
     const prev = db.getWorld(slug);
-    const world = fresh(slug, prev?.preset);
+    const world = fresh(slug, prev?.preset, prev?.seed);
     world.rev = (prev?.rev ?? 0) + 1;
     if (prev) world.createdAt = prev.createdAt;
     db.replaceWorld(world);

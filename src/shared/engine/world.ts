@@ -1,6 +1,7 @@
-import type { Entity, PlayerState, Vec3, World } from '../types';
+import type { Entity, PlayerState, TimeOfDay, Vec3, World } from '../types';
 import { MAX_ENTITIES } from '../types';
 import { worldPos } from './transform';
+import { terrainField, type TerrainField, type TerrainSpec } from '../terrain/field';
 
 export const ATTACH_MAX_DEPTH = 4;
 
@@ -9,6 +10,8 @@ export interface Transient {
   ofs: Vec3;
   /** Vertical squash multiplier for bounces and landings (1 = none). */
   sq: number;
+  /** A gesture being acted out (wave, clap...): seconds in, out of its length. Puppets move their pieces. */
+  gesture?: { name: string; t: number; dur: number };
 }
 
 /**
@@ -22,6 +25,12 @@ export class WorldModel {
   slug: string;
   rev: number;
   createdAt: number;
+  preset?: string;
+  seed?: number;
+  sky: TimeOfDay;
+  /** The recipe and its baked heights; null = the flat meadow at y 0. */
+  terrainSpec?: TerrainSpec;
+  terrain: TerrainField | null = null;
 
   constructor(world: World) {
     this.slug = world.slug;
@@ -29,6 +38,10 @@ export class WorldModel {
     this.createdAt = world.createdAt;
     this.player = { pos: [...world.player.pos], yaw: world.player.yaw, pitch: world.player.pitch };
     for (const e of world.entities) this.entities.set(e.id, cloneEntity(e));
+    this.preset = world.preset;
+    this.seed = world.seed;
+    this.sky = world.sky ?? 'day';
+    this.setTerrain(world.terrain);
     this.ensureYaw();
   }
 
@@ -38,6 +51,34 @@ export class WorldModel {
     for (const e of this.entities.values()) {
       if (e.yaw === undefined) e.yaw = Math.round((Math.atan2(p[0] - e.pos[0], p[2] - e.pos[2]) * 180) / Math.PI);
     }
+  }
+
+  setTerrain(spec: TerrainSpec | undefined): void {
+    this.terrainSpec = spec;
+    this.terrain = terrainField(spec);
+  }
+
+  /** Height of the ground (terrain, not structures) at (x, z). */
+  ground(x: number, z: number): number {
+    return this.terrain ? this.terrain.height(x, z) : 0;
+  }
+
+  /** Whether a circle of radius r at (x, z) touches water. */
+  wet(x: number, z: number, r = 0): boolean {
+    return this.terrain ? this.terrain.wetWithin(x, z, r) : false;
+  }
+
+  /** How far an entity's feet are above the ground under it (unattached entities only; 0 for attached ones). */
+  heightAboveGround(e: Entity): number {
+    if (e.parent) return 0;
+    return e.pos[1] - this.ground(e.pos[0], e.pos[2]);
+  }
+
+  /** Standing on the ground (structures always count: they are built on it). */
+  onGround(e: Entity, tolerance = 0.05): boolean {
+    if (e.parent) return false;
+    if (e.structure) return true;
+    return Math.abs(e.pos[1] - this.ground(e.pos[0], e.pos[2])) <= tolerance;
   }
 
   get(id: string): Entity | undefined {
@@ -151,6 +192,10 @@ export class WorldModel {
       player: { pos: [...this.player.pos], yaw: this.player.yaw, pitch: this.player.pitch },
       entities: this.list().map(cloneEntity),
       createdAt: this.createdAt,
+      ...(this.preset ? { preset: this.preset } : {}),
+      ...(this.seed !== undefined ? { seed: this.seed } : {}),
+      ...(this.terrainSpec ? { terrain: this.terrainSpec } : {}),
+      ...(this.sky !== 'day' ? { sky: this.sky } : {}),
     };
   }
 
@@ -163,6 +208,10 @@ export class WorldModel {
     this.player.yaw = world.player.yaw;
     this.player.pitch = world.player.pitch;
     this.rev = Math.max(this.rev, world.rev);
+    this.preset = world.preset;
+    this.seed = world.seed;
+    this.sky = world.sky ?? 'day';
+    if (JSON.stringify(world.terrain ?? null) !== JSON.stringify(this.terrainSpec ?? null)) this.setTerrain(world.terrain);
     this.ensureYaw();
   }
 }

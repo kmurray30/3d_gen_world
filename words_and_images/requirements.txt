@@ -11,3 +11,5 @@ aiohttp>=3.9
 yarl>=1.9
 tqdm
 Pillow>=10
+numpy
+scipy

@@ -161,6 +161,35 @@ export class CommandValidator {
         }
         return { ...a, id };
       }
+      case 'detach': {
+        // the piece becomes its own thing; later steps can name it by its ref
+        const id = this.mapId(a.id);
+        if (!id || id === 'player') {
+          errors.push(`detach: unknown id "${a.id}"`);
+          return null;
+        }
+        const part = a.part.toLowerCase().replace(/\s+/g, '_');
+        const newId = this.allocate(a.ref ?? `${id}_${part}`, part);
+        this.kinds.set(newId, 'object');
+        this.words.set(newId, part);
+        return { ...a, id, part, newId };
+      }
+      case 'operate': {
+        const id = this.mapId(a.id);
+        if (!id || id === 'player') {
+          errors.push(`operate: unknown id "${a.id}"`);
+          return null;
+        }
+        return { ...a, id };
+      }
+      case 'reattach': {
+        const id = this.mapId(a.id);
+        if (!id || id === 'player') {
+          errors.push(`reattach: unknown id "${a.id}"`);
+          return null;
+        }
+        return { ...a, id };
+      }
       case 'attach': {
         const id = this.mapId(a.id);
         const to = this.mapId(a.to);
@@ -195,6 +224,7 @@ export class CommandValidator {
         return { ...a, id: id ?? undefined, at: at ?? undefined };
       }
       case 'wait':
+      case 'sky':
         return a;
       default:
         return null;

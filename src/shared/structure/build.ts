@@ -4,13 +4,14 @@
  */
 import { DEG } from '../engine/math';
 import type { SpriteRef } from '../types';
-import type { BoxPart, DecalPart, DecalResolver, MaterialName, Opening, Part, PrismPart, RoofPart, StairsPart, Structure, WallPart } from './types';
+import type { BoxPart, DecalPart, DecalResolver, Joint, MaterialName, Opening, Part, PrismPart, RibbonPart, RoofPart, StairsPart, Structure, WallPart } from './types';
 
 export const INK = '#2b2b2b';
 export const WALL_T = 0.24;
 
 export class Parts {
   readonly parts: Part[] = [];
+  readonly joints: Joint[] = [];
   private minX = Infinity;
   private maxX = -Infinity;
   private minZ = Infinity;
@@ -43,13 +44,25 @@ export class Parts {
         this.track(x, y + p.h, z, p.w / 2, p.d / 2, p.rot);
         break;
       case 'prism':
-        this.track(x, y + p.h, z, Math.max(p.r, p.rTop ?? 0), Math.max(p.rz ?? p.r, p.rTop ?? 0), 0);
+        if (p.lie) this.track(x, y + (p.half ? 1 : 2) * (p.rz ?? p.r), z, p.r, p.h / 2, p.rot);
+        else this.track(x, y + p.h, z, Math.max(p.r, p.rTop ?? 0), Math.max(p.rz ?? p.r, p.rTop ?? 0), 0);
         break;
       case 'decal':
         this.track(x, y + p.h, z, p.w / 2, 0.02, p.rot);
         break;
+      case 'ribbon': {
+        const reach = Math.max(...p.path.map((q) => Math.abs(q[0]))) + Math.max(p.w, p.wEnd ?? p.w) / 2;
+        this.track(x, y + Math.max(...p.path.map((q) => q[1])) + p.w / 2, z, reach, reach, 0);
+        break;
+      }
     }
     return p;
+  }
+
+  /** A moving piece; parts added with `joint: j.id` move with it. */
+  joint(j: Joint): Joint {
+    this.joints.push(j);
+    return j;
   }
 
   box(x: number, y: number, z: number, w: number, h: number, d: number, mat: MaterialName, color: string, extra: Partial<BoxPart> = {}): BoxPart {
@@ -58,6 +71,10 @@ export class Parts {
 
   prism(x: number, y: number, z: number, sides: number, r: number, h: number, mat: MaterialName, color: string, extra: Partial<PrismPart> = {}): PrismPart {
     return this.add({ t: 'prism', pos: [x, y, z], sides, r, h, mat, color, ...extra });
+  }
+
+  ribbon(x: number, y: number, z: number, path: Array<[number, number]>, w: number, mat: MaterialName, color: string, extra: Partial<RibbonPart> = {}): RibbonPart {
+    return this.add({ t: 'ribbon', pos: [x, y, z], path, w, mat, color, ghost: true, ...extra });
   }
 
   roof(x: number, y: number, z: number, style: RoofPart['style'], w: number, h: number, d: number, mat: MaterialName, color: string, extra: Partial<RoofPart> = {}): RoofPart {
@@ -77,7 +94,8 @@ export class Parts {
     const sprite = this.decals(word);
     if (!sprite?.file) return null;
     const w = h * (sprite.w / Math.max(1, sprite.h));
-    return this.decal(x, y, z, sprite, w, h, rot, word === 'door' ? { role: 'door', ...extra } : extra);
+    const role = word === 'door' ? { role: 'door' as const, name: 'door' } : word === 'window' ? { role: 'window' as const } : {};
+    return this.decal(x, y, z, sprite, w, h, rot, { ...role, ...extra });
   }
 
   /** A paper sign with text. */
@@ -111,6 +129,11 @@ export class Parts {
     }
   }
 
+  /** The footprint rectangle and top so far. */
+  get extent(): { minX: number; maxX: number; minZ: number; maxZ: number; maxY: number } {
+    return { minX: this.minX, maxX: this.maxX, minZ: this.minZ, maxZ: this.maxZ, maxY: this.maxY };
+  }
+
   get bounds(): Structure['bounds'] {
     if (!this.parts.length) return { w: 1, h: 1, d: 1 };
     return { w: this.maxX - this.minX, h: this.maxY, d: this.maxZ - this.minZ };
@@ -124,13 +147,14 @@ export class Parts {
       for (const p of this.parts) {
         p.pos = [p.pos[0] - cx, p.pos[1], p.pos[2] - cz];
       }
+      for (const j of this.joints) j.at = [j.at[0] - cx, j.at[1], j.at[2] - cz];
       this.minX -= cx;
       this.maxX -= cx;
       this.minZ -= cz;
       this.maxZ -= cz;
     }
     const b = this.bounds;
-    return { gen, params, parts: this.parts, bounds: { w: round(b.w), h: round(b.h), d: round(b.d) }, ...(ink ? { ink } : {}) };
+    return { gen, params, parts: this.parts, bounds: { w: round(b.w), h: round(b.h), d: round(b.d) }, ...(ink ? { ink } : {}), ...(this.joints.length ? { joints: this.joints } : {}) };
   }
 }
 
@@ -153,10 +177,16 @@ export function tidy(s: Structure): Structure {
   for (const p of s.parts) {
     p.pos = [round(p.pos[0]), round(p.pos[1]), round(p.pos[2])];
     if (p.rot !== undefined) p.rot = round(p.rot, 2);
-    for (const k of ['w', 'h', 'd', 'r', 'rz', 'rTop'] as const) {
+    for (const k of ['w', 'h', 'd', 'r', 'rz', 'rTop', 'hole', 'wEnd'] as const) {
       const v = (p as unknown as Record<string, unknown>)[k];
       if (typeof v === 'number') (p as unknown as Record<string, number>)[k] = round(v);
     }
+    if (p.t === 'ribbon') p.path = p.path.map(([a, b]) => [round(a), round(b)]);
+  }
+  for (const j of s.joints ?? []) {
+    j.at = [round(j.at[0]), round(j.at[1]), round(j.at[2])];
+    j.axis = [round(j.axis[0], 4), round(j.axis[1], 4), round(j.axis[2], 4)];
+    j.amount = round(j.amount);
   }
   return s;
 }

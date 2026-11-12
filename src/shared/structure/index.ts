@@ -2,10 +2,12 @@
  * The generator registry: a name plus loose parameters (from a preset, a vocabulary word or the model) becomes a
  * Structure. Parameters are coerced here so generators can trust their numbers.
  */
+import { cutOpenings } from './openings';
 import { makeRng } from '../engine/math';
 import type { DecalResolver, GenContext, MaterialName, Structure } from './types';
 import { MATERIALS } from './types';
 import { bunker } from './gen/bunker';
+import { bridge } from './gen/bridge';
 import { customStructure, type CustomPartSpec } from './gen/custom';
 import { fence, yard } from './gen/fence';
 import { gingerbreadHouse, house, randomHouse } from './gen/house';
@@ -13,8 +15,18 @@ import { witchHut } from './gen/hut';
 import { lighthouse, tower } from './gen/tower';
 import { signboard } from './gen/signboard';
 
-export const GENERATORS = ['house', 'gingerbread', 'fence', 'yard', 'tower', 'lighthouse', 'witch_hut', 'bunker', 'signboard', 'custom'] as const;
+import { bench, birdbath, fountain, lamppost, mailbox, pillar, signpost, trashCan, well } from './gen/props';
+
+/** Small built things of streets and squares: solid from every side, too small to walk into. */
+export const PROP_GENS = ['fountain', 'lamppost', 'mailbox', 'signpost', 'well', 'bench', 'birdbath', 'trash_can', 'pillar'] as const;
+export type PropGen = (typeof PROP_GENS)[number];
+
+export const GENERATORS = ['house', 'gingerbread', 'fence', 'yard', 'tower', 'lighthouse', 'witch_hut', 'bunker', 'bridge', ...PROP_GENS, 'signboard', 'custom'] as const;
 export type GenName = (typeof GENERATORS)[number];
+
+export function isPropGen(v: unknown): v is PropGen {
+  return typeof v === 'string' && (PROP_GENS as readonly string[]).includes(v);
+}
 
 export type Params = Record<string, unknown>;
 
@@ -133,6 +145,8 @@ export function coerceParams(gen: GenName, raw: Params): Params {
         doorColor: colorOf(p.doorColor),
         chimney: bool(p.chimney),
         windows: bool(p.windows),
+        shutters: bool(p.shutters),
+        shutterColor: colorOf(p.shutterColor),
         doorAt: num(p.doorAt),
         sign: typeof p.sign === 'string' ? p.sign.slice(0, 24) : undefined,
         random: bool(p.random),
@@ -168,6 +182,25 @@ export function coerceParams(gen: GenName, raw: Params): Params {
       return clean({ w: num(p.w ?? p.width), d: num(p.d ?? p.depth), levels: num(p.levels ?? p.stories ?? p.floors), color: colorOf(p.color ?? p.colour) });
     case 'signboard':
       return clean({ text: typeof (p.text ?? p.sign ?? p.label) === 'string' ? String(p.text ?? p.sign ?? p.label).slice(0, 24) : undefined, color: colorOf(p.color ?? p.colour) });
+    case 'bridge':
+      return clean({ len: num(p.len ?? p.length), w: num(p.w ?? p.width), drop: num(p.drop), color: colorOf(p.color ?? p.colour) });
+    case 'fountain':
+      return clean({ r: num(p.r ?? p.radius ?? (num(p.w ?? p.width) ?? NaN) / 2), tiers: num(p.tiers ?? p.levels), color: colorOf(p.color ?? p.colour ?? p.stone), water: colorOf(p.water ?? p.waterColor) });
+    case 'lamppost':
+      return clean({ h: num(p.h ?? p.height), color: colorOf(p.color ?? p.colour), light: colorOf(p.light ?? p.lightColor ?? p.glow) });
+    case 'mailbox':
+      return clean({ color: colorOf(p.color ?? p.colour), flag: bool(p.flag) });
+    case 'signpost':
+      return clean({ arms: num(p.arms ?? p.signs ?? p.boards), color: colorOf(p.color ?? p.colour) });
+    case 'well':
+      return clean({ color: colorOf(p.color ?? p.colour ?? p.stone), roofColor: colorOf(p.roofColor ?? p.roof) });
+    case 'bench':
+      return clean({ w: num(p.w ?? p.width ?? p.length), color: colorOf(p.color ?? p.colour), frame: colorOf(p.frame ?? p.frameColor) });
+    case 'birdbath':
+    case 'trash_can':
+      return clean({ color: colorOf(p.color ?? p.colour) });
+    case 'pillar':
+      return clean({ h: num(p.h ?? p.height), color: colorOf(p.color ?? p.colour) });
     case 'custom':
       return { parts: Array.isArray(p.parts) ? p.parts : [], label: typeof p.label === 'string' ? p.label : 'custom' };
   }
@@ -175,6 +208,12 @@ export function coerceParams(gen: GenName, raw: Params): Params {
 
 /** Build a structure. Params are expected to be coerced already. Returns null for an unknown generator. */
 export function generate(gen: string, params: Params, seed: number, decals: DecalResolver): Structure | null {
+  const s = generateParts(gen, params, seed, decals);
+  // holes behind its doors and windows, so they open onto the inside (and tower doorways can be walked through)
+  return s ? cutOpenings(s) : null;
+}
+
+function generateParts(gen: string, params: Params, seed: number, decals: DecalResolver): Structure | null {
   const ctx: GenContext = { rng: makeRng(seed), decal: decals };
   switch (gen as GenName) {
     case 'house': {
@@ -200,6 +239,26 @@ export function generate(gen: string, params: Params, seed: number, decals: Deca
       return bunker(params, ctx, decals);
     case 'signboard':
       return signboard(params, ctx, decals);
+    case 'bridge':
+      return bridge(params, ctx, decals);
+    case 'fountain':
+      return fountain(params, ctx);
+    case 'lamppost':
+      return lamppost(params, ctx);
+    case 'mailbox':
+      return mailbox(params, ctx);
+    case 'signpost':
+      return signpost(params, ctx);
+    case 'well':
+      return well(params, ctx);
+    case 'bench':
+      return bench(params, ctx);
+    case 'birdbath':
+      return birdbath(params, ctx);
+    case 'trash_can':
+      return trashCan(params, ctx);
+    case 'pillar':
+      return pillar(params, ctx);
     case 'custom':
       return customStructure((params.parts as CustomPartSpec[]) ?? [], ctx, decals, params.label as string);
     default:
@@ -269,6 +328,52 @@ export const STRUCTURE_WORDS: Record<string, StructureWord> = {
   'witch house': { gen: 'witch_hut' },
   "witch's house": { gen: 'witch_hut' },
   building: { gen: 'house', params: { random: true } },
+  bridge: { gen: 'bridge' },
+  footbridge: { gen: 'bridge', params: { w: 2.2 } },
+  // props
+  fountain: { gen: 'fountain' },
+  'water fountain': { gen: 'fountain' },
+  'stone fountain': { gen: 'fountain' },
+  'town fountain': { gen: 'fountain' },
+  'wishing fountain': { gen: 'fountain' },
+  'tiered fountain': { gen: 'fountain', params: { tiers: 2 } },
+  'big fountain': { gen: 'fountain', params: { r: 3.6 } },
+  'small fountain': { gen: 'fountain', params: { r: 1.4 } },
+  lamppost: { gen: 'lamppost' },
+  'lamp post': { gen: 'lamppost' },
+  'lamp-post': { gen: 'lamppost' },
+  'street lamp': { gen: 'lamppost' },
+  streetlamp: { gen: 'lamppost' },
+  'street light': { gen: 'lamppost' },
+  streetlight: { gen: 'lamppost' },
+  'gas lamp': { gen: 'lamppost' },
+  mailbox: { gen: 'mailbox' },
+  'mail box': { gen: 'mailbox' },
+  signpost: { gen: 'signpost' },
+  'sign post': { gen: 'signpost' },
+  fingerpost: { gen: 'signpost' },
+  guidepost: { gen: 'signpost' },
+  well: { gen: 'well' },
+  'wishing well': { gen: 'well' },
+  'water well': { gen: 'well' },
+  'stone well': { gen: 'well' },
+  bench: { gen: 'bench' },
+  'park bench': { gen: 'bench' },
+  'garden bench': { gen: 'bench' },
+  'wooden bench': { gen: 'bench' },
+  birdbath: { gen: 'birdbath' },
+  'bird bath': { gen: 'birdbath' },
+  'trash can': { gen: 'trash_can' },
+  trashcan: { gen: 'trash_can' },
+  'garbage can': { gen: 'trash_can' },
+  'rubbish bin': { gen: 'trash_can' },
+  'trash bin': { gen: 'trash_can' },
+  dustbin: { gen: 'trash_can' },
+  pillar: { gen: 'pillar' },
+  column: { gen: 'pillar' },
+  'stone column': { gen: 'pillar' },
+  'marble column': { gen: 'pillar' },
+  'greek column': { gen: 'pillar' },
 };
 
 export function structureWord(normalized: string): StructureWord | null {
@@ -281,3 +386,5 @@ export { fence, yard } from './gen/fence';
 export { tower, lighthouse } from './gen/tower';
 export { witchHut } from './gen/hut';
 export { bunker } from './gen/bunker';
+export { bridge } from './gen/bridge';
+export { fountain, lamppost, mailbox, signpost, well, bench, birdbath, trashCan, pillar } from './gen/props';

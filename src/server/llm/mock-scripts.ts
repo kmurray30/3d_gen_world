@@ -8,6 +8,10 @@ export function mockScript(command: string, ctx: CompactWorld): Step[] {
   const flower = find(/flower|sprout|sapling|plant/);
   const any = ctx.target ?? ctx.entities[0]?.id;
   if (/disappear|clear|delete everything|remove everything/.test(c)) return [{ op: 'remove', id: 'all', how: 'fade' }];
+  if (/\b(night|dark|stars come out)\b/.test(c)) return [{ op: 'sky', time: 'night' }, { op: 'say', text: 'Night falls and the lamps flicker on.' }];
+  if (/\b(sunset|dusk|evening)\b/.test(c)) return [{ op: 'sky', time: 'sunset' }];
+  if (/\b(dawn|sunrise|morning)\b/.test(c)) return [{ op: 'sky', time: 'dawn' }];
+  if (/\b(daytime|noon|make it day)\b/.test(c)) return [{ op: 'sky', time: 'day' }];
   if (/water/.test(c) && flower)
     return [
       { op: 'spawn', ref: 'can', word: 'watering can', at: { rel: 'above', of: flower, height: 'low' } },

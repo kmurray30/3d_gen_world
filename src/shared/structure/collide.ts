@@ -6,7 +6,7 @@
  */
 import type { Entity, Vec3 } from '../types';
 import { DEG, clamp, rotateY } from '../engine/math';
-import type { Part, PrismPart, RoofPart, Structure, WallPart } from './types';
+import type { Opening, Part, PrismPart, RoofPart, Structure, WallPart } from './types';
 
 export interface Span {
   bottom: number;
@@ -55,11 +55,35 @@ function prismRadius(part: PrismPart): { rx: number; rz: number } {
   return { rx: r, rz: (part.rz ?? part.r) * (r / part.r) };
 }
 
+/** Holes you can walk through: doorways (from the floor or a step above it), not windows. */
+const DOORWAY_MAX_Y = 0.5;
+
+function doorways<T extends Opening>(openings: T[] | undefined): T[] {
+  return (openings ?? []).filter((o) => (o.y ?? 0) < DOORWAY_MAX_Y);
+}
+
+/** Whether a point (part-local) lies in a doorway through a hollow prism's side, a body of radius r clear of its jambs. */
+function inPrismDoorway(part: PrismPart, lx: number, lz: number, r: number): boolean {
+  const ways = doorways(part.openings);
+  if (!ways.length) return false;
+  const n = Math.max(3, Math.round(part.sides));
+  const step = (Math.PI * 2) / n;
+  const a = Math.atan2(lz, lx);
+  const k = Math.floor((((a - Math.PI / n) % (Math.PI * 2)) + Math.PI * 4) % (Math.PI * 2) / step) % n;
+  const a0 = Math.PI / n + step * k;
+  const a1 = a0 + step;
+  const c0 = [Math.cos(a0) * part.r, Math.sin(a0) * part.r];
+  const c1 = [Math.cos(a1) * part.r, Math.sin(a1) * part.r];
+  const len = Math.hypot(c1[0] - c0[0], c1[1] - c0[1]);
+  const along = ((lx - (c0[0] + c1[0]) / 2) * (c1[0] - c0[0]) + (lz - (c0[1] + c1[1]) / 2) * (c1[1] - c0[1])) / Math.max(1e-6, len);
+  return ways.some((o) => ((Math.round(o.side) % n) + n) % n === k && Math.abs(along - o.at) <= o.w / 2 - r * 0.6);
+}
+
 /** Solid x-ranges of a wall at floor level (between the doorways). */
 function wallSegments(part: WallPart): Array<[number, number]> {
   const segs: Array<[number, number]> = [];
   let cursor = -part.w / 2;
-  for (const o of [...(part.openings ?? [])].sort((a, b) => a.at - b.at)) {
+  for (const o of [...doorways(part.openings)].sort((a, b) => a.at - b.at)) {
     if (o.at - o.w / 2 > cursor) segs.push([cursor, o.at - o.w / 2]);
     cursor = Math.max(cursor, o.at + o.w / 2);
   }
@@ -69,6 +93,12 @@ function wallSegments(part: WallPart): Array<[number, number]> {
 
 /** Height of a part's solid in its own local column, relative to its base, given the local point is inside. */
 function localTop(part: Part, lx: number, lz: number): number {
+  if (part.t === 'prism' && part.lie) {
+    // the round top of a log on its side
+    const rz = part.rz ?? part.r;
+    const k = Math.sqrt(Math.max(0, 1 - (lx / part.r) ** 2));
+    return part.half ? rz * k : rz * (1 + k);
+  }
   switch (part.t) {
     case 'box':
       return part.h;
@@ -104,12 +134,20 @@ export function partSpan(part: Part, x: number, z: number): Span | null {
       return { bottom: y0, top: y0 + localTop(part, lx, lz) };
     case 'wall': {
       if (Math.abs(lx) > part.w / 2 || Math.abs(lz) > part.d / 2) return null;
-      const o = part.openings?.find((op) => Math.abs(lx - op.at) <= op.w / 2);
-      return o ? { bottom: y0 + o.h, top: y0 + part.h } : { bottom: y0, top: y0 + part.h };
+      const o = doorways(part.openings).find((op) => Math.abs(lx - op.at) <= op.w / 2);
+      return o ? { bottom: y0 + (o.y ?? 0) + o.h, top: y0 + part.h } : { bottom: y0, top: y0 + part.h };
     }
     case 'prism': {
+      if (part.lie) {
+        if (Math.abs(lx) > part.r || Math.abs(lz) > part.h / 2) return null;
+        return { bottom: y0, top: y0 + localTop(part, lx, lz) };
+      }
       const { rx, rz } = prismRadius(part);
-      if (Math.hypot(lx / rx, lz / rz) > 1) return null;
+      const e = Math.hypot(lx / rx, lz / rz);
+      if (e > 1) return null;
+      // a hollow ring: the column through its opening misses it, and so does one through a doorway in its side
+      if (part.hole && e < part.hole / part.r) return null;
+      if (part.hole && inPrismDoorway(part, lx, lz, 0)) return null;
       return { bottom: y0, top: y0 + localTop(part, lx, lz) };
     }
     default:
@@ -146,6 +184,12 @@ export function partContact(part: Part, x: number, z: number, r: number): Contac
   const eps = 1e-4;
   switch (part.t) {
     case 'prism': {
+      if (part.lie) {
+        const c = rectContact(lx, lz, r, -part.r, part.r, -part.h / 2, part.h / 2);
+        if (!c) return null;
+        const ix = clamp(c.cx, -part.r + eps, part.r - eps);
+        return { push: fromLocal(part, c.push), span: { bottom: y0, top: y0 + localTop(part, ix, 0) } };
+      }
       const { rx, rz } = prismRadius(part);
       const d = Math.hypot(lx, lz);
       const a = Math.atan2(lz, lx);
@@ -153,6 +197,17 @@ export function partContact(part: Part, x: number, z: number, r: number): Contac
       if (d >= rad + r) return null;
       const nx = d > 1e-6 ? lx / d : 1;
       const nz = d > 1e-6 ? lz / d : 0;
+      if (part.hole) {
+        // a ring wall: clear of it well inside the opening or in a doorway through its side; otherwise out the
+        // nearer side (in, when a body fits)
+        const inner = rad * (part.hole / part.r);
+        if (d <= inner - r) return null;
+        if (inPrismDoorway(part, lx, lz, r)) return null;
+        const out = rad + r - d;
+        const into = inner > r ? d - (inner - r) : Infinity;
+        const k = into < out ? -into : out;
+        return { push: fromLocal(part, [nx * k, nz * k]), span: { bottom: y0, top: y0 + part.h } };
+      }
       const k = Math.min(1, d / Math.max(rad, 1e-6)) * (1 - eps);
       const top = localTop(part, nx * rad * k, nz * rad * k);
       return { push: fromLocal(part, [nx * (rad + r - d), nz * (rad + r - d)]), span: { bottom: y0, top: y0 + top } };

@@ -9,6 +9,8 @@ export interface HudHandlers {
   onAngle?: () => void;
   onWalls?: () => void;
   onLook?: () => void;
+  onTime?: () => void;
+  onSound?: () => void;
 }
 
 export type StartChoice = 'village' | 'gallery' | 'meadow' | 'continue';
@@ -22,6 +24,8 @@ export interface ViewLabels {
   angle: string;
   walls: string;
   look?: string;
+  time: string;
+  sound: string;
 }
 
 /** DOM overlay: command bar, hint, top bar with menu, target label, toasts, desktop pointer-lock overlay. */
@@ -33,7 +37,8 @@ export class Hud {
   private readonly hint: HTMLDivElement;
   private readonly target: HTMLDivElement;
   private readonly toasts: HTMLDivElement;
-  private readonly lockOverlay: HTMLDivElement;
+  private readonly crosshair: HTMLDivElement;
+  private crosshairState = '';
   private readonly menu: HTMLDivElement;
   private readonly status: HTMLDivElement;
   private readonly viewbar: HTMLDivElement;
@@ -57,10 +62,12 @@ export class Hud {
         <button type="button" data-view="angle" title="Cycle the camera angle: behind, high, bird, top (R)"><span class="k">Angle</span><span class="v"></span></button>
         <button type="button" data-view="walls" title="Fade walls that hide you (B)"><span class="k">Walls</span><span class="v"></span></button>
         <button type="button" data-view="look" title="How code-drawn things look: the original sprites, paper cutouts or 3D (L)"><span class="k">Look</span><span class="v"></span></button>
+        <button type="button" data-view="time" title="Time of day: dawn, day, sunset, night (T)"><span class="k">Time</span><span class="v"></span></button>
+        <button type="button" data-view="sound" title="Sound: on, effects without music, off (M)"><span class="k">Sound</span><span class="v"></span></button>
       </div>
       <div class="target-label" hidden></div>
       <div class="toasts"></div>
-      <div class="lock-overlay" hidden><div class="card">Click to look around<br><small>WASD to walk, / to type</small></div></div>
+      <div class="crosshair" hidden></div>
       <div class="cmdbar">
         <div class="hint"></div>
         <form class="cmd" autocomplete="off">
@@ -75,7 +82,7 @@ export class Hud {
     this.hint = root.querySelector('.hint')!;
     this.target = root.querySelector('.target-label')!;
     this.toasts = root.querySelector('.toasts')!;
-    this.lockOverlay = root.querySelector('.lock-overlay')!;
+    this.crosshair = root.querySelector('.crosshair')!;
     this.menu = root.querySelector('.menu')!;
     this.status = root.querySelector('.status')!;
 
@@ -115,6 +122,8 @@ export class Hud {
       if (act === 'angle') handlers.onAngle?.();
       if (act === 'walls') handlers.onWalls?.();
       if (act === 'look') handlers.onLook?.();
+      if (act === 'time') handlers.onTime?.();
+      if (act === 'sound') handlers.onSound?.();
       (e.target as HTMLElement).closest('button')?.blur();
     });
     // Keep the command bar above the on-screen keyboard.
@@ -153,8 +162,13 @@ export class Hud {
     this.button.textContent = busy ? '...' : 'Go';
   }
 
-  showLockOverlay(show: boolean): void {
-    this.lockOverlay.hidden = !show;
+  /** The dot in the middle of the screen while looking around; it rings when it rests on something to poke. */
+  setCrosshair(show: boolean, onTarget: boolean): void {
+    const state = `${show}|${onTarget}`;
+    if (state === this.crosshairState) return;
+    this.crosshairState = state;
+    this.crosshair.hidden = !show;
+    this.crosshair.classList.toggle('on', onTarget);
   }
 
   setTarget(label: string | null): void {

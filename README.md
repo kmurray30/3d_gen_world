@@ -12,22 +12,31 @@ village, the visuals demo, an empty meadow, or the world you were last in. Every
 happen in the box ("water the flower", "a dragon flies in and breathes fire at the house", "make
 it huge" while looking at something). Desktop: click to look, WASD to walk, Shift to run, `/` to
 type. Phone: left thumb walks, right thumb looks, tap a thing to name it. Clicking or tapping a
-thing also pokes it: objects jiggle, animals and people turn to you and answer, and a building's
-door swings open or shut. The menu has Worlds (tap
+thing also pokes it: objects jiggle, animals and people turn to you and answer, and built things
+work the piece you clicked: one of a house's doors or windows (its walls do nothing), a mailbox's door
+or flag, a bin's lid, a well's bucket, a lamp's light, a fountain's water (a click anywhere on a small
+prop works its main piece). The menu has Worlds (tap
 the title too), Undo, Reset and Copy link. Worlds lists every world you have opened on this device,
 starts a new one, and opens any world from its link or name. The demos are reused per device:
 choosing the village or the visuals demo again reopens yours (Reset restores it). `?dev=1` opens a
 console that runs hand-written scripts.
 
-**Views.** The buttons at the top right (or `V`, `R`, `B` on a keyboard) switch between first
+**Views.** The buttons at the top right (or `V`, `R`, `B`, `T` on a keyboard) switch between first
 person, third person and a free camera that flies with WASD, Space and C; cycle the third-person
-angle (behind, high, bird, top: the last one is an overhead 2.5D view); and turn wall fading on or
-off. With fading on, any wall or roof between the camera and your character goes see-through, so
-you can follow yourself into a house.
+angle (behind, high, bird, top: the last one is an overhead 2.5D view); turn wall fading on or off;
+and change the time of day (dawn, day, sunset, night). With fading on, any wall or roof between the
+camera and your character goes see-through, so you can follow yourself into a house. At night the
+lamps, windows and the lighthouse light up. `Tab` (or `Alt`) frees the mouse without `Esc`; click
+the scene to look around again (the hint line says so; nothing covers the scene). While looking
+around, a dot in the middle of the screen shows what a click will poke, ringed when it rests on
+something.
 
 **Paper in the world.** Cutouts no longer turn to face the camera: each has a yaw in the world, so
-you can walk around one and see its edge. Things spawn facing you, walkers turn their paper along
-their path, and anything living turns, wanders a few steps around home, or fidgets on its own when
+you can walk around one and see its edge. They always stand upright: looking up or down never tips
+them (or your own character); only scripted moves like pouring or falling over lean them. Your own
+character is the exception to the yaw: like Paper Mario, it always lies flat to the camera and
+flips, with a quick paper turn, to face the way you walk across the screen. Things spawn facing
+you, walkers turn their paper along their path, and anything living turns, wanders a few steps around home, or fidgets on its own when
 no command is using it, favouring orientations you can see. Buildings can be changed in place
 ("add a story to the house", "paint the cottage blue"): the model sets new generator parameters
 and the structure regenerates with the rest kept.
@@ -39,9 +48,11 @@ and walks and runs with real leg and arm motion in paper and 3D.
 **Visuals demo.** Every code-drawn figure stands three times in labelled rows: its old sprite, the
 paper cutout and the 3D model. Click or tap one to make it react.
 
-**Village.** Worlds -> "+ New village" (or `?preset=village`) starts a meadow with one of each
-structure: three houses, a fenced yard, a gingerbread house, a witch's hut with a hat for a roof, a
-lighthouse and a three-level bunker with outside stairs you can climb. Reset brings the village back.
+**Village.** Worlds -> "+ New village" (or `?preset=village`) generates a new village from a random
+seed: rolling hills, a river with a bridge where the road crosses it, a lake with a lighthouse on its
+shore, sometimes a duck pond, a plaza with a fountain, roads out of it lined with houses that face
+them, a fenced garden, a gingerbread house, a bunker on the highest hill, a witch's hut deep in the
+woods at the end of a winding path, trees, lamps and villagers. Reset rebuilds the same village.
 
 ## Code-drawn figures
 
@@ -118,15 +129,45 @@ XAI_API_KEY=... npx tsx scripts/eval-prompt.ts   # run 20 commands against Grok 
 
 ## Structures
 
-Decor is drawn (the 3,700 cutouts). Structures are built: a handful of flat-faced shapes (box, wall
-with doorways, n-gon prism or cone, gable/hip/shed roof, stairs, a sticker for doors, windows and
-signs) with a tinted crayon tile and an ink outline. No image generation is involved.
+Decor is drawn (the 3,700 cutouts) and stands as flat paper; only trees and bushes become origami
+crosses. Structures are built: a handful of flat-faced shapes (box, wall with doorways, n-gon prism or
+cone, hollow ring, a prism laid on its side, gable/hip/shed roof, stairs, a paper strip, a sticker for
+doors, windows and signs) with a tinted crayon tile and an ink outline. No image generation is involved.
+
+Street props are built the same way, so they are solid from every side: a fountain (an octagonal
+basin you can wade into, a column, paper water arcs, one or two tiers), lamp posts whose lanterns glow
+with a halo at night, mailboxes with their door toward the road, signposts, wells, benches, birdbaths,
+bins and columns (`src/shared/structure/gen/props.ts`). Their words build them ("a red mailbox" builds
+a red one); detailed things (statues, scarecrows, people, animals) stay drawings, and the model can
+lay out parts for another simple fixture. On a slope a prop stands level on a round stone plinth.
+`scripts/shots-props.ts` shows each prop up close, `scripts/shots-village-props.mjs` the ones in a
+village.
+
+**Moving pieces.** Built things have joints: parts that move together on a hinge, a slide, a
+stretch (a well rope paying out), a spin, or that shrink away (a fountain's jets) or switch off (a
+lamp). Each moving piece has two named states (`closed`/`open`, `down`/`up`, `on`/`off`) kept in
+the entity's state as `open_<piece>`; the model moves them with
+`{"op":"operate","id":"mailbox_1","part":"door","to":"open"}` and sees them in the world context
+("door (closed), flag (up), windows (2 of 12 open), roof, chimney"). Mailboxes open their door and
+raise their flag, bins flip their lid, wells lower the bucket as the crank turns, lamp posts and the
+lighthouse switch off, fountains stop. House windows are cut into a frame and two sashes that swing
+out over a real hole in the wall, so you see into the room; some houses have plank shutters that
+swing shut over them (a window opening opens its shutters). Every door opens on its own (a
+lighthouse's tower door and its cottage door are `door` and `door_1`; "doors" reaches both). Holes are
+cut from where doors and windows sit (`src/shared/structure/openings.ts`): through walls and wall
+boards, and through towers and the lighthouse, which are hollow so you can walk in through their
+doors. Older saved worlds get the holes when they are drawn. Named parts (`roof`, `chimney`, `door`, `lantern`, `lid`,
+`bucket`, `hat`, `sign`) come off with `detach` as structures of their own, slide off and land, and
+go back with `reattach`; anim `apart` floats every part out from the middle and back.
+`cd scripts && npx tsx shots-parts.ts http://localhost:8787 OUT` shows all of it.
 
 - `src/shared/structure/` is the kit: `types.ts` (parts), `geometry.ts` (parts -> mesh data with
   metre-based UVs, face shading and outline edges), `collide.ts` (walls push, patios and stairs
   support), and `gen/` with one generator per family: `house` (also `randomHouse` and the
-  gingerbread house), `fence`/`yard`, `tower`/`lighthouse`, `witchHut`, `bunker`, and `custom`,
-  which lays out parts the model describes by relation ("a cone on the base") so nothing floats.
+  gingerbread house), `fence`/`yard`, `tower`/`lighthouse`, `witchHut`, `bunker`, `props`, and
+  `custom`, which lays out parts the model describes by relation ("a cone on the base") so nothing
+  floats. `joints.ts` names the moving pieces, matches words to them ("lower the bucket", "the
+  shutters") and lists what comes off.
 - The LLM never places coordinates. Spawning a building word (`house`, `cottage`, `barn`, `tower`,
   `fence`, `yard`, `fire station`...) builds a structure; the `build` action adds a look
   (`params: {color: "blue", roof: "hip", stories: 2}`) or a parts list for one-offs. A word nobody
@@ -134,10 +175,83 @@ signs) with a tinted crayon tile and an ink outline. No image generation is invo
   keyword heuristic; a yes builds a random house with a sign, a no shows the usual card.
 - Materials are drawn on a canvas at runtime (`src/client/render/materials.ts`) and tinted per
   part, so AI-drawn tiles can replace them later by name without touching the structures.
-- `node scripts/shots-village.mjs http://localhost:8787 out/` screenshots every structure in the
-  village from the front, plus third-person, top-down, wall-fade and indoor views;
+- `node scripts/shots-village.mjs http://localhost:8787 out/` screenshots a generated village: an
+  overview, each special structure, third-person and top-down views, sunset and night;
   `scripts/shots-door.mjs` shows doors closed and poked open, and `scripts/shots-facing.mjs`
   shows cutouts from the side and after a stretch of idle life.
+
+## Puppets: drawings cut into pieces
+
+Rigged drawings are cut into their paper pieces in the browser and move like a paper puppet: a head,
+arms, hands, legs, tails, ears, wings, wheels, clock hands and windmill blades, each turning on its
+own joint. A rig is one small JSON file (`assets/rigs/<word>.json`) with every piece's exact pixel mask;
+20 starter rigs ship, 156 KB in all. The browser only stamps the drawing through the masks and never reads
+pixels back, because browsers that guard against fingerprinting (Safari now does by default) add noise to
+canvas reads. Drawings without a rig still move as one card.
+
+- **Idle life.** Rigged things breathe, sway, blink and glance around; walkers swing their legs (or
+  lift them, seen from the front); tails wag, ears twitch, clock hands tick and blades turn.
+- **Faces.** The drawn face stays as drawn. Expressions (`happy`, `sad`, `angry`, `surprised`,
+  `scared`, `sleepy`, `laughing`, `confused`) swap the drawn mouth for an inked one, close the
+  eyes with paper lids, and add eyebrows only when the expression needs them (a character whose
+  drawing has brows moves its own). Talking moves the mouth while a speech bubble is up.
+- **Gestures.** `wave`, `point`, `clap`, `shrug`, `thumbs_up`, `cover_eyes`, `hands_on_hips`,
+  `arms_up`, `dance`, `bow`, `nod`, `shake_head`, `wink`, `laugh`, `cry`, `gasp`, `look_around`,
+  `wag`, `flap` and `apart` (the pieces float out into an exploded view and back) are anims the
+  model can use like `jump` or `spin`.
+- **Parts.** `{"op":"detach","id":"farmer_1","part":"hat"}` takes a piece off as a thing of its
+  own: it hops clear, falls, can be picked up, thrown or named like anything else, and
+  `{"op":"reattach","id":"hat_1"}` puts it back. The world context lists each rigged thing's parts,
+  so "knock his hat off" or "the dog's tail falls off" work.
+- **Clicks.** A poke reacts to the piece under the dot: a hat is knocked off, a hand waves, a head
+  nods, a tail wags, a loose piece goes back on.
+
+Rigs are made offline (`words_and_images/rig/`, Python with numpy, scipy and Pillow):
+`segment.py <word> --out DIR` splits a drawing into regions along its ink and writes an overlay
+with rulers; a label file (`labels/<word>.json`) names the regions per piece in 0-1000 coordinates,
+with cut lines, automatic wrist, leg and sleeve splits, outline polygons and face marks; and
+`build_rig.py labels/*.json --review DIR` writes the rigs plus a review sheet per drawing.
+`auto_rig.py` labels the whole set with a vision model running locally (Ollama or LM Studio): `pilot` tries two
+models on 40 drawings side by side, `run` does everything, resumably. See `words_and_images/rig/README.md`.
+`node scripts/shots-puppets.mjs http://localhost:8787 OUT boy dog` shows rigs idling, gesturing,
+walking, making faces, talking and coming apart.
+
+## Sound and music
+
+`src/client/audio/` plays the world: your footsteps and those of people and animals nearby on whatever is
+underfoot (grass, the gravel of roads and paths, plaza stone, sand by the water, wading, wooden floors and
+bridges), doors, windows, shutters and the other moving pieces, animal calls by word, things landing by
+weight, effects (explosions, sparkles, splashes), things popping in and out, moves and gestures (claps, wing
+flaps, boings), and the command box. Music cross-fades with the time of day under ambience: birds by day,
+crickets at night, a stream or a lake shore when water is near, wind on the hills, and loops at fountains,
+fires and rain.
+
+People talk in babble: each syllable of a speech bubble is a short sung vowel in the character's own voice
+(children high, giants gruff, robots square), shaped by their expression (happy lifts, sad sinks, angry
+growls, a question rises), with laughs, sobs, gasps, grumbles and hums of their own. It is generated, so it
+needs no files. The Sound button (or `M`) switches between everything, no music, and off, remembered per
+device; sound starts with the first click or key, as browsers require.
+
+The recordings are all CC0 and come from `words_and_images/audio/` (Kenney's packs and Freesound): run
+`fetch_audio.py` there to download them into `assets/audio/`; see its README. Until then only the babble
+plays.
+
+## Terrain, water and villages
+
+- `src/shared/terrain/field.ts`: a world's terrain is a saved recipe (`world.terrain`): seeded hills,
+  a rim of hills round the valley, roads and building pads that flatten the ground, rivers and ponds
+  carved below one water level. It is baked into a height grid that the engine (placing, walking,
+  landing), the player and the renderer all share, interpolated over the same triangles the mesh
+  draws. Worlds without a recipe are the flat meadow.
+- `src/shared/village.ts`: one seed decides a whole village, in an order where each step respects
+  the ones before it (river and lake, plaza, roads, lots facing the roads, the special buildings in
+  fitting spots, bridges at crossings, door paths, trees, lamps, people).
+- Structures built on slopes stand on a stone foundation with steps up to the door; fences follow
+  the ground; bridges are a structure (`gen: "bridge"`) you walk across.
+- The renderer paints the ground (grass, sand banks, roads, paths, the plaza) and draws one water
+  sheet at the water level with an ink line where it meets the shore. The sky is a CSS gradient per
+  time of day with a paper sun and moon and stars; night tints every material through one shader
+  uniform and lets windows and lamps glow. The model can change the time with `{"op":"sky"}`.
 
 ## Sprites and vocabulary
 

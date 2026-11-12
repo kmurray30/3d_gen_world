@@ -10,6 +10,7 @@ import type { FigPart, Figure, Vec3 } from '../../../shared/figure/types';
 import { apply, hull, mul, shapePoints, solve, viewMatrix, type M3 } from '../../../shared/figure/math';
 import { drawCrayonGrain } from '../crayon';
 import { drawFace } from './face';
+import { tinted } from '../tint';
 
 const PLANE = new THREE.PlaneGeometry(1, 1);
 const INK = '#2b2b2b';
@@ -164,7 +165,7 @@ export class PaperFigure {
     for (const p of fig.parts) {
       if (p.only === 'toon') continue;
       const L = this.drawn.layout.get(p.name)!;
-      const mat = new THREE.MeshBasicMaterial({ map: pieceTexture(fig, this.drawn, p, this.expr), alphaTest: 0.5, side: p.side === 'front' ? THREE.FrontSide : p.side === 'back' ? THREE.BackSide : THREE.DoubleSide });
+      const mat = tinted(new THREE.MeshBasicMaterial({ map: pieceTexture(fig, this.drawn, p, this.expr), alphaTest: 0.5, side: p.side === 'front' ? THREE.FrontSide : p.side === 'back' ? THREE.BackSide : THREE.DoubleSide }), p.role === 'glow');
       const mesh = new THREE.Mesh(PLANE, mat);
       mesh.matrixAutoUpdate = false;
       mesh.userData.entityId = entityId;

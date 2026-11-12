@@ -1,0 +1,15 @@
+{"word": "man", "view": "front",
+ "pieces": [
+  {"id": "body", "kind": "body", "regions": [1, 9]},
+  {"id": "head", "kind": "head", "parent": "body", "regions": [3, 4, 10, 11, 12]},
+  {"id": "arm_l", "kind": "arm", "side": "l", "parent": "body", "from": "body", "split": "sleeve"},
+  {"id": "hand_l", "kind": "hand", "side": "l", "parent": "arm_l", "regions": [7]},
+  {"id": "arm_r", "kind": "arm", "side": "r", "parent": "body", "from": "body", "split": "sleeve"},
+  {"id": "hand_r", "kind": "hand", "side": "r", "parent": "arm_r", "regions": [8]},
+  {"id": "leg_l", "kind": "leg", "side": "l", "parent": "body", "regions": [2], "split": "legs"},
+  {"id": "leg_r", "kind": "leg", "side": "r", "parent": "body", "regions": [2], "split": "legs"},
+  {"id": "foot_l", "kind": "foot", "side": "l", "parent": "leg_l", "regions": [5]},
+  {"id": "foot_r", "kind": "foot", "side": "r", "parent": "leg_r", "regions": [6]}
+ ],
+ "erase": [13],
+ "face": {"eyes": [16, 17], "brows": [14, 15], "mouth": 19}}

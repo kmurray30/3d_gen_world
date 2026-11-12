@@ -1,7 +1,9 @@
 import type { Entity, Vec3, World } from '../types';
 import type { ResolvedBuild, ResolvedSpawn, ResolvedStep } from '../schema';
 import { makeRng } from './math';
-import { footprintRadius, massClassFor } from './sizing';
+import { footprintRadius, massClassFor, renderHeight } from './sizing';
+import { findPiece, type Rig } from '../rig';
+import { DEG, rotateY } from './math';
 import { resolvePlace } from './place';
 import { Scheduler, type Script } from './scheduler';
 import { FallTask, makeTasks } from './tasks';
@@ -12,7 +14,11 @@ import { yawFacing } from './facing';
 import { YawTask } from './tasks';
 import { resolvePlayerCollisions, resolvePlayerVsStructures, type Bump } from './collide';
 import { structureRadius } from '../structure/collide';
-import { structureEntity, yawToward } from '../structure/entity';
+import { seatOnTerrain, structureEntity, yawToward } from '../structure/entity';
+import { isPropGen } from '../structure/index';
+import { Parts, round } from '../structure/build';
+import { findMovers, findPieceName, moverState, movers, pieceParts, wantedState, type Mover } from '../structure/joints';
+import type { Structure } from '../structure/types';
 
 export type EngineEvent =
   | { type: 'spawn'; id: string }
@@ -26,7 +32,10 @@ export type EngineEvent =
   | { type: 'arrive'; id: string; target?: string }
   | { type: 'stateChange'; id: string; key: string; value: boolean | number | string }
   | { type: 'scriptDone'; id: string }
-  | { type: 'poke'; id: string }
+  | { type: 'sky'; time: string }
+  | { type: 'poke'; id: string; part?: string }
+  /** A whole-body move or gesture starting (for its sound). */
+  | { type: 'anim'; id: string; name: string; times: number }
   | { type: 'warn'; msg: string };
 
 /**
@@ -44,6 +53,8 @@ export class Engine {
   private keySeq = 0;
   private idSeq = 0;
   private readonly pokeUntil = new Map<string, number>();
+  /** How a drawing comes apart, when its rig is loaded (the client supplies it; pieces need it). */
+  rigs: (file: string) => Rig | undefined = () => undefined;
 
   constructor(world: World, seed = 1) {
     this.world = new WorldModel(world);
@@ -68,8 +79,12 @@ export class Engine {
     if (hop) this.run([{ op: 'anim', id, name: 'hop', times: 1 }], `${scriptId ?? 'turn'}_hop`);
   }
 
-  /** The player clicked or tapped a thing: a small reaction by kind; buildings with a door open or close it. */
-  poke(id: string): boolean {
+  /**
+   * The player clicked or tapped a thing: a small reaction by kind; buildings with a door open or close it. On a
+   * paper puppet, `part` is the piece that was hit and the reaction fits it: a hat gets knocked off, a hand waves,
+   * a tail wags, a lid opens; a piece lying on its own jumps back onto its owner.
+   */
+  poke(id: string, part?: string): boolean {
     const e = this.world.get(id);
     if (!e || e.hidden) return false;
     const key = `poke:${id}`;
@@ -78,15 +93,27 @@ export class Engine {
     const sid = `rule_poke_${this.nextKey()}`;
     const toward = yawFacing(this.world.worldPos(e), this.world.player.pos);
     const pick = (arr: string[]) => arr[Math.floor(this.rng() * arr.length)];
+    if (typeof e.state.piece_of === 'string' && this.world.has(e.state.piece_of)) {
+      this.reattachPiece(id);
+      this.emit({ type: 'poke', id });
+      return true;
+    }
+    const rig = e.sprite.file ? this.rigs(e.sprite.file) : undefined;
+    const piece = rig && part ? rig.pieces.find((p) => p.id === part) : undefined;
+    if (piece && this.pokePiece(e, piece.id, piece.kind, !!piece.detach, toward, sid)) {
+      this.emit({ type: 'poke', id, part });
+      return true;
+    }
     if (e.structure) {
-      const hasDoor = e.structure.parts.some((p) => p.t === 'decal' && p.role === 'door');
-      if (hasDoor) {
-        const open = e.state.door_open !== true;
-        e.state.door_open = open;
-        this.emit({ type: 'stateChange', id, key: 'door_open', value: open });
-      } else {
-        this.run([{ op: 'anim', id, name: 'shake', times: 1 }], sid);
-      }
+      // the moving piece clicked works (a joint that follows another moves that one); a click on a small prop's
+      // body works its main piece (the mailbox door, the lamp, the bin lid); a building's walls do nothing
+      const s = e.structure;
+      const all = movers(s);
+      const lead = part ? (s.joints?.find((j) => j.id === part)?.follow ?? part) : undefined;
+      const m = (lead ? all.find((x) => x.name === lead) : undefined) ?? (isPropGen(s.gen) ? all[0] : undefined);
+      if (m) this.operate(id, m.name, 'toggle');
+      this.emit({ type: 'poke', id, ...(m ? { part: m.name } : {}) });
+      return true;
     } else if (e.kind === 'animal') {
       this.turn(id, toward, undefined, undefined, `${sid}_t`);
       this.run([{ op: 'par', do: [{ op: 'anim', id, name: 'hop', times: 1 }, { op: 'say', id, text: pick(['!', '?', '!!']), dur: 1 }] }], sid);
@@ -100,6 +127,209 @@ export class Engine {
     return true;
   }
 
+  /** The part-by-part pokes. Returns false when the part has nothing special (the whole-thing poke runs). */
+  private pokePiece(e: Entity, piece: string, kind: string, detachable: boolean, toward: number, sid: string): boolean {
+    const living = e.kind === 'human' || e.kind === 'humanoid' || e.kind === 'animal';
+    const say = (text: string, dur = 1.4) => ({ op: 'say' as const, id: e.id, text, dur });
+    const face = (expression: 'happy' | 'surprised' | 'angry' | 'laughing') => ({ op: 'set' as const, id: e.id, expression });
+    const calm = { op: 'set' as const, id: e.id, expression: 'neutral' as const };
+    if (detachable) {
+      const newId = this.uniqueId(`${e.id}_${piece}`);
+      this.run([{ op: 'par', do: [{ op: 'detach', id: e.id, part: piece, newId }, ...(living ? [face('surprised'), say('Hey!')] : [])] }, { op: 'wait', dur: 1.2 }, ...(living ? [calm] : [])], sid);
+      return true;
+    }
+    if (kind === 'door' || kind === 'lid') {
+      const open = e.state[`open_${piece}`] !== true;
+      e.state[`open_${piece}`] = open;
+      this.emit({ type: 'stateChange', id: e.id, key: `open_${piece}`, value: open });
+      return true;
+    }
+    if (!living) return kind === 'wheel' || kind === 'blade' || kind === 'clock_hand' ? (this.run([{ op: 'anim', id: e.id, name: 'wobble', times: 1 }], sid), true) : false;
+    this.turn(e.id, toward, undefined, undefined, `${sid}_t`);
+    switch (kind) {
+      case 'hand':
+      case 'arm':
+        this.run([{ op: 'par', do: [{ op: 'anim', id: e.id, name: 'wave', times: 1 }, say(e.kind === 'animal' ? '!' : 'Hi!')] }], sid);
+        return true;
+      case 'tail':
+        this.run([{ op: 'par', do: [{ op: 'anim', id: e.id, name: 'wag', times: 2 }, face('happy')] }, { op: 'wait', dur: 1.5 }, calm], sid);
+        return true;
+      case 'wing':
+        this.run([{ op: 'anim', id: e.id, name: 'flap', times: 2 }], sid);
+        return true;
+      case 'leg':
+      case 'foot':
+        this.run([{ op: 'par', do: [{ op: 'anim', id: e.id, name: 'hop', times: 1 }, say(e.kind === 'animal' ? '!?' : 'Ow!', 1)] }], sid);
+        return true;
+      case 'body':
+        this.run([{ op: 'par', do: [{ op: 'anim', id: e.id, name: 'laugh', times: 1 }, say(e.kind === 'animal' ? '!!' : 'Hehe!', 1.2)] }], sid);
+        return true;
+      case 'eye':
+      case 'pupil':
+      case 'brow':
+        this.run([{ op: 'par', do: [face('angry'), say(e.kind === 'animal' ? '!' : 'Hey, my eye!', 1.2)] }, { op: 'wait', dur: 1.2 }, calm], sid);
+        return true;
+      case 'head':
+      case 'hair':
+      case 'mouth':
+      case 'ear': {
+        const greet = e.kind === 'animal' ? pick(['!', '?', '!!']) : pick(['Hello!', 'Yes?', 'Oh, hi.', 'Hm?', 'Nice day.']);
+        this.run([{ op: 'par', do: [{ op: 'anim', id: e.id, name: 'nod', times: 1 }, face('happy'), say(greet, 1.6)] }, { op: 'wait', dur: 1.2 }, calm], sid);
+        return true;
+      }
+      default:
+        return false;
+    }
+    function pick(arr: string[]): string {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+  }
+
+  /**
+   * Move a structure's moving pieces to a state: "open" a door, "up" a flag, "off" a lamp, "down" a bucket, or
+   * "toggle" (or nothing) for the other state. A name can reach several ("windows", "shutters"). Opening a window
+   * opens its shutters too, and closing shutters closes the window behind them. False when nothing matched.
+   */
+  operate(id: string, part: string, to?: string): boolean {
+    const e = this.world.get(id);
+    const s = e?.structure;
+    if (!e || !s) return false;
+    const found = findMovers(s, part);
+    if (!found.length) return false;
+    const current = found.every((m) => moverState(e, m) === 1) ? 1 : 0;
+    const all = movers(s);
+    const set = (m: Mover, v: 0 | 1) => {
+      if (moverState(e, m) === v) return;
+      e.state[m.key] = v === 1;
+      this.emit({ type: 'stateChange', id, key: m.key, value: v === 1 });
+    };
+    let any = false;
+    for (const m of found) {
+      const want = wantedState(m, to, found.length > 1 ? current : moverState(e, m));
+      if (want === null) continue;
+      any = true;
+      const n = /^(window|shutters)_(\d+)$/.exec(m.name);
+      if (n) {
+        // a window and its shutters can't both be shut over each other
+        const other = all.find((x) => x.name === (n[1] === 'window' ? `shutters_${n[2]}` : `window_${n[2]}`));
+        if (other && n[1] === 'window' && want === 1) set(other, 0);
+        if (other && n[1] === 'shutters' && want === 1) set(other, 0);
+      }
+      set(m, want);
+    }
+    return any;
+  }
+
+  /**
+   * Take a piece off a rigged drawing or a structure: it becomes its own entity (drawn from the same picture, or
+   * built from the same parts) at the spot it was, and its owner shows without it. Returns the new id, or null
+   * when there is no such piece.
+   */
+  detachPiece(id: string, part: string, newId = `${id}_${part}`): string | null {
+    const e = this.world.get(id);
+    if (e?.structure) return this.detachStructurePiece(e, e.structure, part, newId);
+    if (!e?.sprite.file) return null;
+    const rig = this.rigs(e.sprite.file);
+    const piece = rig ? findPiece(rig, part) : undefined;
+    if (!rig || !piece || !piece.parent || e.state[`off_${piece.id}`] === true) return null;
+    const tall = renderHeight(e);
+    const [x0, y0, x1, y1] = piece.bbox;
+    // where the piece sits on its owner's paper: across its right axis, up from its feet
+    let across = ((x0 + x1) / 2 - 0.5) * (rig.w / rig.h) * tall;
+    if (e.flip) across = -across;
+    const yaw = (e.yaw ?? 0) * DEG;
+    const at = this.world.worldPos(e);
+    const pos: Vec3 = [at[0] + Math.cos(yaw) * across, at[1] + (1 - y1) * tall, at[2] - Math.sin(yaw) * across];
+    const word = piece.detach ?? piece.kind;
+    const heightM = Math.max(0.05, (y1 - y0) * tall);
+    const sprite = { file: e.sprite.file, w: Math.max(1, Math.round((x1 - x0) * rig.w)), h: Math.max(1, Math.round((y1 - y0) * rig.h)), piece: piece.id };
+    const pieceEntity: Entity = {
+      id: this.world.has(newId) ? this.uniqueId(newId) : newId,
+      word,
+      label: word,
+      sprite,
+      pos,
+      flip: e.flip,
+      scale: 1,
+      heightM,
+      tilt: 0,
+      state: { piece_of: e.id, piece: piece.id },
+      effects: [],
+      kind: 'object',
+      solid: false,
+      massClass: massClassFor('object', heightM),
+      huge: false,
+      createdAt: this.time,
+      ...(e.yaw !== undefined ? { yaw: e.yaw } : {}),
+    };
+    if (!this.world.add(pieceEntity)) return null;
+    e.state[`off_${piece.id}`] = true;
+    this.emit({ type: 'stateChange', id: e.id, key: `off_${piece.id}`, value: true });
+    this.emit({ type: 'spawn', id: pieceEntity.id });
+    return pieceEntity.id;
+  }
+
+  /** A structure's named piece (roof, chimney, door, lantern) comes off as a structure of its own. */
+  private detachStructurePiece(e: Entity, s: Structure, part: string, newId: string): string | null {
+    const name = findPieceName(s, part);
+    const idx = name ? pieceParts(s, name) : [];
+    if (!name || !idx.length || idx.length === s.parts.length) return null;
+    const take = new Set(idx);
+    const moved = idx.map((i) => structuredClone(s.parts[i]));
+    // the piece's own frame: centred on its footprint, standing on its lowest point
+    const ext = new Parts();
+    for (const p of moved) ext.add(structuredClone(p));
+    const { minX, maxX, minZ, maxZ, maxY } = ext.extent;
+    const cx = round((minX + maxX) / 2);
+    const cz = round((minZ + maxZ) / 2);
+    const cy = round(Math.min(...moved.map((p) => p.pos[1])));
+    for (const p of moved) p.pos = [round(p.pos[0] - cx), round(p.pos[1] - cy), round(p.pos[2] - cz)];
+    const piece: Structure = { gen: 'piece', params: { of: e.id, name }, parts: moved, bounds: { w: round(maxX - minX), h: round(Math.max(0.05, maxY - cy)), d: round(Math.max(0.05, maxZ - minZ)) }, ...(s.ink ? { ink: s.ink } : {}) };
+    const yaw = e.yaw ?? 0;
+    const at = this.world.worldPos(e);
+    const off = rotateY([cx * e.scale, cy * e.scale, cz * e.scale], yaw * DEG);
+    const pe = structureEntity(this.world.has(newId) ? this.uniqueId(newId) : newId, name, piece, [at[0] + off[0], at[1] + off[1], at[2] + off[2]], yaw, this.time, name);
+    pe.scale = e.scale;
+    pe.massClass = massClassFor('object', piece.bounds.h);
+    pe.solid = Math.max(piece.bounds.w, piece.bounds.d) > 0.6;
+    pe.state = { piece_of: e.id, piece: name, piece_x: cx, piece_y: cy, piece_z: cz };
+    if (!this.world.add(pe)) return null;
+    e.structure = { ...s, parts: s.parts.filter((_, i) => !take.has(i)) };
+    e.state[`off_${name}`] = true;
+    this.emit({ type: 'stateChange', id: e.id, key: `off_${name}`, value: true });
+    this.emit({ type: 'spawn', id: pe.id });
+    return pe.id;
+  }
+
+  /** Put a piece back on its owner (id is the piece, or its owner with a part name). */
+  reattachPiece(id: string, part?: string): boolean {
+    let piece = this.world.get(id);
+    if (piece && typeof piece.state.piece_of !== 'string' && part) {
+      const owner = piece;
+      const rig = owner.sprite.file ? this.rigs(owner.sprite.file) : undefined;
+      const words = part.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+      const want = rig ? findPiece(rig, part)?.id : owner.structure ? undefined : part;
+      piece = this.world
+        .list()
+        .find((x) => x.state.piece_of === owner.id && (want ? x.state.piece === want : !owner.structure || words.some((w) => w === x.state.piece || `${w}`.replace(/s$/, '') === x.state.piece)));
+    }
+    if (!piece || typeof piece.state.piece_of !== 'string') return false;
+    const owner = this.world.get(piece.state.piece_of);
+    const pid = String(piece.state.piece);
+    if (owner?.structure && piece.structure) {
+      const [ox, oy, oz] = [Number(piece.state.piece_x) || 0, Number(piece.state.piece_y) || 0, Number(piece.state.piece_z) || 0];
+      const back = piece.structure.parts.map((p) => ({ ...structuredClone(p), pos: [round(p.pos[0] + ox), round(p.pos[1] + oy), round(p.pos[2] + oz)] as [number, number, number] }));
+      owner.structure = { ...owner.structure, parts: [...owner.structure.parts, ...back] };
+    }
+    this.removeEntity(piece.id, 'pop');
+    if (owner) {
+      delete owner.state[`off_${pid}`];
+      this.emit({ type: 'stateChange', id: owner.id, key: `off_${pid}`, value: false });
+      this.run([{ op: 'anim', id: owner.id, name: 'bounce', times: 1 }], `rule_reattach_${this.nextKey()}`);
+    }
+    return true;
+  }
+
   /** Height of whatever the player stood on after the last `collidePlayer` (0 = the meadow). */
   playerGround = 0;
 
@@ -110,7 +340,7 @@ export class Engine {
   collidePlayer(pos: Vec3 = this.world.player.pos): Bump[] {
     const bumps = resolvePlayerCollisions(this.world, pos);
     if (bumps.length) this.rules.bumps(bumps);
-    this.playerGround = resolvePlayerVsStructures(this.world, pos).support;
+    this.playerGround = resolvePlayerVsStructures(this.world, pos, this.world.ground(pos[0], pos[2])).support;
     return bumps;
   }
 
@@ -221,13 +451,15 @@ export class Engine {
     const id = this.uniqueId(action.id);
     const radius = structureRadius(s);
     let placement = resolvePlace(action.at, this.world, { id, radius, heightM: s.bounds.h }, this.rng);
-    if (placement.parent || placement.pos[1] > 0) {
+    if (placement.parent || placement.pos[1] - this.world.ground(placement.pos[0], placement.pos[2]) > 0.05) {
       // structures stand on the ground; "on the house" means next to it
       placement = resolvePlace({ ...action.at, rel: 'near', height: 'ground' }, this.world, { id, radius, heightM: s.bounds.h }, this.rng);
     }
     const pos: Vec3 = [placement.pos[0], 0, placement.pos[2]];
     const yaw = Math.round(yawToward(pos, this.world.player.pos));
-    const e = structureEntity(id, action.word, s, pos, yaw, this.time, action.label);
+    const seated = seatOnTerrain(s, pos, yaw, (x, z) => this.world.ground(x, z));
+    pos[1] = seated.base;
+    const e = structureEntity(id, action.word, seated.structure, pos, yaw, this.time, action.label);
     if (!this.world.add(e)) {
       this.emit({ type: 'warn', msg: `world is full (${this.world.size})` });
       return null;

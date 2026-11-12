@@ -1,0 +1,14 @@
+{"word": "robot", "view": "front",
+ "pieces": [
+  {"id": "body", "kind": "body", "regions": [1, 3, 22, 25, 10, 4, 27]},
+  {"id": "head", "kind": "head", "parent": "body", "regions": [2, 26, 29, 31, 33]},
+  {"id": "arm_l", "kind": "arm", "side": "l", "parent": "body", "regions": [15, 18, 28, 9]},
+  {"id": "hand_l", "kind": "hand", "side": "l", "parent": "arm_l", "regions": [20, 34]},
+  {"id": "arm_r", "kind": "arm", "side": "r", "parent": "body", "regions": [14, 19, 30, 11]},
+  {"id": "hand_r", "kind": "hand", "side": "r", "parent": "arm_r", "regions": [21, 35]},
+  {"id": "leg_l", "kind": "leg", "side": "l", "parent": "body", "regions": [7, 16, 5]},
+  {"id": "leg_r", "kind": "leg", "side": "r", "parent": "body", "regions": [8, 17, 6]},
+  {"id": "foot_l", "kind": "foot", "side": "l", "parent": "leg_l", "regions": [12]},
+  {"id": "foot_r", "kind": "foot", "side": "r", "parent": "leg_r", "regions": [13, 32]}
+ ],
+ "face": {"eyes": [36, 37], "pupils": [24, 23], "mouth": 38}}

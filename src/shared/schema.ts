@@ -1,3 +1,4 @@
+import { EXPRESSIONS, GESTURES, type Gesture } from './gestures';
 import { z } from 'zod';
 import type { Kind, SpriteRef } from './types';
 import type { Structure } from './structure/types';
@@ -10,7 +11,8 @@ export const DIST = ['touch', 'close', 'near', 'far'] as const;
 export const HEIGHT = ['ground', 'low', 'high', 'sky'] as const;
 export const SPEED = ['slow', 'walk', 'run', 'fly', 'instant'] as const;
 export const STYLE = ['walk', 'hop', 'slide', 'fly'] as const;
-export const ANIM = ['hop', 'wobble', 'shake', 'spin', 'bounce', 'nod', 'fall_over', 'pulse'] as const;
+/** Whole-body moves, then gestures (rigged drawings act these out with their own pieces). */
+export const ANIM = ['hop', 'wobble', 'shake', 'spin', 'bounce', 'fall_over', 'pulse', ...(GESTURES as [Gesture, ...Gesture[]])] as const;
 export const REMOVE_HOW = ['pop', 'fade', 'sink', 'fly_away', 'explode'] as const;
 export const EFFECTS = ['fire', 'smoke', 'steam', 'rain', 'water_spray', 'sparkle', 'explosion', 'snow', 'hearts', 'dust'] as const;
 
@@ -104,6 +106,8 @@ export const SetSchema = z.object({
   tilt: num(-180, 180, 0).optional(),
   face: z.string().trim().max(64).optional(),
   state: z.record(z.string().max(32), z.union([z.boolean(), z.number(), z.string().max(40)])).optional(),
+  /** A face (eyebrows appear for the ones that need them); neutral is the drawing as drawn. */
+  expression: z.enum(EXPRESSIONS).optional().catch(undefined),
   /** Buildings only: regenerate with these generator parameters changed (stories, roof, color, wallMat, w, d...). */
   params: z.record(z.string().max(32), z.unknown()).optional(),
   dur,
@@ -118,6 +122,12 @@ export const AnimSchema = z.object({
 });
 export const AttachSchema = z.object({ op: z.literal('attach'), id, to: id, where: z.enum(['top', 'held']).optional().catch(undefined), delay });
 export const DropSchema = z.object({ op: z.literal('drop'), id, delay });
+/** A piece comes off and becomes its own thing (a hat knocked off, a wheel falling off); ref names the piece. */
+export const DetachSchema = z.object({ op: z.literal('detach'), id, part: z.string().trim().min(1).max(32), ref: z.string().trim().min(1).max(32).optional(), delay });
+/** A piece that came off goes back (id is the piece, or its owner with part). */
+export const ReattachSchema = z.object({ op: z.literal('reattach'), id, part: z.string().trim().max(32).optional(), delay });
+/** A built thing's moving piece to a state: open a mailbox door, raise its flag, switch a lamp off, close the shutters. */
+export const OperateSchema = z.object({ op: z.literal('operate'), id, part: z.string().trim().min(1).max(40), to: z.string().trim().max(20).optional(), delay });
 export const RemoveSchema = z.object({ op: z.literal('remove'), id, how: z.enum(REMOVE_HOW).optional().catch(undefined), delay });
 export const SaySchema = z.object({ op: z.literal('say'), text, id: id.optional(), dur, delay });
 export const EffectSchema = z.object({
@@ -130,6 +140,9 @@ export const EffectSchema = z.object({
   delay,
 });
 export const WaitSchema = z.object({ op: z.literal('wait'), dur: num(0, 20, 1) });
+export const SKY_TIMES = ['dawn', 'day', 'sunset', 'night'] as const;
+/** Change the time of day. */
+export const SkySchema = z.object({ op: z.literal('sky'), time: z.enum(SKY_TIMES).catch('day'), delay });
 
 export const ActionSchema = z.discriminatedUnion('op', [
   SpawnSchema,
@@ -139,10 +152,14 @@ export const ActionSchema = z.discriminatedUnion('op', [
   AnimSchema,
   AttachSchema,
   DropSchema,
+  DetachSchema,
+  ReattachSchema,
+  OperateSchema,
   RemoveSchema,
   SaySchema,
   EffectSchema,
   WaitSchema,
+  SkySchema,
 ]);
 export const ParSchema = z.object({ op: z.literal('par'), do: z.array(ActionSchema).min(1).max(MAX_PAR) });
 export const StepSchema = z.union([ActionSchema, ParSchema]);
@@ -153,12 +170,16 @@ export type CustomPart = z.infer<typeof CustomPartSchema>;
 export type MoveAction = z.infer<typeof MoveSchema> & { /** engine-internal: exact destination (idle wandering) */ dest?: [number, number, number] };
 export type SetAction = z.infer<typeof SetSchema>;
 export type AnimAction = z.infer<typeof AnimSchema>;
+export type DetachAction = z.infer<typeof DetachSchema>;
+export type ReattachAction = z.infer<typeof ReattachSchema>;
+export type OperateAction = z.infer<typeof OperateSchema>;
 export type AttachAction = z.infer<typeof AttachSchema>;
 export type DropAction = z.infer<typeof DropSchema>;
 export type RemoveAction = z.infer<typeof RemoveSchema>;
 export type SayAction = z.infer<typeof SaySchema>;
 export type EffectAction = z.infer<typeof EffectSchema>;
 export type WaitAction = z.infer<typeof WaitSchema>;
+export type SkyAction = z.infer<typeof SkySchema>;
 export type Action = z.infer<typeof ActionSchema>;
 export type ParStep = z.infer<typeof ParSchema>;
 export type Step = z.infer<typeof StepSchema>;
@@ -179,7 +200,9 @@ export type ResolvedSpawn = Omit<SpawnAction, 'ref'> & { ref: string; id: string
 /** A build after the server ran the generator: the parts travel with the step, so the client never generates. */
 export type ResolvedBuild = Pick<BuildAction, 'op' | 'word' | 'at' | 'delay'> & { ref: string; id: string; structure: Structure; label: string };
 export type ResolvedSet = SetAction & { res?: WordResolution; structure?: Structure };
-export type ResolvedAction = Exclude<Action, SpawnAction | BuildAction | SetAction | MoveAction> | MoveAction | ResolvedSpawn | ResolvedBuild | ResolvedSet;
+/** A detach after validation: `newId` is the id the piece will have in the world. */
+export type ResolvedDetach = DetachAction & { newId: string };
+export type ResolvedAction = Exclude<Action, SpawnAction | BuildAction | SetAction | MoveAction | DetachAction> | MoveAction | ResolvedSpawn | ResolvedBuild | ResolvedSet | ResolvedDetach;
 export type ResolvedStep = ResolvedAction | { op: 'par'; do: ResolvedAction[] };
 
 /* ----- stream protocol (server -> client), one JSON object per line ----- */
@@ -204,6 +227,9 @@ export const CompactEntitySchema = z.object({
   effects: z.array(z.string().max(32)).max(8).optional(),
   /** Buildings: how they were generated, so a set with params can regenerate them. */
   structure: z.object({ gen: z.string().max(24), params: z.record(z.string().max(32), z.unknown()) }).optional(),
+  /** Pieces it is made of that a command can name (hat, arm_r, tail...), and which have come off. */
+  parts: z.array(z.string().max(32)).max(32).optional(),
+  off: z.array(z.string().max(32)).max(32).optional(),
 });
 export const CompactWorldSchema = z.object({
   player: z.object({ pos: z.tuple([z.number(), z.number(), z.number()]), yaw: z.number() }),

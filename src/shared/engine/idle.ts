@@ -23,7 +23,7 @@ export class Idle {
   constructor(private readonly engine: Engine) {}
 
   private living(e: Entity): boolean {
-    return (e.kind === 'animal' || e.kind === 'human' || e.kind === 'humanoid') && !e.hidden && !e.parent && e.pos[1] < 0.05;
+    return (e.kind === 'animal' || e.kind === 'human' || e.kind === 'humanoid') && !e.hidden && !e.parent && this.engine.world.onGround(e);
   }
 
   tick(): void {
@@ -82,11 +82,12 @@ export class Idle {
       tx *= lim / dist;
       tz *= lim / dist;
     }
-    const spot = findFreeSpot(footprints(engine.world, new Set([e.id])), tx, tz, footprintRadius(e), engine.rng, engine.world.player, 3);
+    // on dry land only, at the ground's height there
+    const spot = findFreeSpot(footprints(engine.world, new Set([e.id])), tx, tz, footprintRadius(e), engine.rng, engine.world.player, 3, engine.world);
     if (Math.hypot(spot[0] - home[0], spot[2] - home[2]) > WANDER_RADIUS_M + 1.5) return;
     if (Math.hypot(spot[0] - e.pos[0], spot[2] - e.pos[2]) < 0.4) return;
     const style = e.kind === 'animal' ? (engine.rng() < 0.5 ? 'hop' : 'walk') : 'walk';
-    engine.run([{ op: 'move', id: e.id, to: { rel: 'near', of: 'player', height: 'ground' }, speed: 'slow', style, dest: [spot[0], 0, spot[2]] }], `idle_${engine.nextKey()}`);
+    engine.run([{ op: 'move', id: e.id, to: { rel: 'near', of: 'player', height: 'ground' }, speed: 'slow', style, dest: [spot[0], spot[1], spot[2]] }], `idle_${engine.nextKey()}`);
   }
 
   private fidget(e: Entity): void {

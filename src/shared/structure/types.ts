@@ -7,7 +7,7 @@
 import type { SpriteRef } from '../types';
 
 /** Named crayon tiles; the client draws each one procedurally and tints it with the part's colour. */
-export const MATERIALS = ['plaster', 'brick', 'plank', 'shingle', 'stone', 'thatch', 'concrete', 'gingerbread', 'icing', 'stripe', 'glass', 'metal', 'flat'] as const;
+export const MATERIALS = ['plaster', 'brick', 'plank', 'shingle', 'stone', 'thatch', 'concrete', 'gingerbread', 'icing', 'stripe', 'glass', 'metal', 'water', 'flat'] as const;
 export type MaterialName = (typeof MATERIALS)[number];
 
 interface PartBase {
@@ -22,6 +22,47 @@ interface PartBase {
   noInk?: boolean;
   /** Not solid: walked through, nothing lands on it (railings, hat brims that are just for looks). */
   ghost?: boolean;
+  /** Solid but not drawn: collision only (the wall that keeps you on a bridge between its railings). */
+  hidden?: boolean;
+  /** Lit from inside at night: windows, lanterns, the lighthouse lamp. */
+  glow?: boolean;
+  /** The lighthouse lamp: sweeps a beam at night. */
+  beacon?: boolean;
+  /** A lamp: a soft halo of light round it at night (lantern glass, a lamp post's head). */
+  halo?: boolean;
+  /** Moves with this joint (a mailbox door, a bin lid, a bucket). */
+  joint?: string;
+  /** What this piece is called when it comes off on its own ("roof", "chimney", "lantern"). */
+  name?: string;
+}
+
+/**
+ * How a moving piece moves between its two states: turns on a hinge, slides, stretches (a rope paying out),
+ * spins while on, shrinks away (water turned off), or lights up at night (a lamp switched off goes dark).
+ */
+export type JointKind = 'hinge' | 'slide' | 'stretch' | 'spin' | 'shrink' | 'light';
+
+export interface Joint {
+  /** What the piece is called: door, flag, lid, bucket, crank, lamp, water, shutters_2. */
+  id: string;
+  kind: JointKind;
+  /** Pivot: the hinge line passes through it, stretching and shrinking happen about it. Structure-local. */
+  at: [number, number, number];
+  /** Unit axis: what a hinge or spin turns about, the way a slide or stretch goes. */
+  axis: [number, number, number];
+  /**
+   * Full travel: radians (hinge, positive turns counter-clockwise about the axis), metres (slide), extra length
+   * as a fraction (stretch), radians a second (spin).
+   */
+  amount: number;
+  /** Its two states, the built one first: ["closed", "open"], ["down", "up"], ["on", "off"]. */
+  states: [string, string];
+  /** Moves with another joint's state rather than its own (the crank turns as the bucket goes down). */
+  follow?: string;
+  /** Several joints answering to one name ("shutters" for every window's pair). */
+  group?: string;
+  /** Seconds a full move takes (default 0.6). */
+  secs?: number;
 }
 
 /** Axis-aligned box of w (x) by h (y) by d (z) before rotation. */
@@ -32,11 +73,20 @@ export interface BoxPart extends PartBase {
   d: number;
 }
 
-/** A doorway cut out of a wall: centred `at` metres from the wall's centre, reaching from the floor to `h`. */
+/** A hole cut through a wall: centred `at` metres from the wall's centre, `y` up from its base (0, a doorway). */
 export interface Opening {
   at: number;
   w: number;
   h: number;
+  y?: number;
+}
+
+/**
+ * A hole through one side face of a hollow prism (a tower's door or window): side `side` (the face between
+ * corners side and side + 1), centred `at` metres from the face's middle toward corner side + 1, `y` up.
+ */
+export interface PrismOpening extends Opening {
+  side: number;
 }
 
 /**
@@ -61,6 +111,16 @@ export interface PrismPart extends PartBase {
   rTop?: number;
   /** Offset of the top ring relative to the bottom one, for leaning cones (a bent hat tip). */
   lean?: [number, number];
+  /** Inner radius: a hollow ring open at the top and bottom (a basin wall, a well), tapering with the outside. */
+  hole?: number;
+  /**
+   * Laid on its side: the axis runs along local z (h long, centred on pos) and it rests on pos.y, r wide and rz
+   * tall each side of the axis. `half` keeps only the upper half, flat side down (a mailbox's domed top).
+   */
+  lie?: boolean;
+  half?: boolean;
+  /** Doors and windows through a hollow prism's sides. */
+  openings?: PrismOpening[];
 }
 
 /** Roof over a w by d rectangle: gable (ridge along x), hip (ridge along the longer axis), shed (slope down toward +z). */
@@ -92,11 +152,24 @@ export interface DecalPart extends PartBase {
   h: number;
   /** Sign text drawn on a paper card instead of the sprite (sprite.file is null then). */
   text?: string;
-  /** Doors swing open on a hinge when the player interacts with the building. */
-  role?: 'door';
+  /** Doors swing open on a hinge when the player interacts with the building; windows open their two sashes. */
+  role?: 'door' | 'window';
+  /** The wall behind it has a hole cut where it opens, so an open door or window shows the inside. */
+  hole?: boolean;
 }
 
-export type Part = BoxPart | WallPart | PrismPart | RoofPart | StairsPart | DecalPart;
+/**
+ * A flat paper strip following a path in the part's local x-y plane (x outward, y up), `w` wide across the path
+ * and narrowing or widening to `wEnd`: water arcs, banners. Never solid; both sides are drawn.
+ */
+export interface RibbonPart extends PartBase {
+  t: 'ribbon';
+  path: Array<[number, number]>;
+  w: number;
+  wEnd?: number;
+}
+
+export type Part = BoxPart | WallPart | PrismPart | RoofPart | StairsPart | DecalPart | RibbonPart;
 
 export interface Structure {
   /** Generator name ("house", "fence", ...) or "custom" for a parts list the model laid out. */
@@ -107,6 +180,8 @@ export interface Structure {
   bounds: { w: number; h: number; d: number };
   /** Outline ink colour (default near-black; icing white for gingerbread). */
   ink?: string;
+  /** Pieces that move: parts with a matching `joint` move with each. */
+  joints?: Joint[];
 }
 
 /** What a generator needs from the outside world: how to find a sprite for a decal word (door, window, sign). */

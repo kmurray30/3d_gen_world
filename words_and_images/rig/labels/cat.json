@@ -1,0 +1,53 @@
+{
+ "word": "cat",
+ "view": "front",
+ "pieces": [
+  {
+   "id": "body",
+   "kind": "body",
+   "regions": [
+    1
+   ]
+  },
+  {
+   "id": "head",
+   "kind": "head",
+   "parent": "body",
+   "regions": [
+    3
+   ],
+   "from": "body",
+   "cuts": [
+    [
+     [
+      -10,
+      405
+     ],
+     [
+      1010,
+      405
+     ]
+    ]
+   ],
+   "keep": [
+    500,
+    200
+   ]
+  },
+  {
+   "id": "tail",
+   "kind": "tail",
+   "parent": "body",
+   "regions": [
+    2
+   ]
+  }
+ ],
+ "face": {
+  "eyes": [
+   7,
+   6
+  ],
+  "mouth": 8
+ }
+}

@@ -1,6 +1,9 @@
+import { FACE_KINDS, type Rig } from '../../shared/rig';
 import type { CompactWorld, StreamEvent } from '../../shared/schema';
 import type { WorldModel } from '../../shared/engine/world';
 import { renderHeight } from '../../shared/engine/sizing';
+import { describeParts } from '../../shared/structure/joints';
+import type { Entity } from '../../shared/types';
 
 export interface ClientConfig {
   spriteVersion: string;
@@ -59,8 +62,21 @@ export async function streamNdjson(url: string, body: unknown, onEvent: (ev: Str
   }
 }
 
+/** The pieces of a rigged drawing a command can name: limbs, head, hat, tail, wheels... (not the face marks). */
+function partsOf(rig: Rig | undefined): string[] | undefined {
+  if (!rig) return undefined;
+  const parts = rig.pieces.filter((p) => p.parent && !FACE_KINDS.includes(p.kind)).map((p) => p.id);
+  return parts.length ? parts.slice(0, 32) : undefined;
+}
+
+/** A built thing's moving pieces with their states, and what can come off it: "door (closed)", "roof". */
+function structureParts(e: Entity): string[] | undefined {
+  const parts = describeParts(e).map((p) => p.slice(0, 32));
+  return parts.length ? parts.slice(0, 32) : undefined;
+}
+
 /** What the model gets to see: the nearest entities with rounded positions, no coordinates for the model to copy. */
-export function compactWorld(model: WorldModel, target?: string, limit = 40): CompactWorld {
+export function compactWorld(model: WorldModel, target?: string, limit = 40, rigOf: (file: string) => Rig | undefined = () => undefined): CompactWorld {
   const p = model.player.pos;
   const r1 = (v: number) => Math.round(v * 10) / 10;
   const entities = model
@@ -72,12 +88,14 @@ export function compactWorld(model: WorldModel, target?: string, limit = 40): Co
       id: e.id,
       word: e.word,
       kind: e.kind,
-      pos: [r1(pos[0]), r1(pos[1]), r1(pos[2])] as [number, number, number],
+      // height above the ground under it, so things on a hill are not reported as floating
+      pos: [r1(pos[0]), r1(e.parent ? pos[1] : pos[1] - model.ground(pos[0], pos[2])), r1(pos[2])] as [number, number, number],
       h: r1(renderHeight(e)),
       parent: e.parent,
       state: Object.keys(e.state).length ? e.state : undefined,
       effects: e.effects.length ? e.effects : undefined,
       structure: e.structure ? { gen: e.structure.gen, params: e.structure.params } : undefined,
+      parts: e.structure ? structureParts(e) : partsOf(e.sprite.file ? rigOf(e.sprite.file) : undefined),
     }));
-  return { player: { pos: [r1(p[0]), r1(p[1]), r1(p[2])], yaw: Math.round(model.player.yaw * 100) / 100 }, target, entities };
+  return { player: { pos: [r1(p[0]), r1(p[1] - model.ground(p[0], p[2])), r1(p[2])], yaw: Math.round(model.player.yaw * 100) / 100 }, target, entities };
 }

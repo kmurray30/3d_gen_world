@@ -236,6 +236,38 @@ const TILES: Record<MaterialName, TileSpec> = {
       }
     },
   },
+  water: {
+    metres: 1.2,
+    draw: (c, s, r) => {
+      scribble(c, s, r, 0.06, 80, 0.05);
+      // soft streaks with the current, then little crayon wave marks on top
+      for (let i = 0; i < 60; i++) {
+        const x = r() * s;
+        const y = r() * s;
+        c.strokeStyle = `rgba(20,70,130,${(0.06 + r() * 0.08).toFixed(3)})`;
+        c.lineWidth = 4 + r() * 5;
+        c.lineCap = 'round';
+        c.beginPath();
+        c.moveTo(x, y);
+        c.lineTo(x + 30 + r() * 40, y + (r() - 0.5) * 4);
+        c.stroke();
+      }
+      c.strokeStyle = 'rgba(25,75,140,0.5)';
+      c.lineWidth = 3;
+      for (let row = 0; row < 4; row++) {
+        for (let k = 0; k < 3; k++) {
+          const x = ((k + (row % 2) * 0.5) / 3) * s + (r() - 0.5) * 12;
+          const y = ((row + 0.5) / 4) * s + (r() - 0.5) * 10;
+          const w = 26 + r() * 14;
+          c.beginPath();
+          c.moveTo(x, y);
+          c.quadraticCurveTo(x + w / 4, y - 6, x + w / 2, y);
+          c.quadraticCurveTo(x + (3 * w) / 4, y + 6, x + w, y);
+          c.stroke();
+        }
+      }
+    },
+  },
 };
 
 export const TILE_METRES: Record<MaterialName, number> = Object.fromEntries(Object.entries(TILES).map(([k, v]) => [k, v.metres])) as Record<MaterialName, number>;

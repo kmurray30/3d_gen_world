@@ -4,6 +4,7 @@
  * An entity's `pos` is its feet point; sprites stand upright on it.
  */
 import type { Structure } from './structure/types';
+import type { TerrainSpec } from './terrain/field';
 
 export type Kind = 'object' | 'human' | 'humanoid' | 'animal' | 'other';
 export type MassClass = 'light' | 'medium' | 'heavy' | 'animal' | 'person';
@@ -15,6 +16,8 @@ export interface SpriteRef {
   file: string | null;
   w: number;
   h: number;
+  /** Only this piece of a rigged drawing (a hat that came off its owner). */
+  piece?: string;
 }
 
 export interface Entity {
@@ -69,6 +72,9 @@ export interface PlayerState {
   pitch: number;
 }
 
+export const TIMES_OF_DAY = ['dawn', 'day', 'sunset', 'night'] as const;
+export type TimeOfDay = (typeof TIMES_OF_DAY)[number];
+
 export interface World {
   slug: string;
   rev: number;
@@ -77,6 +83,12 @@ export interface World {
   createdAt: number;
   /** Which starter layout this world began as (reset restores it); undefined = the meadow. */
   preset?: string;
+  /** Seed the preset was generated from, so reset rebuilds the same village. */
+  seed?: number;
+  /** Hills, water, roads; undefined = the flat meadow. */
+  terrain?: TerrainSpec;
+  /** Time of day; undefined = day. */
+  sky?: TimeOfDay;
 }
 
 export interface HealthResponse {
@@ -88,4 +100,4 @@ export interface HealthResponse {
 export const PLAYER_RADIUS = 0.35;
 export const PLAYER_EYE_HEIGHT = 1.6;
 export const WORLD_RADIUS = 60;
-export const MAX_ENTITIES = 150;
+export const MAX_ENTITIES = 220;

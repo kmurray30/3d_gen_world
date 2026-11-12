@@ -4,6 +4,7 @@
  * world size, so a hut and a castle have the same grain, and scaling a thing never stretches it.
  */
 import * as THREE from 'three';
+import { chainShaderHook } from './tint';
 
 export const CRAYON_METRES = 2;
 const SIZE = 512;
@@ -86,15 +87,14 @@ export function crayonTexture(): THREE.Texture {
 export function applyCrayon(mat: THREE.MeshBasicMaterial, scaleOf: () => number, mix = 1): void {
   const uScale = { value: 1 / CRAYON_METRES };
   const uMix = { value: mix };
-  mat.onBeforeCompile = (shader) => {
+  chainShaderHook(mat, 'crayon', (shader) => {
     shader.uniforms.uCrayon = { value: crayonTexture() };
     shader.uniforms.uCrayonScale = uScale;
     shader.uniforms.uCrayonMix = uMix;
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <map_pars_fragment>', '#include <map_pars_fragment>\nuniform sampler2D uCrayon;\nuniform float uCrayonScale;\nuniform float uCrayonMix;')
       .replace('#include <map_fragment>', '#include <map_fragment>\n{\n  vec3 grain = texture2D(uCrayon, vMapUv * uCrayonScale).rgb;\n  diffuseColor.rgb *= mix(vec3(1.0), grain, uCrayonMix);\n}');
-  };
-  mat.customProgramCacheKey = () => 'crayon';
+  });
   mat.userData.crayonUpdate = () => {
     uScale.value = scaleOf() / CRAYON_METRES;
   };

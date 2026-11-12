@@ -1,0 +1,15 @@
+{"word": "sailor", "view": "front",
+ "pieces": [
+  {"id": "body", "kind": "body", "regions": [3, 13, 14, 15, 19, 22, 23, 25, 28, 1]},
+  {"id": "head", "kind": "head", "parent": "body", "regions": [2, 4, 11, 12, 26]},
+  {"id": "arm_l", "kind": "arm", "side": "l", "parent": "body", "regions": [7, 24]},
+  {"id": "hand_l", "kind": "hand", "side": "l", "parent": "arm_l", "regions": [17]},
+  {"id": "arm_r", "kind": "arm", "side": "r", "parent": "body", "regions": [9, 27]},
+  {"id": "hand_r", "kind": "hand", "side": "r", "parent": "arm_r", "regions": [16]},
+  {"id": "leg_l", "kind": "leg", "side": "l", "parent": "body", "regions": [5]},
+  {"id": "leg_r", "kind": "leg", "side": "r", "parent": "body", "regions": [6]},
+  {"id": "foot_l", "kind": "foot", "side": "l", "parent": "leg_l", "regions": [10, 18]},
+  {"id": "foot_r", "kind": "foot", "side": "r", "parent": "leg_r", "regions": [8]}
+ ],
+ "erase": [20, 21],
+ "face": {"eyes": [30, 31], "mouth": 33}}

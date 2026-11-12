@@ -1,0 +1,61 @@
+{
+ "word": "duck",
+ "view": "side",
+ "pieces": [
+  {
+   "id": "body",
+   "kind": "body",
+   "regions": [
+    1
+   ]
+  },
+  {
+   "id": "head",
+   "kind": "head",
+   "parent": "body",
+   "regions": [
+    2
+   ],
+   "from": "body",
+   "cuts": [
+    [
+     [
+      370,
+      410
+     ],
+     [
+      705,
+      300
+     ]
+    ]
+   ],
+   "keep": [
+    450,
+    150
+   ]
+  },
+  {
+   "id": "leg_f",
+   "kind": "leg",
+   "parent": "body",
+   "regions": [
+    4
+   ],
+   "z": -1
+  },
+  {
+   "id": "leg_h",
+   "kind": "leg",
+   "parent": "body",
+   "regions": [
+    3
+   ],
+   "z": -1
+  }
+ ],
+ "face": {
+  "eyes": [
+   5
+  ]
+ }
+}

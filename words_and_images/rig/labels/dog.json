@@ -1,0 +1,132 @@
+{
+ "word": "dog",
+ "view": "side",
+ "pieces": [
+  {
+   "id": "body",
+   "kind": "body",
+   "regions": [
+    1
+   ]
+  },
+  {
+   "id": "head",
+   "kind": "head",
+   "parent": "body",
+   "from": "body",
+   "cuts": [
+    [
+     [
+      270,
+      240
+     ],
+     [
+      90,
+      430
+     ]
+    ]
+   ],
+   "keep": [
+    100,
+    150
+   ]
+  },
+  {
+   "id": "tail",
+   "kind": "tail",
+   "parent": "body",
+   "from": "body",
+   "cuts": [
+    [
+     [
+      775,
+      330
+     ],
+     [
+      895,
+      485
+     ]
+    ]
+   ],
+   "keep": [
+    905,
+    150
+   ]
+  },
+  {
+   "id": "leg_fn",
+   "kind": "leg",
+   "parent": "body",
+   "from": "body",
+   "cuts": [
+    [
+     [
+      40,
+      640
+     ],
+     [
+      470,
+      640
+     ]
+    ]
+   ],
+   "keep": [
+    330,
+    900
+   ],
+   "z": -1
+  },
+  {
+   "id": "leg_hn",
+   "kind": "leg",
+   "parent": "body",
+   "from": "body",
+   "cuts": [
+    [
+     [
+      650,
+      640
+     ],
+     [
+      1010,
+      640
+     ]
+    ]
+   ],
+   "keep": [
+    790,
+    920
+   ],
+   "z": -1
+  },
+  {
+   "id": "leg_ff",
+   "kind": "leg",
+   "parent": "body",
+   "regions": [
+    2
+   ],
+   "z": -2
+  },
+  {
+   "id": "leg_hf",
+   "kind": "leg",
+   "parent": "body",
+   "regions": [
+    3
+   ],
+   "z": -2
+  }
+ ],
+ "erase": [
+  4
+ ],
+ "face": {
+  "eyes": [
+   6
+  ],
+  "brows": [
+   5
+  ]
+ }
+}

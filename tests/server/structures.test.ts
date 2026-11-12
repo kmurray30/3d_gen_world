@@ -80,6 +80,24 @@ describe('structure routing', () => {
     expect(fire.step).toMatchObject({ op: 'effect', id: 'h_1' });
   });
 
+  it('street props are built from shapes, in the colour asked for; detailed things stay drawn', async () => {
+    const v = new CommandValidator(vocab, context, resolver);
+    const fountain = await v.handle({ op: 'spawn', ref: 'f', word: 'fountain', at: { rel: 'front' } });
+    expect((fountain.step as ResolvedBuild).structure.gen).toBe('fountain');
+    const lamp = await v.handle({ op: 'spawn', ref: 'l', word: 'lamp posts', at: { rel: 'front' } });
+    expect((lamp.step as ResolvedBuild).structure.gen).toBe('lamppost');
+    const mail = await v.handle({ op: 'spawn', ref: 'm', word: 'red mailbox', at: { rel: 'front' } });
+    expect((mail.step as ResolvedBuild).structure).toMatchObject({ gen: 'mailbox', params: { color: '#e8493b' } });
+    const well = await v.handle({ op: 'spawn', ref: 'w', word: 'old stone well', at: { rel: 'front' } });
+    expect((well.step as ResolvedBuild).structure.gen).toBe('well');
+    for (const word of ['chocolate fountain', 'scarecrow', 'statue', 'flower']) {
+      const r = await v.handle({ op: 'spawn', ref: word.replace(' ', '_'), word, at: { rel: 'front' } });
+      expect(r.step?.op, word).toBe('spawn');
+    }
+    const pink = await v.handle({ op: 'build', ref: 'p', word: 'fountain', at: 'front', gen: 'fountain', params: { color: 'pink', tiers: 2 } });
+    expect((pink.step as ResolvedBuild).structure.params).toMatchObject({ color: '#f7a4c0', tiers: 2 });
+  });
+
   it('build runs generators with coerced params and lays out custom parts', async () => {
     const v = new CommandValidator(vocab, context, resolver);
     const r = await v.handle({ op: 'build', ref: 'c', word: 'cottage', at: 'front', params: { color: 'blue', stories: '2', roof: 'HIP' } });

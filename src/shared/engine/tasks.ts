@@ -1,8 +1,9 @@
 import type { Entity, Vec3 } from '../types';
-import type { AnimAction, EffectAction, MoveAction, RemoveAction, ResolvedAction, ResolvedBuild, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
+import type { AnimAction, EffectAction, MoveAction, OperateAction, ReattachAction, RemoveAction, ResolvedAction, ResolvedBuild, ResolvedDetach, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
+import { GESTURE_SECONDS, isGesture } from '../gestures';
 import { DEG, clamp, dir2, easeIn, easeInOut, easeOut, easeOutBack, lerp } from './math';
 import { footprintRadius, renderHeight, massClassFor } from './sizing';
-import { resolveOverlap, resolvePlace, stopAtEdge, supportAt } from './place';
+import { resolveOverlap, resolvePlace, stopAtEdge, supportAt, walkSurfaceAt } from './place';
 import { faceViewer, flipFor, lerpAngle, visibleYaw, yawAlong } from './facing';
 import { structureEntity } from '../structure/entity';
 import type { Channel, Script, Task } from './scheduler';
@@ -146,6 +147,8 @@ class MoveTask extends BaseTask {
   private chase?: Entity;
   private attachOnArrive = false;
   private readonly rSelf: number = 0;
+  /** Follows the ground (and bridges, patios) while moving instead of sliding in a straight line through hills. */
+  private groundWalk = false;
   constructor(
     private readonly action: MoveAction,
     private readonly engine: Engine,
@@ -176,9 +179,14 @@ class MoveTask extends BaseTask {
     } else {
       const p = resolvePlace(to, this.engine.world, { id: e.id, radius: footprintRadius(e), heightM: renderHeight(e) }, this.engine.rng);
       this.dest = p.pos;
-      if (to.of === 'player' && to.rel === 'at') this.dest = stopAtEdge(e.pos, [this.engine.world.player.pos[0], 0, this.engine.world.player.pos[2]], 0.35, footprintRadius(e), 0.3);
+      if (to.of === 'player' && to.rel === 'at') {
+        this.dest = stopAtEdge(e.pos, [this.engine.world.player.pos[0], 0, this.engine.world.player.pos[2]], 0.35, footprintRadius(e), 0.3);
+        this.dest[1] = this.engine.world.ground(this.dest[0], this.dest[2]);
+      }
     }
-    if (to.height !== 'ground' && !this.chase) this.dest[1] = this.dest[1];
+    const w = this.engine.world;
+    this.groundWalk = this.style !== 'fly' && to.height === 'ground' && Math.abs(e.pos[1] - walkSurfaceAt(w, e.pos[0], e.pos[2], e.pos[1] + 0.6)) < 0.3;
+    if (this.groundWalk && !this.attachOnArrive) this.dest[1] = walkSurfaceAt(w, this.dest[0], this.dest[2], this.dest[1] + 0.6);
     if (this.speed === Infinity) {
       e.pos = [...this.dest];
       this.finish();
@@ -191,7 +199,9 @@ class MoveTask extends BaseTask {
     const tp = this.engine.world.worldPos(t);
     const pad = this.action.to.dist === 'close' ? 0.6 : this.action.to.dist === 'near' ? 1.5 : 0.1;
     const d = stopAtEdge(this.e.pos, tp, footprintRadius(t), footprintRadius(this.e), pad);
-    d[1] = this.e.pos[1] > 0.05 && this.action.to.height === 'ground' ? 0 : this.action.to.height === 'ground' ? 0 : this.e.pos[1];
+    const w = this.engine.world;
+    if (this.action.to.height !== 'ground') d[1] = this.e.pos[1];
+    else d[1] = this.groundWalk ? walkSurfaceAt(w, d[0], d[2], this.e.pos[1] + 0.6) : w.ground(d[0], d[2]);
     return d;
   }
   update(dt: number): boolean {
@@ -226,8 +236,9 @@ class MoveTask extends BaseTask {
     }
     e.pos[0] += (dx / dist) * step;
     e.pos[2] += (dz / dist) * step;
+    if (this.groundWalk) e.pos[1] = walkSurfaceAt(w, e.pos[0], e.pos[2], e.pos[1] + 0.6);
     // vertical: move toward the destination height proportionally to horizontal progress
-    e.pos[1] += dy * Math.min(1, step / dist);
+    else e.pos[1] += dy * Math.min(1, step / dist);
     const tr = w.trans(e.id);
     this.phase += dt;
     const h = renderHeight(e);
@@ -246,11 +257,12 @@ class MoveTask extends BaseTask {
     const tr = this.engine.world.trans(e.id);
     tr.ofs[1] = 0;
     tr.sq = 1;
-    if (this.attachOnArrive && this.chase && this.engine.world.has(this.chase.id)) {
-      this.engine.world.attach(e.id, this.chase.id, 'top');
-    } else if (e.pos[1] <= 0.05) {
-      e.pos[1] = 0;
-      resolveOverlap(this.engine.world, e, this.engine.rng);
+    const w = this.engine.world;
+    if (this.attachOnArrive && this.chase && w.has(this.chase.id)) {
+      w.attach(e.id, this.chase.id, 'top');
+    } else if (w.heightAboveGround(e) <= 0.05) {
+      e.pos[1] = w.ground(e.pos[0], e.pos[2]);
+      resolveOverlap(w, e, this.engine.rng);
     }
     if (this.action.face) e.facing = this.action.face;
     this.engine.emit({ type: 'arrive', id: e.id, target: this.chase?.id ?? (this.action.to.of === 'player' ? 'player' : undefined) });
@@ -266,12 +278,16 @@ class MoveTask extends BaseTask {
 /** Fall under gravity until something solid or the ground; land with a squash, attach to what was landed on. */
 export class FallTask extends BaseTask {
   private vy = 0;
+  private vx = 0;
+  private vz = 0;
   private landing = -1;
   private e!: Entity;
   constructor(
     private readonly id: string,
     private readonly engine: Engine,
     delay = 0,
+    /** A piece popping off this thing: it hops clear of it, toward the player, instead of landing back on it. */
+    private readonly popFrom?: string,
   ) {
     super(delay);
     this.entity = id;
@@ -295,6 +311,26 @@ export class FallTask extends BaseTask {
         e.pos[2] = pp[2] + toPlayer[2] * dist;
       }
     }
+    const from = this.popFrom ? w.get(this.popFrom) : undefined;
+    if (from) {
+      // a small hop up and out, enough to clear the owner's footprint by the time it reaches the ground
+      const fp = w.worldPos(from);
+      // small pieces drop toward the player; big ones (a roof) slide off to one side rather than onto them
+      let out = dir2(fp, [w.player.pos[0], 0, w.player.pos[2]]);
+      if (footprintRadius(e) > 0.6) {
+        const side = [...e.id].reduce((h, c) => h + c.charCodeAt(0), 0) % 2 ? 1 : -1;
+        const a = side * 1.25;
+        out = [out[0] * Math.cos(a) + out[2] * Math.sin(a), 0, -out[0] * Math.sin(a) + out[2] * Math.cos(a)];
+      }
+      const off = Math.hypot(e.pos[0] - fp[0], e.pos[2] - fp[2]);
+      const need = Math.max(0, footprintRadius(from) + footprintRadius(e) + 0.15 - off);
+      this.vy = 1.5;
+      const drop = Math.max(0, e.pos[1] - fp[1]);
+      const t = (this.vy + Math.sqrt(this.vy * this.vy + 2 * GRAVITY * drop)) / GRAVITY;
+      const speed = need / Math.max(0.2, t);
+      this.vx = out[0] * speed;
+      this.vz = out[2] * speed;
+    }
     return true;
   }
   update(dt: number): boolean {
@@ -312,12 +348,15 @@ export class FallTask extends BaseTask {
       return false;
     }
     this.vy -= GRAVITY * dt;
+    e.pos[0] += this.vx * dt;
     e.pos[1] += this.vy * dt;
+    e.pos[2] += this.vz * dt;
     const exclude = new Set([e.id, ...this.engine.descendants(e.id)]);
+    if (this.popFrom) exclude.add(this.popFrom);
     const support = supportAt(w, e.pos[0], e.pos[2], exclude);
     if (e.pos[1] <= support.y) {
       e.pos[1] = support.y;
-      this.vy = 0;
+      this.vy = this.vx = this.vz = 0;
       this.landing = 0;
       if (support.id) {
         const parent = w.get(support.id)!;
@@ -403,7 +442,7 @@ function setTasks(action: ResolvedSet, engine: Engine): Task[] {
   const dur = action.dur ?? 0.5;
   const delay = action.delay ?? 0;
   const w = engine.world;
-  if (action.state || action.face || action.res) {
+  if (action.state || action.face || action.res || action.expression) {
     tasks.push(
       new Tween(
         action.id,
@@ -432,6 +471,12 @@ function setTasks(action: ResolvedSet, engine: Engine): Task[] {
           const e = w.get(action.id);
           if (!e) return false;
           if (action.face) e.facing = action.face;
+          if (action.expression) {
+            const prev = e.state.expression;
+            if (action.expression === 'neutral') delete e.state.expression;
+            else e.state.expression = action.expression;
+            if (prev !== e.state.expression) engine.emit({ type: 'stateChange', id: e.id, key: 'expression', value: action.expression });
+          }
           if (action.state) {
             for (const [key, value] of Object.entries(action.state)) {
               const prev = e.state[key];
@@ -501,11 +546,33 @@ function setTasks(action: ResolvedSet, engine: Engine): Task[] {
 function animTask(action: AnimAction, engine: Engine): Task {
   const w = engine.world;
   const times = Math.max(1, Math.round(action.times ?? 1));
-  const cycle: Record<AnimAction['name'], number> = { hop: 0.5, wobble: 0.8, shake: 0.5, spin: 0.8, bounce: 0.5, nod: 0.8, fall_over: 0.6, pulse: 0.5 };
+  const name = action.name;
+  if (isGesture(name)) {
+    // a gesture: the engine only keeps time; puppets move their own pieces, plain drawings their whole card
+    const dur = GESTURE_SECONDS[name] * times;
+    return new Tween(
+      action.id,
+      'gesture',
+      dur,
+      (k) => {
+        if (w.has(action.id)) w.trans(action.id).gesture = { name, t: k * dur, dur };
+      },
+      () => {
+        if (!w.has(action.id)) return false;
+        engine.emit({ type: 'anim', id: action.id, name, times });
+        return true;
+      },
+      () => {
+        if (w.has(action.id)) delete w.trans(action.id).gesture;
+      },
+      action.delay ?? 0,
+    );
+  }
+  const cycle: Record<string, number> = { hop: 0.5, wobble: 0.8, shake: 0.5, spin: 0.8, bounce: 0.5, fall_over: 0.6, pulse: 0.5 };
   const dur = cycle[action.name] * times;
   let baseTilt = 0;
   let baseScale = 1;
-  const usesTilt = action.name === 'wobble' || action.name === 'spin' || action.name === 'nod' || action.name === 'fall_over';
+  const usesTilt = action.name === 'wobble' || action.name === 'spin' || action.name === 'fall_over';
   const usesScale = action.name === 'pulse';
   return new Tween(
     action.id,
@@ -534,9 +601,6 @@ function animTask(action: AnimAction, engine: Engine): Task {
           tr.sq = 1 - Math.sin(c * Math.PI) * 0.25;
           tr.ofs[1] = Math.sin(c * Math.PI) * 0.05;
           break;
-        case 'nod':
-          e.tilt = baseTilt + Math.sin(c * Math.PI * 2) * 8;
-          break;
         case 'fall_over':
           e.tilt = lerp(baseTilt, 85, easeIn(k));
           break;
@@ -550,6 +614,7 @@ function animTask(action: AnimAction, engine: Engine): Task {
       if (!e) return false;
       baseTilt = e.tilt;
       baseScale = e.scale;
+      engine.emit({ type: 'anim', id: action.id, name: action.name, times });
       return true;
     },
     () => {
@@ -559,7 +624,7 @@ function animTask(action: AnimAction, engine: Engine): Task {
       tr.ofs[0] = 0;
       tr.ofs[1] = 0;
       tr.sq = 1;
-      if (action.name === 'spin' || action.name === 'wobble' || action.name === 'nod') e.tilt = baseTilt;
+      if (action.name === 'spin' || action.name === 'wobble') e.tilt = baseTilt;
       if (action.name === 'pulse') e.scale = baseScale;
     },
     action.delay ?? 0,
@@ -619,6 +684,46 @@ function removeTasks(action: RemoveAction, engine: Engine): Task[] {
       delay,
     );
   });
+}
+
+/** A piece comes off its owner, becomes its own thing at the same spot, and falls to the ground. */
+function detachTasks(action: ResolvedDetach, engine: Engine): Task[] {
+  return [
+    new Tween(
+      action.id,
+      undefined,
+      0,
+      () => undefined,
+      () => engine.detachPiece(action.id, action.part, action.newId) !== null,
+      undefined,
+      action.delay ?? 0,
+    ),
+    new FallTask(action.newId, engine, (action.delay ?? 0) + 0.01, action.id),
+  ];
+}
+
+function reattachTask(action: ReattachAction, engine: Engine): Task {
+  return new Tween(
+    action.id,
+    undefined,
+    0,
+    () => undefined,
+    () => engine.reattachPiece(action.id, action.part),
+    undefined,
+    action.delay ?? 0,
+  );
+}
+
+function operateTask(action: OperateAction, engine: Engine): Task {
+  return new Tween(
+    action.id,
+    undefined,
+    0,
+    () => undefined,
+    () => engine.operate(action.id, action.part, action.to),
+    undefined,
+    action.delay ?? 0,
+  );
 }
 
 function sayTask(action: SayAction, engine: Engine): Task {
@@ -699,6 +804,12 @@ export function makeTasks(action: ResolvedAction, _script: Script, engine: Engin
       ];
     case 'drop':
       return [new FallTask(action.id, engine, action.delay ?? 0)];
+    case 'detach':
+      return detachTasks(action, engine);
+    case 'reattach':
+      return [reattachTask(action, engine)];
+    case 'operate':
+      return [operateTask(action, engine)];
     case 'remove':
       return removeTasks(action, engine);
     case 'say':
@@ -707,6 +818,22 @@ export function makeTasks(action: ResolvedAction, _script: Script, engine: Engin
       return [effectTask(action, engine)];
     case 'wait':
       return [new WaitTask(action.dur)];
+    case 'sky':
+      return [
+        new Tween(
+          undefined,
+          undefined,
+          0,
+          () => undefined,
+          () => {
+            engine.world.sky = action.time;
+            engine.emit({ type: 'sky', time: action.time });
+            return true;
+          },
+          undefined,
+          action.delay ?? 0,
+        ),
+      ];
     default:
       return [];
   }

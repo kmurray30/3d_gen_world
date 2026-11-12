@@ -6,6 +6,7 @@
  */
 import * as THREE from 'three';
 import { CRAYON_METRES, drawCrayonGrain } from './crayon';
+import { tinted } from './tint';
 
 export interface TreeColors {
   leaf: string;
@@ -161,7 +162,7 @@ function trunkTexture(color: string): THREE.Texture {
 }
 
 function piece(tex: THREE.Texture, entityId: string): THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> {
-  const m = new THREE.Mesh(PLANE, new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide }));
+  const m = new THREE.Mesh(PLANE, tinted(new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide })));
   m.userData.entityId = entityId;
   return m;
 }

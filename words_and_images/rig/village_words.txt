@@ -1,0 +1,27 @@
+# Drawings villages use (26, from 60 seeds): one per line, as auto_rig.py --words-file takes them
+boat
+bush
+candy_cane
+cat
+cauldron
+cow
+crate
+daisy
+dog
+duck
+farmer
+flower
+girl
+lollipop
+man
+pumpkin
+rose
+sailor
+sandbag
+scarecrow
+seagull
+sheep
+soldier
+sunflower
+tree
+witch

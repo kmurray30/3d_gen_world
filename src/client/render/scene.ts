@@ -2,14 +2,20 @@ import * as THREE from 'three';
 import type { Entity, PlayerState, SpriteRef, Vec3 } from '../../shared/types';
 import { worldPos } from '../../shared/engine/transform';
 import type { WorldModel } from '../../shared/engine/world';
-import { SpriteView, origamiKind } from './sprites';
+import { SpriteView, origamiKind, type GroundView, type LifeInput } from './sprites';
+import { RigStore, paintedAt, type PuppetAsset } from './rig-cut';
+import { renderHeight } from '../../shared/engine/sizing';
 import { applyCrayon, crayonTexture, CRAYON_METRES } from './crayon';
-import { faceViewer, flipFor, lerpAngle, visibleYaw, yawAlong, yawFacing } from '../../shared/engine/facing';
+import { flipFor } from '../../shared/engine/facing';
 import { StructureView } from './structures';
 import { MaterialTiles } from './materials';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
 import { ParticleSystem, shapeOfEntity } from './effects';
 import { BubbleLayer } from './labels';
+import { TerrainView } from './terrain';
+import { SkyView, haloTexture } from './sky';
+import { tinted } from './tint';
+import type { TerrainField } from '../../shared/terrain/field';
 import type { CameraPose } from '../app/camera';
 import { FigureView } from './figure/view';
 import { figureFor } from '../../shared/figure/items';
@@ -31,6 +37,8 @@ export class SceneView {
   readonly scene = new THREE.Scene();
   readonly camera: THREE.PerspectiveCamera;
   readonly textures: TextureStore;
+  /** Which drawings come apart into paper pieces, and their cut-up atlases. */
+  readonly rigs = new RigStore();
   readonly tiles = new MaterialTiles();
   readonly views = new Map<string, SpriteView>();
   readonly structures = new Map<string, StructureView>();
@@ -49,7 +57,14 @@ export class SceneView {
   private avatar: SpriteView | null = null;
   private avatarEntity: Entity | null = null;
   private avatarPhase = 0;
+  /** The avatar's paper turn: 1 facing left as drawn, -1 mirrored to face right, in between mid-turn. */
+  private avatarTurn = 1;
   private lastCam: CameraPose = { pos: [0, 1.6, 0], yaw: 0, pitch: 0 };
+  readonly sky: SkyView;
+  private readonly haloTex = haloTexture();
+  private readonly flatGround: THREE.Mesh;
+  private terrain: TerrainView | null = null;
+  private groundView: GroundView | undefined;
 
   constructor(
     public readonly canvas: HTMLCanvasElement,
@@ -72,7 +87,7 @@ export class SceneView {
     const budget = this.coarse ? 40 * 1024 * 1024 : 96 * 1024 * 1024;
     this.textures = new TextureStore(budget, `/sprites/${spriteVersion}/${size}`);
 
-    const groundMat = new THREE.MeshBasicMaterial({ map: makeGroundTexture() });
+    const groundMat = tinted(new THREE.MeshBasicMaterial({ map: makeGroundTexture() }));
     applyCrayon(groundMat, () => 1, 0.45);
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400).rotateX(-Math.PI / 2), groundMat);
     // the ground plane's UVs span 0..1; the crayon shader expects metres, so hand it metre UVs
@@ -83,7 +98,10 @@ export class SceneView {
     void CRAYON_METRES;
     ground.name = 'ground';
     this.scene.add(ground);
-    // only the 3D figures are lit (everything else is unlit paper): a bright sky fill and a warm sun
+    this.flatGround = ground;
+    this.sky = new SkyView(this.scene, canvas.parentElement ?? document.body);
+    // only the 3D figures are lit (everything else is unlit paper): a bright sky fill and a warm sun; the time of
+    // day reaches them through the shared tint like everything else
     this.scene.add(new THREE.HemisphereLight('#ffffff', '#b9c98f', 1.9));
     const sun = new THREE.DirectionalLight('#fff1d6', 2.3);
     sun.position.set(-6, 10, 7);
@@ -105,6 +123,23 @@ export class SceneView {
     this.camera.updateProjectionMatrix();
     const pr = this.renderer.getPixelRatio();
     for (const s of this.structures.values()) s.setResolution(w * pr, h * pr);
+  }
+
+  /** Show this world's terrain (or the flat meadow when null). Cheap to call every frame: rebuilds only on change. */
+  setTerrain(field: TerrainField | null): void {
+    if ((this.terrain?.field ?? null) === field) return;
+    if (this.terrain) {
+      this.scene.remove(this.terrain.group);
+      this.terrain.dispose();
+      this.terrain = null;
+    }
+    this.flatGround.visible = !field;
+    this.groundView = undefined;
+    if (field) {
+      this.terrain = new TerrainView(field, this.coarse);
+      this.scene.add(this.terrain.group);
+      this.groundView = { height: (x, z) => field.height(x, z), normal: (x, z) => field.normal(x, z) };
+    }
   }
 
   /** The player's own cutout, shown in third person and free camera. */
@@ -134,7 +169,7 @@ export class SceneView {
       huge: false,
       createdAt: 0,
     };
-    this.avatar = new SpriteView('player', this.shadowTex);
+    this.avatar = new SpriteView('player', this.shadowTex, this.haloTex);
     this.scene.add(this.avatar.root);
   }
 
@@ -160,12 +195,12 @@ export class SceneView {
         }
         let view = this.structures.get(e.id);
         if (!view) {
-          view = new StructureView(e.id, { tiles: this.tiles, textures: this.textures });
+          view = new StructureView(e.id, { tiles: this.tiles, textures: this.textures, halo: this.haloTex });
           this.structures.set(e.id, view);
           this.scene.add(view.root);
           view.setResolution(w * pr, h * pr);
         }
-        view.update(e, pos, dt);
+        view.update(e, pos, dt, model.transient.get(e.id)?.gesture);
         continue;
       }
       const structView = this.structures.get(e.id);
@@ -203,7 +238,7 @@ export class SceneView {
             lookAt = [tp[0], tp[2]];
           }
         }
-        fv.update(e, pos, cam.yaw, cam.pitch, this.resolveFlip(e, pos, byId, camState), model.transient.get(e.id)?.sq ?? 1, dt, lookAt);
+        fv.update(e, pos, cam.yaw, cam.pitch, this.resolveFlip(e, pos, byId, camState), model.transient.get(e.id)?.sq ?? 1, dt, lookAt, this.groundView);
         continue;
       }
       const oldFigure = this.figures.get(e.id);
@@ -214,7 +249,7 @@ export class SceneView {
       }
       let view = this.views.get(e.id);
       if (!view) {
-        view = new SpriteView(e.id, this.shadowTex);
+        view = new SpriteView(e.id, this.shadowTex, this.haloTex, this.rigs);
         this.views.set(e.id, view);
         this.scene.add(view.root);
       }
@@ -222,9 +257,10 @@ export class SceneView {
       const living = e.kind === 'animal' || e.kind === 'human' || e.kind === 'humanoid';
       const phase = hashPhase(e.id);
       if (living) sq *= 1 + 0.015 * Math.sin(this.clock * 2.2 + phase);
-      if (living && pos[1] > 0.3 && !e.parent) pos[1] += 0.08 * Math.sin(this.clock * 1.8 + phase);
-      view.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, byId, camState), sq, e.parent ? null : origamiKind(e.word));
+      if (living && !e.parent && pos[1] - model.ground(pos[0], pos[2]) > 0.3) pos[1] += 0.08 * Math.sin(this.clock * 1.8 + phase);
+      view.update(e, pos, cam.yaw, this.textures, this.resolveFlip(e, pos, byId, camState), sq, e.parent ? null : origamiKind(e.word), this.groundView, this.lifeOf(e, pos, model, dt, cam));
     }
+    this.terrain?.update(dt);
     this.effects.syncPersistent(model);
     this.effects.update(dt, (id) => shapeOfEntity(model, id), this.camera);
     this.bubbles.update(this.camera, model, w, h);
@@ -252,8 +288,9 @@ export class SceneView {
   }
 
   /**
-   * Draw the avatar at the player's feet (or hide it in first person). `moving` adds the walk bob; `faceDir` is the
-   * ground direction the player last walked in.
+   * Draw the avatar at the player's feet (or hide it in first person). `moving` adds the walk bob; `faceRight` is
+   * decided on screen by the caller (which way the player last walked across the view), so turning the camera never
+   * flips the character.
    */
   updateAvatar(player: PlayerState, visible: boolean, moving: boolean, faceDir: [number, number] | null, cam: CameraPose, dt: number): void {
     if (!this.avatar || !this.avatarEntity) return;
@@ -265,12 +302,20 @@ export class SceneView {
       return;
     }
     const pos: Vec3 = [player.pos[0], player.pos[1], player.pos[2]];
-    if (faceDir) {
+    // Like Paper Mario, the player's paper always lies flat to the camera. Walking across the screen flips it to
+    // face that way with a quick paper turn; walking toward or away from the camera, standing still or turning
+    // the camera keeps the way it last faced.
+    e.yaw = undefined;
+    if (moving && faceDir) {
       e.faceDir = faceDir;
-      const want = faceViewer(visibleYaw(yawAlong(faceDir[0], faceDir[1]), pos, cam.pos, 0.6), pos, cam.pos);
-      e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
-      e.flip = flipFor(e.yaw, faceDir[0], faceDir[1]);
-    } else if (e.yaw === undefined) e.yaw = yawFacing(pos, cam.pos);
+      const across = (faceDir[0] * Math.cos(cam.yaw) - faceDir[1] * Math.sin(cam.yaw)) / Math.max(1e-6, Math.hypot(faceDir[0], faceDir[1]));
+      if (Math.abs(across) > 0.3) e.flip = across > 0;
+    }
+    const want = e.flip ? -1 : 1;
+    const step = dt * 9;
+    this.avatarTurn = Math.abs(want - this.avatarTurn) <= step ? want : this.avatarTurn + Math.sign(want - this.avatarTurn) * step;
+    // never quite edge-on, so the paper does not vanish mid-turn
+    this.avatar.turn = Math.abs(this.avatarTurn) < 0.08 ? Math.sign(want) * 0.08 : this.avatarTurn;
     let sq = 1;
     if (moving) {
       this.avatarPhase += dt;
@@ -287,16 +332,19 @@ export class SceneView {
       }
       if (!this.avatarFigure) {
         this.avatarFigure = new FigureView('player', fig, this.look as 'paper' | 'toon', this.shadowTex);
+        this.avatarFigure.followYaw = false;
         this.scene.add(this.avatarFigure.root);
       }
       this.avatar.root.visible = false;
       this.avatarFigure.root.visible = true;
-      // the figure animates its own walk, so it gets the feet position without the sprite bob
-      this.avatarFigure.update(e, [player.pos[0], player.pos[1], player.pos[2]], cam.yaw, cam.pitch, e.flip, 1, dt, null);
+      // paper lies flat to the camera like the sprite avatar; 3D faces where it walks. The figure animates its own
+      // walk, so it gets the feet position without the sprite bob.
+      const shown: Entity = { ...e, yaw: (cam.yaw * 180) / Math.PI };
+      this.avatarFigure.update(shown, [player.pos[0], player.pos[1], player.pos[2]], cam.yaw, cam.pitch, e.flip, 1, dt, null, this.groundView);
       return;
     }
     if (this.avatarFigure) this.avatarFigure.root.visible = false;
-    this.avatar.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, new Map(), camState), sq);
+    this.avatar.update(e, pos, cam.yaw, this.textures, this.resolveFlip(e, pos, new Map(), camState), sq, null, this.groundView, { dt, time: this.clock, talking: false, look: null });
   }
 
   /** A poke or a command made this thing react: code-drawn figures play a reaction clip. */
@@ -308,6 +356,7 @@ export class SceneView {
   talk(id: string, seconds: number): void {
     this.figures.get(id)?.talk(seconds);
   }
+
 
   /** Fade structures between the eye and the avatar (feet, chest, head); nothing fades in first person. */
   updateFades(cam: CameraPose, player: PlayerState, thirdPerson: boolean): void {
@@ -334,17 +383,23 @@ export class SceneView {
     return flipFor(yaw, tx - pos[0], tz - pos[2]);
   }
 
-  render(cam: CameraPose): void {
+  render(cam: CameraPose, dt = 0): void {
     const k = this.effects.shake;
     const sx = k ? (Math.random() - 0.5) * k * 0.14 : 0;
     const sy = k ? (Math.random() - 0.5) * k * 0.1 : 0;
     this.camera.position.set(cam.pos[0] + sx, cam.pos[1] + sy, cam.pos[2]);
+    this.sky.update(dt, this.camera.position);
     this.camera.rotation.set(cam.pitch, cam.yaw, k ? (Math.random() - 0.5) * k * 0.02 : 0, 'YXZ');
     this.renderer.render(this.scene, this.camera);
   }
 
   /** Entity under a screen point (normalised device coords), nearest first. */
   pick(ndcX: number, ndcY: number): string | null {
+    return this.pickPart(ndcX, ndcY)?.id ?? null;
+  }
+
+  /** What is under a screen point: the entity and, on a paper puppet, which of its pieces. */
+  pickPart(ndcX: number, ndcY: number): { id: string; piece?: string } | null {
     this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
     const bodies: THREE.Object3D[] = [];
     for (const v of this.views.values()) if (v.root.visible) bodies.push(...v.pickables);
@@ -354,9 +409,38 @@ export class SceneView {
     for (const hit of hits) {
       if (hit.distance > 40) break;
       const id = hit.object.userData.entityId as string | undefined;
-      if (id) return id;
+      if (!id) continue;
+      const piece = hit.object.userData.piece as string | undefined;
+      if (piece && hit.uv) {
+        // only where the piece is painted: its card is a rectangle, the piece inside it is not
+        const mat = (hit.object as THREE.Mesh).material as THREE.MeshBasicMaterial;
+        const asset = (hit.object as THREE.Mesh).userData.asset as PuppetAsset | undefined;
+        if (asset && mat.map === asset.texture && !paintedAt(asset, hit.uv.x, hit.uv.y)) continue;
+      }
+      return { id, ...(piece ? { piece } : {}) };
     }
     return null;
+  }
+
+  /** A sprite's life this frame: the clock, whether it is speaking, its gesture, and what it would look at. */
+  private lifeOf(e: Entity, pos: Vec3, model: WorldModel, dt: number, cam: CameraPose): LifeInput {
+    const tr = model.transient.get(e.id);
+    let look: [number, number] | null = null;
+    if (e.kind === 'human' || e.kind === 'humanoid' || e.kind === 'animal') {
+      // the player catches the eye when near: across the paper's own right axis, and up or down
+      const p = model.player.pos;
+      const h = renderHeight(e);
+      const dx = p[0] - pos[0];
+      const dy = p[1] + 1.4 - (pos[1] + h * 0.85);
+      const dz = p[2] - pos[2];
+      const d = Math.hypot(dx, dz);
+      if (d < 9 && d > 0.2) {
+        const yaw = e.yaw === undefined ? cam.yaw : (e.yaw * Math.PI) / 180;
+        const across = (dx * Math.cos(yaw) - dz * Math.sin(yaw)) / d;
+        look = [Math.max(-1, Math.min(1, across * 1.4)), Math.max(-1, Math.min(1, (dy / Math.max(1, d)) * 1.5))];
+      }
+    }
+    return { dt, time: this.clock, talking: this.bubbles.talking(e.id), look, gesture: tr?.gesture };
   }
 }
 

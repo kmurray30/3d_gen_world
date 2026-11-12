@@ -37,15 +37,23 @@ export function footprints(world: WorldModel, exclude?: Set<string>): Footprint[
   const out: Footprint[] = [];
   for (const e of world.entities.values()) {
     if (exclude?.has(e.id) || e.parent || e.hidden) continue;
-    if (e.pos[1] > 0.05) continue;
+    if (!world.onGround(e)) continue;
     out.push({ id: e.id, x: e.pos[0], z: e.pos[2], r: footprintRadius(e) });
   }
   if (!exclude?.has('player')) out.push({ id: 'player', x: world.player.pos[0], z: world.player.pos[2], r: PLAYER_RADIUS });
   return out;
 }
 
-export function isFree(fps: Footprint[], x: number, z: number, r: number): boolean {
+/** Where things may stand: the ground's height and whether a circle there gets its feet wet. */
+export interface GroundInfo {
+  ground(x: number, z: number): number;
+  wet(x: number, z: number, r: number): boolean;
+}
+const FLAT: GroundInfo = { ground: () => 0, wet: () => false };
+
+export function isFree(fps: Footprint[], x: number, z: number, r: number, land: GroundInfo = FLAT): boolean {
   if (Math.hypot(x, z) > WORLD_RADIUS - 1) return false;
+  if (land.wet(x, z, r * 0.8)) return false;
   for (const f of fps) {
     const dx = f.x - x;
     const dz = f.z - z;
@@ -58,8 +66,8 @@ export function isFree(fps: Footprint[], x: number, z: number, r: number): boole
  * Nearest free spot to (x, z): the point itself, then rings of candidates 0.5m apart out to `maxRing`.
  * Within a ring the free candidate closest to the player's view direction wins. Falls back to the original point.
  */
-export function findFreeSpot(fps: Footprint[], x: number, z: number, r: number, rng: () => number, player?: PlayerState, maxRing = 12): Vec3 {
-  if (isFree(fps, x, z, r)) return [x, z === 0 ? 0 : 0, z] as Vec3;
+export function findFreeSpot(fps: Footprint[], x: number, z: number, r: number, rng: () => number, player?: PlayerState, maxRing = 12, land: GroundInfo = FLAT): Vec3 {
+  if (isFree(fps, x, z, r, land)) return [x, land.ground(x, z), z];
   const axes = player ? playerAxes(player) : null;
   const start = rng() * Math.PI * 2;
   for (let ring = 0.5; ring <= maxRing; ring += 0.5) {
@@ -70,7 +78,7 @@ export function findFreeSpot(fps: Footprint[], x: number, z: number, r: number, 
       const a = start + (i / n) * Math.PI * 2;
       const cx = x + Math.cos(a) * ring;
       const cz = z + Math.sin(a) * ring;
-      if (!isFree(fps, cx, cz, r)) continue;
+      if (!isFree(fps, cx, cz, r, land)) continue;
       let score = ring;
       if (axes && player) {
         const dx = cx - player.pos[0];
@@ -80,12 +88,12 @@ export function findFreeSpot(fps: Footprint[], x: number, z: number, r: number, 
       }
       if (score < bestScore) {
         bestScore = score;
-        best = [cx, 0, cz];
+        best = [cx, land.ground(cx, cz), cz];
       }
     }
     if (best) return best;
   }
-  return [x, 0, z];
+  return [x, land.ground(x, z), z];
 }
 
 function clampToWorld(p: Vec3): Vec3 {
@@ -133,7 +141,7 @@ export function resolvePlace(place: Place, world: WorldModel, self: SelfInfo, rn
       pos = add3(P, scale3(f, d));
       break;
     case 'above': {
-      const topY = target ? world.worldPos(target)[1] + renderHeight(target) : 0;
+      const topY = target ? world.worldPos(target)[1] + renderHeight(target) : world.ground(anchorPos[0], anchorPos[2]);
       return { pos: [anchorPos[0], topY + ABOVE_M[place.height], anchorPos[2]] };
     }
     case 'at':
@@ -173,11 +181,12 @@ export function resolvePlace(place: Place, world: WorldModel, self: SelfInfo, rn
       break;
   }
 
-  pos[1] = HEIGHT_M[place.height];
   pos = clampToWorld(pos);
-  if (pos[1] === 0 && !parent) {
+  if (place.height === 'ground' && !parent) {
     const exclude = new Set<string>(self.id ? [self.id] : []);
-    pos = findFreeSpot(footprints(world, exclude), pos[0], pos[2], self.radius, rng, player);
+    pos = findFreeSpot(footprints(world, exclude), pos[0], pos[2], self.radius, rng, player, 12, world);
+  } else {
+    pos[1] = world.ground(pos[0], pos[2]) + HEIGHT_M[place.height];
   }
   return { pos, parent, anchor };
 }
@@ -191,7 +200,7 @@ export function stopAtEdge(from: Vec3, targetPos: Vec3, rTarget: number, rSelf: 
 
 /** Highest solid thing under (x, z): its top height and id, or the ground (y 0, no id). */
 export function supportAt(world: WorldModel, x: number, z: number, exclude: Set<string>, maxY = Infinity): { y: number; id?: string } {
-  let best: { y: number; id?: string } = { y: 0 };
+  let best: { y: number; id?: string } = { y: world.ground(x, z) };
   for (const e of world.entities.values()) {
     if (exclude.has(e.id) || e.hidden || !e.solid || e.parent) continue;
     const p = e.pos;
@@ -215,11 +224,26 @@ export function supportHeightAt(world: WorldModel, x: number, z: number, exclude
 
 /** After an entity arrives somewhere, restore the no-overlap invariant for ground-level entities. */
 export function resolveOverlap(world: WorldModel, e: Entity, rng: () => number): void {
-  if (e.parent || e.hidden || e.pos[1] > 0.05) return;
+  if (e.parent || e.hidden || !world.onGround(e)) return;
   const r = footprintRadius(e);
   const fps = footprints(world, new Set([e.id]));
   if (isFree(fps, e.pos[0], e.pos[2], r)) return;
   const spot = findFreeSpot(fps, e.pos[0], e.pos[2], r, rng, world.player, 6);
   e.pos[0] = spot[0];
+  e.pos[1] = world.ground(spot[0], spot[2]);
   e.pos[2] = spot[2];
+}
+
+/**
+ * Height a walker at (x, z) treads on: the ground, or a structure surface (bridge deck, patio, stairs) no higher
+ * than `maxY`, so walkers cross bridges instead of wading and climb the stairs they reach.
+ */
+export function walkSurfaceAt(world: WorldModel, x: number, z: number, maxY: number): number {
+  let y = world.ground(x, z);
+  for (const e of world.entities.values()) {
+    if (!e.structure || e.hidden) continue;
+    const top = structureTopAt(e.structure, e, e.pos, x, z, maxY);
+    if (top !== null && top > y) y = top;
+  }
+  return y;
 }

@@ -31,6 +31,12 @@ git add assets && git commit -m "Add gap sprites" && git push
 `overrides.json` maps tricky synonyms to the right entry by hand (plant -> potted plant until the real
 plant sprite exists, kid -> boy, bow -> bow (weapon)). Edit it whenever a word resolves to the wrong picture.
 
+## Rigs (paper puppets)
+
+`rig/` cuts drawings into pieces the game animates (arms, heads, tails, wheels, faces). A starter set of 20 is
+hand-labelled; `rig/auto_rig.py` labels the rest with a vision model running on your own machine. See
+[rig/README.md](rig/README.md).
+
 ## The original pipeline (for reference)
 
 1. `words_filtered.csv`: the vocabulary (word, type).
