@@ -18,6 +18,7 @@
  */
 import type { FigPart, Figure, Vec3 } from './types';
 import { apply, euler, mul, solve, transpose, type M3 } from './math';
+import { hexNum } from './colors';
 
 export interface Sculpt {
   /** Vertex positions in figure space (rest pose). */
@@ -65,7 +66,7 @@ export function smin(a: number, b: number, k: number): number {
 }
 
 function hexToLinear(hex: string): Vec3 {
-  const n = parseInt(hex.slice(1), 16);
+  const n = hexNum(hex);
   const s = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v / 255);
   return s.map((c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))) as Vec3;
 }
@@ -152,7 +153,15 @@ export function triangleSdf(px: number, py: number, P: Array<[number, number]>):
  * them back down, and every animation bends the skin from there.
  */
 export function bindPose(fig: Figure): Record<string, Vec3> {
-  if (fig.rig === 'biped') return { armL: [0, 0, 38], armR: [0, 0, -38], legL: [0, 0, 4], legR: [0, 0, -4] };
+  if (fig.rig === 'biped') {
+    // spread hanging arms away from the body; an arm the author already raised or held out stays as it is
+    // (spreading it further would swing it into the head)
+    const spread = (name: string) => {
+      const r = fig.parts.find((p) => p.name === name)?.rot ?? [0, 0, 0];
+      return Math.max(0, 38 - Math.max(0, Math.max(Math.abs(r[0]), Math.abs(r[2])) - 6));
+    };
+    return { armL: [0, 0, spread('armL')], armR: [0, 0, -spread('armR')], legL: [0, 0, 4], legR: [0, 0, -4] };
+  }
   if (fig.rig === 'bird') return { wingL: [0, 0, 40], wingR: [0, 0, -40] };
   return {};
 }

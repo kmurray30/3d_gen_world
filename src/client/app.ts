@@ -9,6 +9,9 @@ import type { Step } from '../shared/schema';
 import { starterWorld } from '../shared/engine/presets';
 import { defaultSprite } from '../shared/engine/sizing';
 import { SceneView } from './render/scene';
+import * as THREE from 'three';
+import { setSculptDetail } from './render/figure/cel';
+import { NameTags } from './render/labels';
 import { DesktopInput } from './input/desktop';
 import { TouchInput } from './input/touch';
 import { PlayerController } from './app/player';
@@ -52,13 +55,21 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       return r.ok;
     });
   }
-  let world: World;
+  let world!: World;
   let created = false;
   let fresh = false;
+  // the Atlas: every thing, laid out as a world to explore; shared and read-only
+  const atlas = location.pathname === '/atlas';
   try {
-    // the bare address asks where to go: a demo, a fresh meadow, or the last world
+    // the bare address asks where to go: a demo, a fresh meadow, the Atlas, or the last world
     const q = new URLSearchParams(location.search);
-    if (!/^\/w\//.test(location.pathname) && !q.get('preset') && q.get('new') !== '1') {
+    if (atlas) {
+      hud.setStatus('Laying out the Atlas...');
+      const r = await fetch('/api/atlas');
+      if (!r.ok) throw new Error(`could not load the Atlas (${r.status})`);
+      world = ((await r.json()) as { world: World }).world;
+      hud.setStatus('');
+    } else if (!/^\/w\//.test(location.pathname) && !q.get('preset') && q.get('new') !== '1') {
       const last = lastWorld();
       const known = last ? listWorlds().find((w) => w.slug === last) : undefined;
       const choice = await hud.chooseStart(known ? displayName(known) : null);
@@ -69,9 +80,12 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       } else if (choice === 'meadow') {
         history.replaceState(null, '', `/w/${await createWorld()}${location.search}`);
         fresh = true;
+      } else if (choice === 'atlas') {
+        location.assign('/atlas');
+        return;
       }
     }
-    ({ world, created } = await openWorld());
+    if (!atlas) ({ world, created } = await openWorld());
     created ||= fresh;
     if (world.preset === 'village' || world.preset === 'gallery') rememberPresetWorld(world.preset, world.slug);
   } catch (e) {
@@ -84,23 +98,36 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   const engine = new Engine(world, Date.now() & 0xffff);
   sounds = new GameSounds(engine);
   const store = new WorldStore(engine, world, {
-    onSaved: () => recordVisit(slug, engine.world.size),
+    onSaved: () => (atlas ? undefined : recordVisit(slug, engine.world.size)),
     onConflict: () => hud.toast('This world changed somewhere else, so it was reloaded.', 'info', 5000),
     onError: (msg) => hud.toast(msg, 'error'),
   });
+  store.readOnly = atlas;
+  // figures breathe and blink by themselves; engine fidgets for thousands of distant things would be wasted work
+  if (atlas) engine.idle.enabled = false;
   const scene = new SceneView(canvas, config.spriteVersion, hudRoot);
+  if (atlas) {
+    // thousands of things: draw only what is near, sculpt lighter models, and fog the distance
+    scene.cullRadius = coarse ? 38 : 56;
+    scene.scene.fog = new THREE.Fog(scene.scene.fog!.color, scene.cullRadius * 0.45, scene.cullRadius * 0.98);
+    setSculptDetail(coarse ? 0.45 : 0.6);
+    scene.nameTags = new NameTags(hudRoot, coarse ? 5.5 : 7.5, coarse ? 14 : 24);
+  }
   // which drawings come apart into paper pieces (a tiny list; drawings load their rigs as they appear)
   await scene.rigs.init();
   const rigOf = (file: string) => scene.rigs.rigOf(file);
   engine.rigs = rigOf;
   const player = new PlayerController(engine.world.player);
+  player.radius = () => engine.world.radius;
   player.resolveCollisions = (pos) => {
     engine.collidePlayer(pos);
     return engine.playerGround;
   };
   scene.setAvatar(config.avatar ?? { word: 'you', sprite: defaultSprite('human'), heightM: 1.5 });
-  recordVisit(slug, engine.world.size);
-  if (created || takeFreshFlag(slug)) {
+  if (!atlas) recordVisit(slug, engine.world.size);
+  if (atlas) {
+    hud.toast('The Atlas: every thing there is, sorted into districts along the paths. Walk around, click things to make them react. L switches the look.', 'info', 9000);
+  } else if (created || takeFreshFlag(slug)) {
     hud.toast(
       world.preset === 'gallery'
         ? 'The visuals demo. Each thing stands three times: its old sprite, a paper cutout, and 3D. Click or tap them to make them react.'
@@ -129,11 +156,12 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   /* ----- view: camera modes, angles, wall fading ----- */
   const rig = new CameraRig();
   rig.ground = (x, z) => engine.world.ground(x, z);
+  rig.radius = () => engine.world.radius;
   const settings = loadViewSettings();
   rig.setAngle(settings.angle, engine.world.player);
   rig.setMode(settings.mode, engine.world.player);
   scene.fadeWalls = settings.fade;
-  scene.look = settings.look;
+  scene.look = atlas && settings.look === 'sprites' ? 'cel' : settings.look;
   const LOOK_NAMES = { sprites: 'sprites', paper: 'paper', origami: 'origami', toon: '3D', cel: 'cel' } as const;
   const refreshViewLabels = () => {
     const sound = sounds!.mixer.soundMode;

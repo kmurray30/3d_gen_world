@@ -1,5 +1,5 @@
 import type { Entity, PlayerState, TimeOfDay, Vec3, World } from '../types';
-import { MAX_ENTITIES } from '../types';
+import { MAX_ENTITIES, WORLD_RADIUS, worldRadius } from '../types';
 import { worldPos } from './transform';
 import { terrainField, type TerrainField, type TerrainSpec } from '../terrain/field';
 
@@ -31,6 +31,8 @@ export class WorldModel {
   /** The recipe and its baked heights; null = the flat meadow at y 0. */
   terrainSpec?: TerrainSpec;
   terrain: TerrainField | null = null;
+  /** How far from the centre the player and things may go. */
+  radius = WORLD_RADIUS;
 
   constructor(world: World) {
     this.slug = world.slug;
@@ -56,6 +58,7 @@ export class WorldModel {
   setTerrain(spec: TerrainSpec | undefined): void {
     this.terrainSpec = spec;
     this.terrain = terrainField(spec);
+    this.radius = worldRadius({ terrain: spec });
   }
 
   /** Height of the ground (terrain, not structures) at (x, z). */

@@ -59,3 +59,52 @@ export class BubbleLayer {
     }
   }
 }
+
+/**
+ * Name tags: small labels over the nearest things in view, so a world of thousands of things reads like a visual
+ * dictionary. Only the closest few are tagged, fading out with distance; elements are pooled.
+ */
+export class NameTags {
+  private readonly pool: HTMLDivElement[] = [];
+  private readonly v = new THREE.Vector3();
+
+  constructor(
+    private readonly root: HTMLElement,
+    private readonly radius = 7,
+    private readonly max = 24,
+  ) {}
+
+  update(camera: THREE.PerspectiveCamera, model: WorldModel, ids: Iterable<string>, width: number, height: number): void {
+    const cam = camera.position;
+    const near: Array<{ id: string; d: number }> = [];
+    for (const id of ids) {
+      const e = model.get(id);
+      if (!e || e.hidden || e.structure || e.state.display) continue;
+      const p = model.renderPos(e);
+      const d = Math.hypot(p[0] - cam.x, p[2] - cam.z);
+      if (d < this.radius) near.push({ id, d });
+    }
+    near.sort((a, b) => a.d - b.d);
+    let used = 0;
+    for (const { id, d } of near) {
+      if (used >= this.max) break;
+      const e = model.get(id)!;
+      const p = model.renderPos(e);
+      this.v.set(p[0], p[1] + renderHeight(e) + 0.08, p[2]).project(camera);
+      if (this.v.z > 1 || Math.abs(this.v.x) > 1.05 || Math.abs(this.v.y) > 1.05) continue;
+      let el = this.pool[used];
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'nametag';
+        this.root.appendChild(el);
+        this.pool.push(el);
+      }
+      if (el.textContent !== e.label) el.textContent = e.label;
+      el.style.display = '';
+      el.style.opacity = String(Math.min(1, (this.radius - d) / 2.5));
+      el.style.transform = `translate(${(((this.v.x + 1) / 2) * width).toFixed(0)}px, ${(((1 - this.v.y) / 2) * height).toFixed(0)}px) translate(-50%, -100%)`;
+      used++;
+    }
+    for (let i = used; i < this.pool.length; i++) this.pool[i].style.display = 'none';
+  }
+}

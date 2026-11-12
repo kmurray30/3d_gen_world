@@ -11,7 +11,8 @@ const SHORT = 'public, max-age=60, must-revalidate';
  *  - /manifest.json                                  -> assets/manifest.json (short cache)
  *  - /rigs/<file>.json, /rigs/index.json               -> assets/rigs (how drawings come apart; short cache)
  *  - /audio/manifest.json, /audio/<cue>/<n>.mp3        -> assets/audio (sounds and music; see words_and_images/audio)
- *  - everything else                                 -> dist/client (Vite output; hashed bundles are immutable)
+ *  - everything else                                 -> dist/client (Vite output; hashed bundles are immutable and
+ *    sent as the brotli/gzip copies the build writes next to them)
  *  - /w/<slug>                                       -> dist/client/index.html (SPA)
  * Roots are relative to the process working directory (repo root locally, /app in the container).
  */
@@ -60,11 +61,14 @@ export function mountStatic(app: Hono): void {
     '/*',
     serveStatic({
       root: './dist/client',
+      // sends the .br/.gz written at build time (scripts/precompress.mjs) to browsers that accept them
+      precompressed: true,
       onFound: (path, c) => {
         // Vite emits content-hashed files under /static; index.html must stay fresh.
         c.header('Cache-Control', path.includes('/static/') ? IMMUTABLE : 'no-cache');
       },
     }),
   );
-  app.get('/w/*', serveStatic({ path: './dist/client/index.html' }));
+  app.get('/w/*', serveStatic({ path: './dist/client/index.html', precompressed: true }));
+  app.get('/atlas', serveStatic({ path: './dist/client/index.html', precompressed: true }));
 }

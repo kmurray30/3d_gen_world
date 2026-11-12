@@ -4,7 +4,6 @@
  * alone for a while so "the dog sits" does not get wandered away from.
  */
 import type { Entity, Vec3 } from '../types';
-import { WORLD_RADIUS } from '../types';
 import type { Engine } from './index';
 import { footprints, findFreeSpot } from './place';
 import { footprintRadius } from './sizing';
@@ -76,7 +75,7 @@ export class Idle {
     const r = 0.8 + engine.rng() * (WANDER_RADIUS_M - 0.8);
     let tx = home[0] + Math.cos(a) * r;
     let tz = home[2] + Math.sin(a) * r;
-    const lim = WORLD_RADIUS - 3;
+    const lim = engine.world.radius - 3;
     const dist = Math.hypot(tx, tz);
     if (dist > lim) {
       tx *= lim / dist;

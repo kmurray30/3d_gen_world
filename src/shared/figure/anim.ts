@@ -520,7 +520,7 @@ export function reactionsFor(fig: Figure): string[] {
       if (fig.parts.some((p) => p.name === 'door')) return ['door'];
       if (fig.parts.some((p) => p.name === 'crank')) return ['crank'];
       if (fig.parts.some((p) => p.name === 'lid')) return ['lid', 'jiggle'];
-      if (fig.parts.some((p) => p.name === 'wheel')) return ['roll', 'jiggle'];
+      if (fig.parts.some((p) => p.name === 'wheel' || /^wheel[A-Z0-9_]/.test(p.name))) return ['roll', 'jiggle'];
       if (fig.heightM < 1.2) return ['spin', 'jiggle', 'jiggle'];
       return ['jiggle'];
   }
@@ -539,7 +539,28 @@ export function samplePose(fig: Figure, name: string, t: number): Pose {
   // loops run on continuous time (wrapping would jump any sine that is not a whole number of cycles per loop)
   const time = clip.loop ? t : Math.min(t, clip.dur);
   const p = clip.fn(time, { H: fig.heightM, key: fig.key });
-  return { j: p.j ?? {}, t: p.t, sc: p.sc, root: p.root ?? [0, 0, 0], rootRot: p.rootRot ?? [0, 0, 0], expr: p.expr };
+  const j = p.j ?? {};
+  // every wheel turns, not just the one named "wheel" (wheelL, wheel2, wheel_fr...); same for rotors and fans
+  for (const [base, names] of spinners(fig)) {
+    const r = j[base];
+    if (r) for (const n of names) j[n] ??= r;
+  }
+  return { j, t: p.t, sc: p.sc, root: p.root ?? [0, 0, 0], rootRot: p.rootRot ?? [0, 0, 0], expr: p.expr };
+}
+
+const SPINNER = /^(wheel|rotor|fan)([A-Z0-9_].*)$/;
+const spinnerCache = new WeakMap<Figure, Map<string, string[]>>();
+function spinners(fig: Figure): Map<string, string[]> {
+  let m = spinnerCache.get(fig);
+  if (!m) {
+    m = new Map();
+    for (const p of fig.parts) {
+      const hit = SPINNER.exec(p.name);
+      if (hit) m.set(hit[1], [...(m.get(hit[1]) ?? []), p.name]);
+    }
+    spinnerCache.set(fig, m);
+  }
+  return m;
 }
 
 function blend(a: Pose, b: Pose, w: number): Pose {

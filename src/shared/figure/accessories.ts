@@ -158,7 +158,8 @@ export function hat(kind: HatKind, color?: string): Extra {
         add('wedge', [W * 0.18, Hh * 0.35, D * 1.0], [0, top + Hh * 0.12, -D * 0.05], { color: col(color ?? 'magenta') });
         break;
       case 'afro':
-        add('ball', [W * 1.6, Hh * 1.35, D * 1.5], [0, d.headY + Hh * 0.18, -D * 0.1], { color: col(color ?? 'darkbrown'), layer: -2 });
+        // a big round mass behind and above the face (not in front of it)
+        add('ball', [W * 1.6, Hh * 1.3, D * 1.35], [0, d.headY + Hh * 0.2, -D * 0.28], { color: col(color ?? 'darkbrown'), layer: -2 });
         break;
     }
   };
@@ -447,11 +448,23 @@ export function held(kind: HeldKind, color?: string, side: 'L' | 'R' = 'R'): Ext
         carried(H * 0.16, a * 0.3, col(kind === 'racket' ? 'white' : 'black'));
         add(kind === 'pan' ? 'cyl' : kind === 'magnifier' ? 'torus' : kind === 'racket' ? 'torus' : 'box', kind === 'pan' ? [a * 3, a * 0.5, a * 3] : kind === 'racket' ? [a * 2.6, a * 3.4, a * 0.25] : kind === 'magnifier' ? [a * 1.8, a * 1.8, a * 0.3] : [a * 1.6, a * 2, a * 0.15], [0, -H * 0.2, a * 1.4], { color: c(kind === 'pan' ? 'iron' : kind === 'racket' ? 'red' : kind === 'magnifier' ? 'gold' : 'silver'), tube: 0.12, srot: [25, 0, 0] });
         break;
-      case 'guitar':
-      case 'violin':
-        add('ball', [H * 0.2, H * 0.25, a * 1.2], [a * 0.5, a * 3, a * 2.2], { color: c(kind === 'violin' ? 'darkwood' : 'wood'), srot: [0, 0, 40] });
-        add('box', [a * 0.6, H * 0.3, a * 0.4], [-a * 2.5, a * 6.5, a * 2.2], { color: col('darkwood'), srot: [0, 0, 40] });
+      case 'guitar': {
+        // slung across the front of the body (on the torso, not the hand, so it stays put whatever the arms do)
+        const T = d.torsoH, z = d.td / 2 + a * 0.75, bh = T * 0.62, nl = H * 0.3, ang = 52;
+        const bx = -d.tw * 0.1, by = T * 0.3;
+        const r = (ang * Math.PI) / 180;
+        add('ball', [d.tw * 0.95, bh, a * 1.1], [bx, by, z], { parent: 'torso', color: c('wood') });
+        add('cyl', [d.tw * 0.28, a * 0.3, d.tw * 0.28], [bx, by + bh * 0.05, z + a * 0.5], { parent: 'torso', srot: [90, 0, 0], color: col('#3a2414'), noInk: true });
+        add('box', [a * 0.55, nl, a * 0.4], [bx + Math.sin(r) * (bh * 0.4 + nl / 2), by + Math.cos(r) * (bh * 0.4 + nl / 2), z], { parent: 'torso', srot: [0, 0, -ang], color: col('darkwood') });
         break;
+      }
+      case 'violin': {
+        // tucked under the chin on the figure's left shoulder, neck pointing out along the left arm
+        const T = d.torsoH, z = d.td / 2 + a * 0.5;
+        add('ball', [d.tw * 0.42, T * 0.36, a * 0.7], [d.tw * 0.32, T * 0.86, z], { parent: 'torso', srot: [0, 0, 70], color: c('darkwood') });
+        add('box', [a * 0.4, T * 0.45, a * 0.3], [d.tw * 0.85, T * 0.98, z + a * 0.3], { parent: 'torso', srot: [0, 0, 70], color: col('#2a1a10') });
+        break;
+      }
       case 'trumpet':
         add('cyl', [a * 0.4, H * 0.18, a * 0.4], [0, a * 0.8, a * 1.6], { srot: [70, 0, 0], color: c('brass') });
         add('cyl', [a * 1.4, a * 1.2, a * 1.4], [0, a * 1.8, a * 3.6], { taper: 0.3, srot: [-110, 0, 0], color: c('brass') });

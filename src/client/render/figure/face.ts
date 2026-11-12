@@ -5,6 +5,7 @@
  */
 import type { Expr } from '../../../shared/figure/anim';
 import type { FaceSpec } from '../../../shared/figure/types';
+import { hexNum } from '../../../shared/figure/colors';
 
 const INK = '#2b2118';
 
@@ -210,6 +211,6 @@ export function drawFace(ctx: CanvasRenderingContext2D, x: number, y: number, w:
 }
 
 function hexA(hex: string, a: number): string {
-  const n = parseInt(hex.slice(1), 16);
+  const n = hexNum(hex);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }

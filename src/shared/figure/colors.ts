@@ -14,7 +14,17 @@ export const C: Record<string, string> = {
   lettuce: '#7cc45a', banana: '#f6dc5a', honey: '#e8a83a', milk: '#fbf9f2', coffee: '#6b4226', tea: '#c8873a',
   skin1: '#f6d2b4', skin2: '#f0c39f', skin3: '#d9a173', skin4: '#a8714a', skin5: '#7a4b2e',
 };
-export const col = (c: string | undefined, fallback = '#cccccc'): string => (c ? (c.startsWith('#') ? c : C[c.toLowerCase()] ?? fallback) : fallback);
+/** A colour name or hex code as six-digit hex ('#ccc' becomes '#cccccc'). */
+export const col = (c: string | undefined, fallback = '#cccccc'): string => (c ? (c.startsWith('#') ? longHex(c) : C[c.toLowerCase()] ?? fallback) : fallback);
+
+function longHex(c: string): string {
+  return /^#[0-9a-f]{3}$/i.test(c) ? `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}` : c;
+}
+
+/** A hex colour ('#rrggbb' or the short '#rgb') as a 0xrrggbb number. */
+export function hexNum(hex: string): number {
+  return parseInt(longHex(hex).slice(1), 16);
+}
 
 const COLOR_KEYS = /color|colour|skin|hair|shirt|pants|shoes|skirt|legs|belly|hoof|nose|wing|beak|comb|scales|spikes|horns|eyes|blush|beard|glasses|stripes|fin|bands|tail/i;
 

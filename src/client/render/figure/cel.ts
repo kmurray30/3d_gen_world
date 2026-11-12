@@ -18,47 +18,132 @@ import { labelFace } from './label';
 
 const DEG = Math.PI / 180;
 
-/* ----- the sculpt cache and its worker ----- */
+/* ----- the sculpt cache and its workers ----- */
 
+/**
+ * Models are sculpted on demand by a couple of workers, nearest first (each view says how far away it is), and
+ * kept in a small LRU: a model nobody is showing is dropped once the cache is over budget, so walking through the
+ * thousands of things in the Atlas keeps memory flat.
+ */
 const ready = new Map<string, Sculpt>();
-/** Phones get lighter models (about half the triangles). */
-const DETAIL = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 0.7 : 1;
-const asked = new Set<string>();
-let worker: Worker | null | undefined;
+const lastUse = new Map<string, number>();
+const inUse = new Map<string, number>();
+const wanted = new Map<string, number>();
+const inFlight = new Set<string>();
+const workers: Array<{ w: Worker; busy: boolean }> = [];
+let workersFailed = false;
+let detail = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 0.7 : 1;
+const BUDGET = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? 90 : 220;
+let clock = 0;
 
-function startWorker(): Worker | null {
-  if (worker !== undefined) return worker;
+/** Lighter models (fewer triangles) for crowded worlds. Call before anything is sculpted. */
+export function setSculptDetail(d: number): void {
+  detail = d;
+}
+
+function startWorkers(): void {
+  if (workers.length || workersFailed) return;
+  const n = Math.max(1, Math.min(3, (navigator.hardwareConcurrency || 2) - 1));
   try {
-    worker = new Worker(new URL('./sculpt-worker.ts', import.meta.url), { type: 'module' });
-    worker.onmessage = (ev: MessageEvent<{ key: string; sculpt?: Sculpt }>) => {
-      if (ev.data.sculpt) ready.set(ev.data.key, ev.data.sculpt);
-    };
-    worker.onerror = () => {
-      worker = null;
-      for (const k of asked) if (!ready.has(k)) setTimeout(() => sculptHere(k), 0);
-    };
+    for (let i = 0; i < n; i++) {
+      const w = new Worker(new URL('./sculpt-worker.ts', import.meta.url), { type: 'module' });
+      const slot = { w, busy: false };
+      w.onmessage = (ev: MessageEvent<{ key: string; sculpt?: Sculpt }>) => {
+        inFlight.delete(ev.data.key);
+        if (ev.data.sculpt) {
+          ready.set(ev.data.key, ev.data.sculpt);
+          lastUse.set(ev.data.key, clock);
+        }
+        slot.busy = false;
+        pump();
+      };
+      w.onerror = () => {
+        workersFailed = true;
+      };
+      workers.push(slot);
+    }
   } catch {
-    worker = null;
+    workersFailed = true;
   }
-  return worker;
+}
+
+/** Hand the nearest wanted models to idle workers. */
+function pump(): void {
+  for (const slot of workers) {
+    if (slot.busy) continue;
+    let best: string | null = null;
+    let bestD = Infinity;
+    for (const [k, d] of wanted) if (!inFlight.has(k) && d < bestD) (best = k), (bestD = d);
+    if (!best) return;
+    wanted.delete(best);
+    const fig = getFigure(best);
+    if (!fig) continue;
+    inFlight.add(best);
+    slot.busy = true;
+    // the spec travels with the request, so the worker bundle needs no catalog of its own
+    slot.w.postMessage({ fig, detail });
+  }
 }
 
 function sculptHere(key: string): void {
   const fig = getFigure(key);
-  if (fig && !ready.has(key)) ready.set(key, sculpt(fig, { detail: DETAIL }));
+  if (fig && !ready.has(key)) ready.set(key, sculpt(fig, { detail }));
 }
 
-/** The sculpted model for a figure if it is ready; asks for it otherwise. */
-export function sculptFor(key: string): Sculpt | null {
+/** The sculpted model for a figure if it is ready; otherwise asks for it, `distance` away from the camera. */
+export function sculptFor(key: string, distance = 0): Sculpt | null {
+  clock++;
   const hit = ready.get(key);
-  if (hit) return hit;
-  if (!asked.has(key)) {
-    asked.add(key);
-    const w = startWorker();
-    if (w) w.postMessage({ key, detail: DETAIL });
-    else setTimeout(() => sculptHere(key), 0);
+  if (hit) {
+    lastUse.set(key, clock);
+    return hit;
   }
+  startWorkers();
+  if (workersFailed) {
+    if (!inFlight.has(key)) {
+      inFlight.add(key);
+      setTimeout(() => {
+        sculptHere(key);
+        inFlight.delete(key);
+      }, 0);
+    }
+    return null;
+  }
+  if (!inFlight.has(key)) wanted.set(key, Math.min(distance, wanted.get(key) ?? Infinity));
+  pump();
   return null;
+}
+
+/** A view stopped wanting a model (it was culled before the model arrived). */
+export function unwantSculpt(key: string): void {
+  wanted.delete(key);
+}
+
+function retain(key: string): void {
+  inUse.set(key, (inUse.get(key) ?? 0) + 1);
+}
+
+function release(key: string): void {
+  const n = (inUse.get(key) ?? 1) - 1;
+  if (n > 0) inUse.set(key, n);
+  else inUse.delete(key);
+  evict();
+}
+
+/** Drop the least recently used models nobody is showing, down to the budget. */
+function evict(): void {
+  if (ready.size <= BUDGET) return;
+  const idle = [...ready.keys()].filter((k) => !inUse.has(k)).sort((a, b) => (lastUse.get(a) ?? 0) - (lastUse.get(b) ?? 0));
+  for (const k of idle) {
+    if (ready.size <= BUDGET) break;
+    ready.delete(k);
+    lastUse.delete(k);
+    const g = geoCache.get(k);
+    if (g) {
+      g.dispose();
+      geoCache.delete(k);
+    }
+  }
 }
 
 /* ----- materials ----- */
@@ -163,6 +248,10 @@ export class CelFigure {
   private readonly eyes: THREE.Mesh[] = [];
   private face: THREE.MeshBasicMaterial | null = null;
   private expr: Expr = 'neutral';
+  private key = '';
+  /** Ink and tiny details: a few pixels when the figure is far away, but each still costs a draw call. */
+  private readonly nearOnly: THREE.Object3D[] = [];
+  private far = false;
 
   constructor(
     readonly fig: Figure,
@@ -189,8 +278,10 @@ export class CelFigure {
       const parent = p.parent ? bones.get(p.parent) : undefined;
       (parent ?? this.group).add(bones.get(p.name)!);
     }
-    // the sculpted skin and its outline
+    // the sculpted skin and its outline (shared by every copy of this figure)
     const geo = skinGeometry(fig.key, s);
+    retain(fig.key);
+    this.key = fig.key;
     const skinMat = celMaterial('#ffffff', true);
     const lineMat = outlineMaterial(ink);
     this.mats.push(skinMat, lineMat);
@@ -202,6 +293,7 @@ export class CelFigure {
     }
     skin.userData.entityId = entityId;
     this.solids.push(skin);
+    this.nearOnly.push(line);
     this.group.updateMatrixWorld(true);
     const skeleton = new THREE.Skeleton(s.bones.map((n) => bones.get(n)!));
     skin.bind(skeleton);
@@ -223,6 +315,7 @@ export class CelFigure {
         const mesh = new THREE.Mesh(ball, mat);
         mesh.scale.set(p.size[0] * 1.035, p.size[1] * 1.035, p.size[2] * 1.035);
         mesh.renderOrder = 2;
+        this.nearOnly.push(mesh);
         const holder = new THREE.Object3D();
         if (p.off) holder.position.set(...p.off);
         holder.add(mesh);
@@ -244,6 +337,7 @@ export class CelFigure {
       mesh.userData.entityId = entityId;
       holder.add(mesh);
       this.solids.push(mesh);
+      if (Math.max(...p.size) < fig.heightM * 0.06) this.nearOnly.push(mesh);
       if (p.role === 'eye') {
         mesh.userData.baseY = mesh.scale.y;
         this.eyes.push(mesh);
@@ -257,6 +351,7 @@ export class CelFigure {
         const omat = tinted(new THREE.MeshBasicMaterial({ color: shadeOf(p.color, 0.3), side: THREE.BackSide }));
         this.mats.push(omat);
         const shell = new THREE.Mesh(g, omat);
+        this.nearOnly.push(shell);
         shell.scale.set(scale[0] * (1 + (2 * ink) / Math.max(0.01, p.size[0])), scale[1] * (1 + (2 * ink) / Math.max(0.01, p.size[1])), scale[2] * (1 + (2 * ink) / Math.max(0.01, p.size[2])));
         holder.add(shell);
       }
@@ -269,6 +364,13 @@ export class CelFigure {
 
   get pickables(): THREE.Object3D[] {
     return this.solids;
+  }
+
+  /** Far away: drop the outline, the face, ink shells and tiny details (fewer draw calls where nobody can see them). */
+  setFar(far: boolean): void {
+    if (far === this.far) return;
+    this.far = far;
+    for (const o of this.nearOnly) o.visible = !far;
   }
 
   setOpacity(alpha: number): void {
@@ -309,5 +411,6 @@ export class CelFigure {
   dispose(): void {
     for (const m of this.mats) m.dispose();
     for (const g of this.geos) g.dispose();
+    if (this.key) release(this.key);
   }
 }

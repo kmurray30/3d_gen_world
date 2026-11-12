@@ -100,4 +100,8 @@ export interface HealthResponse {
 export const PLAYER_RADIUS = 0.35;
 export const PLAYER_EYE_HEIGHT = 1.6;
 export const WORLD_RADIUS = 60;
+/** How far from the centre the player and things may go: the meadow's 60 m, or out to a bigger world's rim hills. */
+export function worldRadius(world: { terrain?: { rimFrom: number } }): number {
+  return Math.max(WORLD_RADIUS, (world.terrain?.rimFrom ?? 0) - 2);
+}
 export const MAX_ENTITIES = 220;

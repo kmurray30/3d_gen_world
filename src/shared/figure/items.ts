@@ -279,6 +279,8 @@ export function getFigure(key: string): Figure | null {
   } catch {
     return null;
   }
+  // a broken entry (non-finite size) falls back to the word's sprite or card rather than poisoning layout and rendering
+  if (![f.heightM, f.halfW, f.halfD].every((v) => Number.isFinite(v) && v > 0)) return null;
   // the catalog builds figures under their own word; make sure the key matches what was asked for
   if (f.key !== key) f = { ...f, key };
   cache.set(key, f);

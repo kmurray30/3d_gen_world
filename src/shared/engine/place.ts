@@ -48,11 +48,13 @@ export function footprints(world: WorldModel, exclude?: Set<string>): Footprint[
 export interface GroundInfo {
   ground(x: number, z: number): number;
   wet(x: number, z: number, r: number): boolean;
+  /** How far from the centre things may stand (default WORLD_RADIUS). */
+  radius?: number;
 }
 const FLAT: GroundInfo = { ground: () => 0, wet: () => false };
 
 export function isFree(fps: Footprint[], x: number, z: number, r: number, land: GroundInfo = FLAT): boolean {
-  if (Math.hypot(x, z) > WORLD_RADIUS - 1) return false;
+  if (Math.hypot(x, z) > (land.radius ?? WORLD_RADIUS) - 1) return false;
   if (land.wet(x, z, r * 0.8)) return false;
   for (const f of fps) {
     const dx = f.x - x;
@@ -96,9 +98,9 @@ export function findFreeSpot(fps: Footprint[], x: number, z: number, r: number, 
   return [x, land.ground(x, z), z];
 }
 
-function clampToWorld(p: Vec3): Vec3 {
+function clampToWorld(p: Vec3, radius: number): Vec3 {
   const d = Math.hypot(p[0], p[2]);
-  const lim = WORLD_RADIUS - 2;
+  const lim = radius - 2;
   if (d <= lim) return p;
   return [(p[0] / d) * lim, p[1], (p[2] / d) * lim];
 }
@@ -181,7 +183,7 @@ export function resolvePlace(place: Place, world: WorldModel, self: SelfInfo, rn
       break;
   }
 
-  pos = clampToWorld(pos);
+  pos = clampToWorld(pos, world.radius);
   if (place.height === 'ground' && !parent) {
     const exclude = new Set<string>(self.id ? [self.id] : []);
     pos = findFreeSpot(footprints(world, exclude), pos[0], pos[2], self.radius, rng, player, 12, world);

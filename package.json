@@ -12,7 +12,7 @@
     "dev:server": "tsx watch src/server/index.ts",
     "dev:client": "vite",
     "build": "npm run build:client && npm run build:server",
-    "build:client": "vite build",
+    "build:client": "vite build && node scripts/precompress.mjs",
     "build:server": "node scripts/build-server.mjs",
     "start": "node dist/server/index.js",
     "typecheck": "tsc --noEmit",

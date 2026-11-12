@@ -33,6 +33,12 @@ batches: write ~40 entries, check, preview, fix, continue. Finish with a clean c
 - Usually 3 to 25 parts. Parts that touch or overlap; nothing floating unless it should (a cloud, a halo).
 - Colours that read: use palette names or hex. Distinct parts in distinct colours.
 - Things stand on y = 0 (feet, wheels, base). Flying things (a kite, a balloon, a cloud) can start higher.
+- At least one chunky part. The cel model melts together only parts whose thinnest side is at least about 7% of
+  the figure's largest size; thinner parts (rods, cards, poles, blades) ride along as separate smooth pieces.
+  A figure made only of thin parts "sculpts to almost nothing" in the checker, so give flat and spindly things a
+  base, a stand, a slab or a thicker body. (Preview sheets thicken thin parts, so they look fine there anyway.)
+- Known limits: `segs` (facets) only shows in the paper, origami and 3D looks; the cel model is always smooth.
+  There is no partial ring, curved tube or see-through glass yet: build arcs from short rods.
 
 ## Coordinates
 

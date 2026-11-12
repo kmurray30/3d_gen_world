@@ -48,6 +48,8 @@ export class CameraRig {
   angle = 1;
   /** Ground height under a point, so the camera never dips into a hill. */
   ground: (x: number, z: number) => number = () => 0;
+  /** How far from the centre the world goes (the free camera may fly 20 m past it). */
+  radius: () => number = () => WORLD_RADIUS;
   /** Pitch the third-person camera is easing toward after an angle change (null = the player steers it). */
   private pitchGoal: number | null = null;
   readonly pose: CameraPose = { pos: [0, PLAYER_EYE_HEIGHT, 0], yaw: 0, pitch: 0 };
@@ -175,9 +177,10 @@ export class CameraRig {
     f.pos[2] += (rz * ax + fz * ay) * speed * dt;
     f.pos[1] = clamp(f.pos[1], this.ground(f.pos[0], f.pos[2]) + MIN_Y, 90);
     const r = Math.hypot(f.pos[0], f.pos[2]);
-    if (r > WORLD_RADIUS + 20) {
-      f.pos[0] *= (WORLD_RADIUS + 20) / r;
-      f.pos[2] *= (WORLD_RADIUS + 20) / r;
+    const lim = this.radius() + 20;
+    if (r > lim) {
+      f.pos[0] *= lim / r;
+      f.pos[2] *= lim / r;
     }
     p.pos = [...f.pos];
     p.yaw = f.yaw;

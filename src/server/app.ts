@@ -6,6 +6,8 @@ import type { LlmProvider } from './llm/provider';
 import { RateLimiter, clientIp } from './ratelimit';
 import { commandRoutes } from './routes/command';
 import { worldsRoutes } from './routes/worlds';
+import { atlasWorld, type AtlasWord } from '../shared/engine/atlas';
+import { compress } from 'hono/compress';
 import { mountStatic } from './static';
 import { HeuristicClassifier, type StructureClassifier } from './llm/classify';
 import { StructureResolver } from './structures';
@@ -61,6 +63,29 @@ export function createApp(deps: AppDeps): Hono {
 
   app.use('/api/worlds/*', requireAuth(deps.auth));
   app.use('/api/worlds', requireAuth(deps.auth));
+  app.use('/api/atlas', requireAuth(deps.auth));
+  app.use('/api/atlas', compress());
+
+  // The Atlas: every word laid out as a world to explore. Built once (deterministic) and cached; read-only.
+  let atlasJson: string | null = null;
+  app.get('/api/atlas', (c) => {
+    if (!atlasJson) {
+      const words: AtlasWord[] = [];
+      for (const [kind, list] of Object.entries(deps.vocab.byType()) as Array<[AtlasWord['kind'], string[]]>) for (const word of list) words.push({ word, kind, hm: deps.vocab.entry(word).heightM });
+      const sprite = (word: string, kind: AtlasWord['kind']) => {
+        const hit = deps.vocab.resolveWord(word, kind);
+        return hit ? deps.vocab.entry(hit).sprite : null;
+      };
+      const decal = (word: string) => {
+        const hit = deps.vocab.resolveWord(word);
+        return hit ? deps.vocab.entry(hit).sprite : null;
+      };
+      atlasJson = JSON.stringify({ world: atlasWorld(words, sprite, decal, 0) });
+    }
+    c.header('Content-Type', 'application/json');
+    c.header('Cache-Control', 'no-cache');
+    return c.body(atlasJson);
+  });
 
   // Command budget: per-IP and per-world rate limits, then the global daily cap.
   app.use('/api/worlds/:slug/command', async (c, next) => {

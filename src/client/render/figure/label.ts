@@ -1,10 +1,11 @@
 /** Printed text for label cards (letters, numbers, signs): black or white ink, whichever reads on the card. */
 import * as THREE from 'three';
+import { hexNum } from '../../../shared/figure/colors';
 
 const cache = new Map<string, THREE.Texture>();
 
 export function inkFor(card: string): string {
-  const n = parseInt(card.slice(1), 16);
+  const n = hexNum(card);
   const l = 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
   return l > 140 ? '#231f1c' : '#fbf8f0';
 }

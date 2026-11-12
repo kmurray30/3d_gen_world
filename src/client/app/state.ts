@@ -85,8 +85,12 @@ export class WorldStore {
     return this.undoStack.length > 0;
   }
 
+  /** The Atlas is shared and read-only: nothing is saved, undo keeps a few steps in memory, reset reloads it. */
+  readOnly = false;
+
   /** Call once per frame. */
   tick(now = Date.now()): void {
+    if (this.readOnly) return;
     const p = this.engine.world.player.pos;
     if (Math.hypot(p[0] - this.lastPlayerPos[0], p[2] - this.lastPlayerPos[2]) > 0.5 && now - this.lastSave > MAX_INTERVAL_MS) this.markDirty();
     if (!this.dirtyAt || this.saving) return;
@@ -97,7 +101,8 @@ export class WorldStore {
   /** Snapshot before a command so it can be undone. */
   pushUndo(): void {
     this.undoStack.push(this.engine.snapshot());
-    if (this.undoStack.length > UNDO_MAX) this.undoStack.shift();
+    if (this.undoStack.length > (this.readOnly ? 3 : UNDO_MAX)) this.undoStack.shift();
+    if (this.readOnly) return;
     try {
       sessionStorage.setItem(`undo:${this.slug}`, JSON.stringify(this.undoStack.slice(-UNDO_SESSION_MAX)));
     } catch {
@@ -110,16 +115,21 @@ export class WorldStore {
     if (!snap) return false;
     this.engine.cancelAll();
     this.engine.world.load(snap);
-    try {
-      sessionStorage.setItem(`undo:${this.slug}`, JSON.stringify(this.undoStack.slice(-UNDO_SESSION_MAX)));
-    } catch {
-      /* quota */
-    }
+    if (!this.readOnly)
+      try {
+        sessionStorage.setItem(`undo:${this.slug}`, JSON.stringify(this.undoStack.slice(-UNDO_SESSION_MAX)));
+      } catch {
+        /* quota */
+      }
     await this.save(true);
     return true;
   }
 
   async reset(): Promise<void> {
+    if (this.readOnly) {
+      location.reload();
+      return;
+    }
     this.pushUndo();
     const r = await fetch(`/api/worlds/${this.slug}/reset`, { method: 'POST' });
     if (!r.ok) {
@@ -135,6 +145,7 @@ export class WorldStore {
   }
 
   async save(force = false, keepalive = false): Promise<void> {
+    if (this.readOnly) return;
     if (this.saving || (!force && !this.dirtyAt)) return;
     this.saving = true;
     const world = this.engine.snapshot();

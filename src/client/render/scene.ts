@@ -11,7 +11,7 @@ import { StructureView } from './structures';
 import { MaterialTiles } from './materials';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
 import { ParticleSystem, shapeOfEntity } from './effects';
-import { BubbleLayer } from './labels';
+import { BubbleLayer, NameTags } from './labels';
 import { TerrainView } from './terrain';
 import { SkyView, haloTexture } from './sky';
 import { tinted } from './tint';
@@ -43,6 +43,10 @@ export class SceneView {
   readonly views = new Map<string, SpriteView>();
   readonly structures = new Map<string, StructureView>();
   readonly figures = new Map<string, FigureView>();
+  /** Crowded worlds (the Atlas) only draw things within this many metres of the camera. */
+  cullRadius = Infinity;
+  /** Labels over the nearest things (the Atlas). */
+  nameTags: NameTags | null = null;
   /** The viewer's Look setting; entities with their own `look` ignore it. */
   look: Look = 'sprites';
   private avatarFigure: FigureView | null = null;
@@ -183,9 +187,19 @@ export class SceneView {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
     const pr = this.renderer.getPixelRatio();
+    const cull = this.cullRadius;
     for (const e of byId.values()) {
-      seen.add(e.id);
       const pos = model.renderPos(e);
+      let camDist = 0;
+      if (cull < Infinity) {
+        // crowded worlds draw only what is near; a little slack before dropping a view stops flicker at the edge
+        const dx = pos[0] - cam.pos[0], dz = pos[2] - cam.pos[2];
+        camDist = Math.sqrt(dx * dx + dz * dz);
+        const lim = e.structure ? cull * 1.6 : cull;
+        if (camDist > lim + 6) continue;
+        if (camDist > lim && !this.views.has(e.id) && !this.figures.has(e.id) && !this.structures.has(e.id)) continue;
+      }
+      seen.add(e.id);
       if (e.structure) {
         const spriteView = this.views.get(e.id);
         if (spriteView) {
@@ -238,6 +252,7 @@ export class SceneView {
             lookAt = [tp[0], tp[2]];
           }
         }
+        fv.camDistance = camDist;
         fv.update(e, pos, cam.yaw, cam.pitch, this.resolveFlip(e, pos, byId, camState), model.transient.get(e.id)?.sq ?? 1, dt, lookAt, this.groundView);
         continue;
       }
@@ -264,6 +279,7 @@ export class SceneView {
     this.effects.syncPersistent(model);
     this.effects.update(dt, (id) => shapeOfEntity(model, id), this.camera);
     this.bubbles.update(this.camera, model, w, h);
+    this.nameTags?.update(this.camera, model, [...this.figures.keys(), ...this.views.keys()], w, h);
     for (const [id, view] of this.views) {
       if (!seen.has(id)) {
         this.scene.remove(view.root);

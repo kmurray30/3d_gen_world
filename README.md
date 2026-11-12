@@ -50,6 +50,16 @@ and walks and runs with real leg and arm motion in paper and 3D.
 paper cutout, the origami, the 3D model and the sculpted cel model. Click or tap one to make it react. The dragons hover
 over their row, and three more circle high overhead, one in each code-drawn style.
 
+**The Atlas.** The start screen (or Worlds) opens the Atlas at `/atlas`: every word in the vocabulary,
+thousands of things, laid out as a place to walk through. Districts (Town Square, Food Hall, Garage, Wild
+Park, Seaside, Sky & Space, Fantasy Grove and twenty more) sit in rows along footpaths north of a plaza with
+a fountain. Each district has a signboard, and inside it every group (fruit, power tools, dog breeds) has its
+own sign: small things on display tables, bigger ones standing in rows, fish swimming over a pond, planets
+and stars floating overhead. Name tags float over the nearest things. Tiny things are shown bigger and huge
+ones smaller so everything reads at walking distance. The Atlas opens in the cel look, is shared and
+read-only (commands work but are not saved, and Reset reloads it), and only draws what is within about 55 m
+(38 m on phones); beyond about 16 m models drop their outlines, faces and tiny details.
+
 **Village.** Worlds -> "+ New village" (or `?preset=village`) generates a new village from a random
 seed: rolling hills, a river with a bridge where the road crosses it, a lake with a lighthouse on its
 shore, sometimes a duck pond, a plaza with a fountain, roads out of it lined with houses that face
@@ -110,6 +120,27 @@ just a renderer. Screenshot scripts for checking them: `scripts/shots-figures.mj
 close up and from the side), `scripts/shots-anims.mjs` (reaction clips) and
 `scripts/shots-look.mjs` (the village under each Look, and the avatar walking) and
 `scripts/shots-dragon.mjs` (the dragon in every style, mid-flap and breathing fire).
+
+## The catalog: a figure for every word
+
+`src/shared/figure/catalog/` holds a code-drawn figure for (nearly) every vocabulary word, filed under an
+Atlas district and a group. Each entry is a few lines in a small builder language
+(`src/shared/figure/dsl.ts`): balls, rounded boxes, cylinders and cones, capsules, rings, prisms, rods
+between two points, text cards, stars and hearts, mirrored pairs, and named moving parts (`wheel`, `rotor`,
+`fan`, `door`, `lid`). People come from `who()` with hats, face items, clothes, wings and ~70 held things
+(`src/shared/figure/accessories.ts`); animals from kits for four-legged beasts (with horns, antlers, trunks,
+manes, spots, stripes, shells), birds, fish, bugs, snakes and dragons. The guide for writing entries is
+`docs/catalog-authoring.md`.
+
+```
+npx tsx scripts/check-catalog.ts objects-01                       # every assigned word builds and sculpts
+npx tsx scripts/preview-catalog.ts objects-01 0 48 /tmp/sheet.png    # numbered contact sheet, no browser
+```
+
+The preview renders sculpted models with a small software rasterizer to PNG. Entries are code, so the
+models cost nothing to make at runtime: they are built in the browser when they come into view (sculpted in
+web workers, nearest first, with a memory budget) and use whatever look is on. The Look setting draws any
+word that has an entry as paper, origami, 3D or cel in every world; words without one keep their sprite.
 
 ## Run locally
 
@@ -288,4 +319,6 @@ removal). Game sprites are WebP files committed under `assets/sprites/{512,256}/
 ## Deploy
 
 One Node service on Railway built from the `Dockerfile`, a volume mounted at `/data`, and the
-environment variables above. `railway.json` sets the health check (`/api/health`).
+environment variables above. `railway.json` sets the health check (`/api/health`). `npm run build` also writes
+brotli and gzip copies of the client files (`scripts/precompress.mjs`); the server sends those to browsers that
+accept them (the client bundle with the whole catalog is about 2 MB raw, 0.5 MB as brotli).

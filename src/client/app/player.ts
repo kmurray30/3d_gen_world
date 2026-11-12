@@ -13,6 +13,8 @@ export class PlayerController {
   private vy = 0;
   /** Set by the app: pushes the player out of solids and returns the height they can stand on there. */
   resolveCollisions?: (pos: Vec3) => number;
+  /** How far from the centre the player may walk. */
+  radius: () => number = () => WORLD_RADIUS;
   /** Height of whatever the player stands on (0 = the meadow). */
   ground = 0;
   private grounded = true;
@@ -50,9 +52,10 @@ export class PlayerController {
       s.pos[2] += (rz * ax + fz * ay) * speed * dt;
     }
     const r = Math.hypot(s.pos[0], s.pos[2]);
-    if (r > WORLD_RADIUS) {
-      s.pos[0] *= WORLD_RADIUS / r;
-      s.pos[2] *= WORLD_RADIUS / r;
+    const lim = this.radius();
+    if (r > lim) {
+      s.pos[0] *= lim / r;
+      s.pos[2] *= lim / r;
     }
     const wasGrounded = this.grounded;
     this.ground = this.resolveCollisions?.(s.pos) ?? 0;

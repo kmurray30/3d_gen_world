@@ -154,6 +154,7 @@ body { background: linear-gradient(#6db3ff 0%, #9fd0ff 55%, #d9efff 100%); }
 .new-row .primary { flex: 1; }
 .new-row .new-village { background: #bfe3f7; }
 .new-row .new-gallery { background: #f7c9e0; }
+.new-row .open-atlas { background: #ffe3a8; }
 .new-row { flex-wrap: wrap; }
 .card.start { max-width: 420px; width: 100%; display: flex; flex-direction: column; gap: 10px; padding: 18px; }
 .card.start h2 { margin: 0; }
@@ -164,6 +165,7 @@ body { background: linear-gradient(#6db3ff 0%, #9fd0ff 55%, #d9efff 100%); }
 .start-btn.village { background: #bfe3f7; }
 .start-btn.gallery { background: #f7c9e0; }
 .start-btn.meadow { background: #d9f2c4; }
+.start-btn.atlas { background: #ffe3a8; }
 .start-btn.continue { background: var(--accent); }
 .start-btn:hover, .start-btn:focus-visible { transform: translateY(-1px); box-shadow: 0 3px 0 var(--ink); }
 .world-list { display: flex; flex-direction: column; gap: 6px; }
@@ -178,3 +180,5 @@ body { background: linear-gradient(#6db3ff 0%, #9fd0ff 55%, #d9efff 100%); }
 .open-form input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 9px 10px; border: 3px solid var(--ink); border-radius: 10px; }
 .worlds-msg { min-height: 1.2em; font-size: 13px; color: #7a3b00; }
 .worlds-note { margin: 0; font-size: 12px; color: #666; }
+
+.nametag { position: absolute; left: 0; top: 0; pointer-events: none; padding: 1px 7px; border-radius: 9px; background: rgba(255, 252, 240, 0.86); border: 2px solid rgba(43, 43, 43, 0.75); font-size: 12px; font-weight: 700; color: #2b2b2b; white-space: nowrap; z-index: 2; }

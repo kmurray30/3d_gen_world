@@ -5,7 +5,7 @@
  */
 import type { FaceSpec, FigPart, Figure, Rig, Vec3 } from './types';
 import { measure } from './math';
-import { hexColors } from './colors';
+import { hexColors, hexNum } from './colors';
 
 export class Parts {
   readonly list: FigPart[] = [];
@@ -284,7 +284,7 @@ export function bird(key: string, o: BirdOpts): Figure {
 }
 
 export function shadeHex(hex: string, k: number): string {
-  const n = parseInt(hex.slice(1), 16);
+  const n = hexNum(hex);
   const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.max(0, Math.min(255, Math.round(v * k))));
   return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }

@@ -58,7 +58,8 @@ describe('figure specs', () => {
     expect(figureFor('a chicken')?.key).toBe('rooster');
     expect(figureFor('lamp post')?.key).toBe('lamppost');
     expect(figureFor('cart')?.key).toBe('wheelbarrow');
-    expect(figureFor('spaceship')).toBeNull();
+    expect(figureFor('spaceship')?.key).toBe('spaceship'); // from the catalog
+    expect(figureFor('flibbertigibbet')).toBeNull();
   });
 });
 

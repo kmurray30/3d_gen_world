@@ -13,7 +13,7 @@ export interface HudHandlers {
   onSound?: () => void;
 }
 
-export type StartChoice = 'village' | 'gallery' | 'meadow' | 'continue';
+export type StartChoice = 'village' | 'gallery' | 'atlas' | 'meadow' | 'continue';
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -217,6 +217,7 @@ export class Hud {
       modal.innerHTML = `<div class="card start"><h2>Paper World</h2><p>Say something and it happens. Where to?</p>
         <button type="button" data-start="village" class="start-btn village"><b>Story village</b><span>Houses to walk into, villagers, a witch's hut and a lighthouse. Type what happens next.</span></button>
         <button type="button" data-start="gallery" class="start-btn gallery"><b>Visuals demo</b><span>Things drawn by code, each as its old sprite, a paper cutout and 3D. Click them to make them react.</span></button>
+        <button type="button" data-start="atlas" class="start-btn atlas"><b>The Atlas</b><span>Every thing there is, thousands of them, sorted into districts you can walk through.</span></button>
         <button type="button" data-start="meadow" class="start-btn meadow"><b>Empty meadow</b><span>A fresh little meadow of your own.</span></button>
         ${lastName ? `<button type="button" data-start="continue" class="start-btn continue"><b>Continue</b><span>${escapeHtml(lastName)}</span></button>` : ''}
       </div>`;

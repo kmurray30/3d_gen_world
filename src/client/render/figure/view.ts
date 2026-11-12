@@ -14,7 +14,7 @@ import { flipFor, lerpAngle, yawAlong } from '../../../shared/engine/facing';
 import { PaperFigure } from './paper';
 import type { GroundView } from '../sprites';
 import { ToonFigure } from './toon';
-import { CelFigure, sculptFor } from './cel';
+import { CelFigure, sculptFor, unwantSculpt } from './cel';
 
 export type FigureStyle = 'paper' | 'origami' | 'toon' | 'cel';
 const DEG = Math.PI / 180;
@@ -34,6 +34,8 @@ export class FigureView {
   /** The solid styles (origami, 3D, cel). A cel figure starts as the 3D one until its sculpted model is ready. */
   private toon: ToonFigure | CelFigure | null = null;
   private celPending = false;
+  /** Set by the scene each frame: nearer figures get their sculpted models first. */
+  camDistance = 0;
   private last: Vec3 | null = null;
   private speed = 0;
   private dir: [number, number] | null = null;
@@ -161,7 +163,7 @@ export class FigureView {
     } else if (this.toon) {
       if (this.celPending) {
         // the sculpted model arrived from the worker: swap it in for the stand-in
-        const s = sculptFor(this.fig.key);
+        const s = sculptFor(this.fig.key, this.camDistance);
         if (s) {
           this.inner.remove(this.toon.group);
           this.toon.dispose();
@@ -172,6 +174,7 @@ export class FigureView {
         }
       }
       this.toon.update(pose, expr);
+      if (this.toon instanceof CelFigure) this.toon.setFar(this.camDistance > Math.max(16, 8 * this.fig.heightM * s));
       const moving = this.speed > 0.15 && this.dir;
       if (moving) this.wantFacing = Math.atan2(this.dir![0], this.dir![1]) / DEG;
       else if (lookAt) this.wantFacing = Math.atan2(lookAt[0] - pos[0], lookAt[1] - pos[2]) / DEG;
@@ -209,6 +212,7 @@ export class FigureView {
   }
 
   dispose(): void {
+    if (this.celPending) unwantSculpt(this.fig.key);
     this.paper?.dispose();
     this.paper2?.dispose();
     this.toon?.dispose();
