@@ -61,6 +61,13 @@ export function visibleYaw(yawDeg: number, pos: Vec3, cam: Vec3, minVis = 0.6): 
   return excess <= 0 ? yawDeg : wrapDeg(yawDeg + Math.sign(d) * excess);
 }
 
+/** Of the two yaws that show the same paper plane, the one whose front faces the viewer (code-drawn figures have a
+ *  back: hair instead of a face). */
+export function faceViewer(yawDeg: number, pos: Vec3, cam: Vec3): number {
+  const n = normalOf(yawDeg);
+  return n[0] * (cam[0] - pos[0]) + n[1] * (cam[2] - pos[2]) < 0 ? wrapDeg(yawDeg + 180) : yawDeg;
+}
+
 /** Whether a sprite moving along `d` should be mirrored on a plane with this yaw (art faces left by default). */
 export function flipFor(yawDeg: number, dx: number, dz: number): boolean {
   const r = rightOf(yawDeg);

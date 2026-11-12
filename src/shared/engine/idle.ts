@@ -8,7 +8,7 @@ import { WORLD_RADIUS } from '../types';
 import type { Engine } from './index';
 import { footprints, findFreeSpot } from './place';
 import { footprintRadius } from './sizing';
-import { visibleYaw, wrapDeg } from './facing';
+import { faceViewer, visibleYaw, wrapDeg } from './facing';
 
 const SCRIPTED_COOLDOWN_S = 12;
 const WANDER_RADIUS_M = 3;
@@ -45,7 +45,9 @@ export class Idle {
       if (now - (this.lastScripted.get(e.id) ?? -1e9) < SCRIPTED_COOLDOWN_S) continue;
       started++;
       const roll = engine.rng();
-      if (roll < 0.4) this.turn(e);
+      // things placed on display (the gallery) keep their pose and only fidget
+      if (e.state.stay) this.fidget(e);
+      else if (roll < 0.4) this.turn(e);
       else if (roll < 0.75) this.wander(e);
       else this.fidget(e);
     }
@@ -62,7 +64,7 @@ export class Idle {
     const engine = this.engine;
     const sign = engine.rng() < 0.5 ? -1 : 1;
     const want = wrapDeg((e.yaw ?? 0) + sign * (60 + engine.rng() * 90));
-    const yaw = visibleYaw(want, e.pos, engine.world.player.pos, 0.75);
+    const yaw = faceViewer(visibleYaw(want, e.pos, engine.world.player.pos, 0.75), e.pos, engine.world.player.pos);
     const flip = engine.rng() < 0.5;
     engine.turn(e.id, yaw, flip, e.kind === 'animal' ? 'hop' : undefined, `idle_${engine.nextKey()}`);
   }

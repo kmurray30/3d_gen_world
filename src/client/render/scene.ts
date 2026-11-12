@@ -4,13 +4,18 @@ import { worldPos } from '../../shared/engine/transform';
 import type { WorldModel } from '../../shared/engine/world';
 import { SpriteView, origamiKind } from './sprites';
 import { applyCrayon, crayonTexture, CRAYON_METRES } from './crayon';
-import { flipFor, lerpAngle, visibleYaw, yawAlong, yawFacing } from '../../shared/engine/facing';
+import { faceViewer, flipFor, lerpAngle, visibleYaw, yawAlong, yawFacing } from '../../shared/engine/facing';
 import { StructureView } from './structures';
 import { MaterialTiles } from './materials';
 import { TextureStore, makeGroundTexture, makeShadowTexture } from './textures';
 import { ParticleSystem, shapeOfEntity } from './effects';
 import { BubbleLayer } from './labels';
 import type { CameraPose } from '../app/camera';
+import { FigureView } from './figure/view';
+import { figureFor } from '../../shared/figure/items';
+
+/** How things with a code-drawn figure are shown: the original sprite, layered paper, or 3D. */
+export type Look = 'sprites' | 'paper' | 'toon';
 
 export const SKY_TOP = '#6db3ff';
 export const SKY_HORIZON = '#d9efff';
@@ -29,6 +34,10 @@ export class SceneView {
   readonly tiles = new MaterialTiles();
   readonly views = new Map<string, SpriteView>();
   readonly structures = new Map<string, StructureView>();
+  readonly figures = new Map<string, FigureView>();
+  /** The viewer's Look setting; entities with their own `look` ignore it. */
+  look: Look = 'sprites';
+  private avatarFigure: FigureView | null = null;
   readonly effects: ParticleSystem;
   readonly bubbles: BubbleLayer;
   /** Fade structures standing between the camera and the avatar (third person and free camera only). */
@@ -74,6 +83,11 @@ export class SceneView {
     void CRAYON_METRES;
     ground.name = 'ground';
     this.scene.add(ground);
+    // only the 3D figures are lit (everything else is unlit paper): a bright sky fill and a warm sun
+    this.scene.add(new THREE.HemisphereLight('#ffffff', '#b9c98f', 1.9));
+    const sun = new THREE.DirectionalLight('#fff1d6', 2.3);
+    sun.position.set(-6, 10, 7);
+    this.scene.add(sun);
     this.effects = new ParticleSystem(this.scene);
     this.bubbles = new BubbleLayer(hudRoot ?? document.body);
 
@@ -160,6 +174,44 @@ export class SceneView {
         structView.dispose();
         this.structures.delete(e.id);
       }
+      const style = e.look ?? (this.look === 'sprites' ? 'sprite' : this.look);
+      const fig = style === 'sprite' ? null : figureFor(e.word);
+      if (fig && style !== 'sprite') {
+        const spriteView = this.views.get(e.id);
+        if (spriteView) {
+          this.scene.remove(spriteView.root);
+          spriteView.dispose();
+          this.views.delete(e.id);
+        }
+        let fv = this.figures.get(e.id);
+        if (fv && (fv.style !== style || fv.fig !== fig)) {
+          this.scene.remove(fv.root);
+          fv.dispose();
+          fv = undefined;
+        }
+        if (!fv) {
+          fv = new FigureView(e.id, fig, style, this.shadowTex);
+          this.figures.set(e.id, fv);
+          this.scene.add(fv.root);
+        }
+        let lookAt: [number, number] | null = null;
+        if (e.facing === 'player') lookAt = [cam.pos[0], cam.pos[2]];
+        else if (e.facing) {
+          const t = byId.get(e.facing);
+          if (t) {
+            const tp = worldPos(t, (id) => byId.get(id));
+            lookAt = [tp[0], tp[2]];
+          }
+        }
+        fv.update(e, pos, cam.yaw, cam.pitch, this.resolveFlip(e, pos, byId, camState), model.transient.get(e.id)?.sq ?? 1, dt, lookAt);
+        continue;
+      }
+      const oldFigure = this.figures.get(e.id);
+      if (oldFigure) {
+        this.scene.remove(oldFigure.root);
+        oldFigure.dispose();
+        this.figures.delete(e.id);
+      }
       let view = this.views.get(e.id);
       if (!view) {
         view = new SpriteView(e.id, this.shadowTex);
@@ -183,6 +235,13 @@ export class SceneView {
         this.views.delete(id);
       }
     }
+    for (const [id, view] of this.figures) {
+      if (!seen.has(id)) {
+        this.scene.remove(view.root);
+        view.dispose();
+        this.figures.delete(id);
+      }
+    }
     for (const [id, view] of this.structures) {
       if (!seen.has(id)) {
         this.scene.remove(view.root);
@@ -202,12 +261,13 @@ export class SceneView {
     e.hidden = !visible;
     if (!visible) {
       this.avatar.root.visible = false;
+      if (this.avatarFigure) this.avatarFigure.root.visible = false;
       return;
     }
     const pos: Vec3 = [player.pos[0], player.pos[1], player.pos[2]];
     if (faceDir) {
       e.faceDir = faceDir;
-      const want = visibleYaw(yawAlong(faceDir[0], faceDir[1]), pos, cam.pos, 0.6);
+      const want = faceViewer(visibleYaw(yawAlong(faceDir[0], faceDir[1]), pos, cam.pos, 0.6), pos, cam.pos);
       e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
       e.flip = flipFor(e.yaw, faceDir[0], faceDir[1]);
     } else if (e.yaw === undefined) e.yaw = yawFacing(pos, cam.pos);
@@ -218,7 +278,35 @@ export class SceneView {
       sq = 1 + Math.sin(this.avatarPhase * 18) * 0.02;
     }
     const camState: PlayerState = { pos: cam.pos, yaw: cam.yaw, pitch: cam.pitch };
+    const fig = this.look === 'sprites' ? null : figureFor(e.word);
+    if (fig) {
+      if (this.avatarFigure && (this.avatarFigure.style !== this.look || this.avatarFigure.fig !== fig)) {
+        this.scene.remove(this.avatarFigure.root);
+        this.avatarFigure.dispose();
+        this.avatarFigure = null;
+      }
+      if (!this.avatarFigure) {
+        this.avatarFigure = new FigureView('player', fig, this.look as 'paper' | 'toon', this.shadowTex);
+        this.scene.add(this.avatarFigure.root);
+      }
+      this.avatar.root.visible = false;
+      this.avatarFigure.root.visible = true;
+      // the figure animates its own walk, so it gets the feet position without the sprite bob
+      this.avatarFigure.update(e, [player.pos[0], player.pos[1], player.pos[2]], cam.yaw, cam.pitch, e.flip, 1, dt, null);
+      return;
+    }
+    if (this.avatarFigure) this.avatarFigure.root.visible = false;
     this.avatar.update(e, pos, cam.yaw, cam.pitch, this.textures, this.resolveFlip(e, pos, new Map(), camState), sq);
+  }
+
+  /** A poke or a command made this thing react: code-drawn figures play a reaction clip. */
+  react(id: string, clip?: string): string | null {
+    return this.figures.get(id)?.react(clip) ?? null;
+  }
+
+  /** Move a figure's mouth while its speech bubble is up. */
+  talk(id: string, seconds: number): void {
+    this.figures.get(id)?.talk(seconds);
   }
 
   /** Fade structures between the eye and the avatar (feet, chest, head); nothing fades in first person. */
@@ -260,6 +348,7 @@ export class SceneView {
     this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
     const bodies: THREE.Object3D[] = [];
     for (const v of this.views.values()) if (v.root.visible) bodies.push(...v.pickables);
+    for (const v of this.figures.values()) if (v.root.visible) bodies.push(...v.pickables);
     for (const s of this.structures.values()) if (s.root.visible) bodies.push(...s.pickables);
     const hits = this.raycaster.intersectObjects(bodies, false);
     for (const hit of hits) {

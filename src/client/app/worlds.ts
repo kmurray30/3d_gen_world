@@ -101,6 +101,29 @@ export async function worldExists(slug: string): Promise<boolean> {
   return true;
 }
 
+/** The demo worlds this device made, so the start screen reopens them instead of making a new one each time. */
+export function rememberPresetWorld(preset: string, slug: string): void {
+  try {
+    localStorage.setItem(`pw.preset.${preset}`, slug);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** This device's world for a demo preset (reused while it exists), or a new one. */
+export async function presetWorldSlug(preset: 'village' | 'gallery'): Promise<{ slug: string; created: boolean }> {
+  let known: string | null = null;
+  try {
+    known = localStorage.getItem(`pw.preset.${preset}`);
+  } catch {
+    /* ignore */
+  }
+  if (known && SLUG_RE.test(known) && (await worldExists(known).catch(() => false))) return { slug: known, created: false };
+  const slug = await createWorld(preset);
+  rememberPresetWorld(preset, slug);
+  return { slug, created: true };
+}
+
 export async function createWorld(preset?: string): Promise<string> {
   const r = await fetch(`/api/worlds${preset ? `?preset=${encodeURIComponent(preset)}` : ''}`, { method: 'POST' });
   if (!r.ok) throw new Error(`could not create a world (${r.status})`);

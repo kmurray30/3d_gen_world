@@ -165,10 +165,15 @@ export class CameraRig {
   }
 }
 
+export type LookSetting = 'sprites' | 'paper' | 'toon';
+export const LOOKS: LookSetting[] = ['sprites', 'paper', 'toon'];
+
 export interface ViewSettings {
   mode: ViewMode;
   angle: number;
   fade: boolean;
+  /** How code-drawn things show: original sprites, paper cutouts or 3D. */
+  look: LookSetting;
 }
 
 const KEY = 'pw.view';
@@ -178,12 +183,12 @@ export function loadViewSettings(): ViewSettings {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const v = JSON.parse(raw) as Partial<ViewSettings>;
-      return { mode: VIEW_MODES.includes(v.mode as ViewMode) ? (v.mode as ViewMode) : 'first', angle: clamp(Number(v.angle ?? 1), 0, ANGLES.length - 1) | 0, fade: v.fade !== false };
+      return { mode: VIEW_MODES.includes(v.mode as ViewMode) ? (v.mode as ViewMode) : 'first', angle: clamp(Number(v.angle ?? 1), 0, ANGLES.length - 1) | 0, fade: v.fade !== false, look: LOOKS.includes(v.look as LookSetting) ? (v.look as LookSetting) : 'sprites' };
     }
   } catch {
     /* ignore */
   }
-  return { mode: 'first', angle: 1, fade: true };
+  return { mode: 'first', angle: 1, fade: true, look: 'sprites' };
 }
 
 export function saveViewSettings(v: ViewSettings): void {

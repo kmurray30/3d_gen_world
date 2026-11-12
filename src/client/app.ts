@@ -11,10 +11,10 @@ import { SceneView } from './render/scene';
 import { DesktopInput } from './input/desktop';
 import { TouchInput } from './input/touch';
 import { PlayerController } from './app/player';
-import { ANGLES, CameraRig, loadViewSettings, saveViewSettings, type ViewMode } from './app/camera';
+import { ANGLES, CameraRig, LOOKS, loadViewSettings, saveViewSettings, type ViewMode } from './app/camera';
 import { Hud } from './ui/hud';
 import { WorldsPanel } from './ui/worlds-panel';
-import { createWorld, goToWorld, recordVisit, takeFreshFlag } from './app/worlds';
+import { createWorld, displayName, goToWorld, lastWorld, listWorlds, presetWorldSlug, recordVisit, rememberPresetWorld, takeFreshFlag } from './app/worlds';
 
 declare global {
   interface Window {
@@ -35,6 +35,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     onView: () => cycleView(),
     onAngle: () => cycleAngle(),
     onWalls: () => toggleWalls(),
+    onLook: () => cycleLook(),
   });
   let worldsPanel: WorldsPanel | undefined;
   const config: ClientConfig = await fetchConfig().catch(() => ({ spriteVersion: 'dev', llm: 'offline', needsPasscode: false, authed: true }));
@@ -46,8 +47,26 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   }
   let world: World;
   let created = false;
+  let fresh = false;
   try {
+    // the bare address asks where to go: a demo, a fresh meadow, or the last world
+    const q = new URLSearchParams(location.search);
+    if (!/^\/w\//.test(location.pathname) && !q.get('preset') && q.get('new') !== '1') {
+      const last = lastWorld();
+      const known = last ? listWorlds().find((w) => w.slug === last) : undefined;
+      const choice = await hud.chooseStart(known ? displayName(known) : null);
+      if (choice === 'village' || choice === 'gallery') {
+        const pick = await presetWorldSlug(choice);
+        fresh = pick.created;
+        history.replaceState(null, '', `/w/${pick.slug}${location.search}`);
+      } else if (choice === 'meadow') {
+        history.replaceState(null, '', `/w/${await createWorld()}${location.search}`);
+        fresh = true;
+      }
+    }
     ({ world, created } = await openWorld());
+    created ||= fresh;
+    if (world.preset === 'village' || world.preset === 'gallery') rememberPresetWorld(world.preset, world.slug);
   } catch (e) {
     hud.toast(`${(e as Error).message}. Playing offline.`, 'error', 6000);
     world = starterWorld('local', (_word, kind) => defaultSprite(kind));
@@ -70,7 +89,15 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   scene.setAvatar(config.avatar ?? { word: 'you', sprite: defaultSprite('human'), heightM: 1.5 });
   recordVisit(slug, engine.world.size);
   if (created || takeFreshFlag(slug)) {
-    hud.toast(engine.world.list().some((e) => e.structure) ? 'Welcome to the village. Walk into the houses, climb the bunker. V switches the view.' : 'New world. The menu has Worlds to switch, and Copy link to share this one.', 'info', 6000);
+    hud.toast(
+      world.preset === 'gallery'
+        ? 'The visuals demo. Each thing stands three times: its old sprite, a paper cutout, and 3D. Click or tap them to make them react.'
+        : world.preset === 'village'
+          ? 'Welcome to the village. Walk into the houses, climb the bunker. V switches the view, L the look.'
+          : 'New world. The menu has Worlds to switch, and Copy link to share this one.',
+      'info',
+      7000,
+    );
   }
   const leave = async (): Promise<void> => {
     if (busy) throw new Error('Wait for the current command to finish first.');
@@ -93,9 +120,20 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   rig.setAngle(settings.angle, engine.world.player);
   rig.setMode(settings.mode, engine.world.player);
   scene.fadeWalls = settings.fade;
+  scene.look = settings.look;
+  const LOOK_NAMES = { sprites: 'sprites', paper: 'paper', toon: '3D' } as const;
   const refreshViewLabels = () => {
-    hud.setViewLabels({ view: VIEW_NAMES[rig.mode], angle: rig.mode === 'third' ? ANGLES[rig.angle].name : '-', walls: scene.fadeWalls ? 'fade' : 'solid' });
-    saveViewSettings({ mode: rig.mode, angle: rig.angle, fade: scene.fadeWalls });
+    hud.setViewLabels({ view: VIEW_NAMES[rig.mode], angle: rig.mode === 'third' ? ANGLES[rig.angle].name : '-', walls: scene.fadeWalls ? 'fade' : 'solid', look: LOOK_NAMES[scene.look] });
+    saveViewSettings({ mode: rig.mode, angle: rig.angle, fade: scene.fadeWalls, look: scene.look });
+  };
+  const cycleLook = () => {
+    scene.look = LOOKS[(LOOKS.indexOf(scene.look) + 1) % LOOKS.length];
+    hud.toast(
+      scene.look === 'sprites' ? 'Look: the original sprites.' : scene.look === 'paper' ? 'Look: code-drawn paper cutouts, for the things that have one so far.' : 'Look: code-drawn 3D, for the things that have one so far.',
+      'info',
+      2500,
+    );
+    refreshViewLabels();
   };
   const cycleView = () => {
     const mode = rig.cycleMode(engine.world.player);
@@ -171,12 +209,16 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   };
   engine.on((ev) => {
     if (ev.type === 'say') {
-      if (ev.id && engine.world.has(ev.id)) scene.bubbles.say(ev.id, ev.text, ev.dur);
+      if (ev.id && engine.world.has(ev.id)) {
+        scene.bubbles.say(ev.id, ev.text, ev.dur);
+        scene.talk(ev.id, Math.min(ev.dur, 0.35 + ev.text.length * 0.06));
+      }
       else hud.toast(ev.text, 'say', ev.dur * 1000);
     } else if (ev.type === 'warn') hud.toast(ev.msg, 'error');
     else if (ev.type === 'effect') scene.effects.start(ev.key, ev.name, { entityId: ev.id, pos: ev.pos, dur: ev.dur, loop: ev.loop });
     else if (ev.type === 'effectStop') scene.effects.stop(ev.key);
     else if (ev.type === 'remove') scene.effects.stopEntity(ev.id);
+    else if (ev.type === 'poke') scene.react(ev.id);
   });
   if (new URLSearchParams(location.search).get('dev') === '1') {
     new DevConsole(hudRoot, (steps: Step[]) =>
@@ -198,7 +240,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   const touch = coarse ? new TouchInput(canvas, hudRoot) : null;
   if (!coarse) {
     hud.showLockOverlay(true);
-    hud.setHint('WASD to walk, Shift to run, Space to jump, click to poke things, / to type. V view, R angle, B walls');
+    hud.setHint('WASD to walk, Shift to run, Space to jump, click to poke things, / to type. V view, R angle, B walls, L look');
     desktop.onLockChange = (locked) => hud.showLockOverlay(!locked && !document.activeElement?.matches('input'));
     desktop.onLockError = () => hud.toast('Could not capture the mouse. Click the scene again.', 'error');
     desktop.onRequestCommand = () => {
@@ -209,10 +251,11 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       if (code === 'KeyV') cycleView();
       else if (code === 'KeyR') cycleAngle();
       else if (code === 'KeyB') toggleWalls();
+      else if (code === 'KeyL') cycleLook();
     };
     hud.input.addEventListener('blur', () => hud.showLockOverlay(!desktop.locked));
   } else {
-    hud.setHint('Left thumb: walk, push further to run. Right thumb: look. Tap a thing to name it.');
+    hud.setHint('Left thumb: walk, push further to run. Right thumb: look. Tap a thing to poke it.');
   }
 
   if (touch) {

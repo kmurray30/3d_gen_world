@@ -3,7 +3,7 @@ import type { AnimAction, EffectAction, MoveAction, RemoveAction, ResolvedAction
 import { DEG, clamp, dir2, easeIn, easeInOut, easeOut, easeOutBack, lerp } from './math';
 import { footprintRadius, renderHeight, massClassFor } from './sizing';
 import { resolveOverlap, resolvePlace, stopAtEdge, supportAt } from './place';
-import { flipFor, lerpAngle, visibleYaw, yawAlong } from './facing';
+import { faceViewer, flipFor, lerpAngle, visibleYaw, yawAlong } from './facing';
 import { structureEntity } from '../structure/entity';
 import type { Channel, Script, Task } from './scheduler';
 import type { Engine } from './index';
@@ -212,7 +212,7 @@ class MoveTask extends BaseTask {
     if (dist > 0.02) {
       e.faceDir = [dx / dist, dz / dist];
       // the paper turns to contain the direction of travel, nudged so the player still sees its face
-      const want = visibleYaw(yawAlong(dx / dist, dz / dist), e.pos, w.player.pos, 0.6);
+      const want = faceViewer(visibleYaw(yawAlong(dx / dist, dz / dist), e.pos, w.player.pos, 0.6), e.pos, w.player.pos);
       e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
       e.flip = flipFor(e.yaw, dx / dist, dz / dist);
     }

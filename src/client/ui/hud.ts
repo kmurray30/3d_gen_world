@@ -8,12 +8,20 @@ export interface HudHandlers {
   onView?: () => void;
   onAngle?: () => void;
   onWalls?: () => void;
+  onLook?: () => void;
+}
+
+export type StartChoice = 'village' | 'gallery' | 'meadow' | 'continue';
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 }
 
 export interface ViewLabels {
   view: string;
   angle: string;
   walls: string;
+  look?: string;
 }
 
 /** DOM overlay: command bar, hint, top bar with menu, target label, toasts, desktop pointer-lock overlay. */
@@ -48,6 +56,7 @@ export class Hud {
         <button type="button" data-view="view" title="Switch between first person, third person and a free camera (V)"><span class="k">View</span><span class="v"></span></button>
         <button type="button" data-view="angle" title="Cycle the camera angle: behind, high, bird, top (R)"><span class="k">Angle</span><span class="v"></span></button>
         <button type="button" data-view="walls" title="Fade walls that hide you (B)"><span class="k">Walls</span><span class="v"></span></button>
+        <button type="button" data-view="look" title="How code-drawn things look: the original sprites, paper cutouts or 3D (L)"><span class="k">Look</span><span class="v"></span></button>
       </div>
       <div class="target-label" hidden></div>
       <div class="toasts"></div>
@@ -105,6 +114,7 @@ export class Hud {
       if (act === 'view') handlers.onView?.();
       if (act === 'angle') handlers.onAngle?.();
       if (act === 'walls') handlers.onWalls?.();
+      if (act === 'look') handlers.onLook?.();
       (e.target as HTMLElement).closest('button')?.blur();
     });
     // Keep the command bar above the on-screen keyboard.
@@ -181,6 +191,28 @@ export class Hud {
           err.textContent = 'That is not it. Try again.';
           input.select();
         }
+      });
+    });
+  }
+
+  /** The start screen on the bare site address: pick a demo, a fresh meadow, or continue the last world. */
+  chooseStart(lastName: string | null): Promise<StartChoice> {
+    return new Promise((resolve) => {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      modal.innerHTML = `<div class="card start"><h2>Paper World</h2><p>Say something and it happens. Where to?</p>
+        <button type="button" data-start="village" class="start-btn village"><b>Story village</b><span>Houses to walk into, villagers, a witch's hut and a lighthouse. Type what happens next.</span></button>
+        <button type="button" data-start="gallery" class="start-btn gallery"><b>Visuals demo</b><span>Things drawn by code, each as its old sprite, a paper cutout and 3D. Click them to make them react.</span></button>
+        <button type="button" data-start="meadow" class="start-btn meadow"><b>Empty meadow</b><span>A fresh little meadow of your own.</span></button>
+        ${lastName ? `<button type="button" data-start="continue" class="start-btn continue"><b>Continue</b><span>${escapeHtml(lastName)}</span></button>` : ''}
+      </div>`;
+      this.root.appendChild(modal);
+      modal.addEventListener('keydown', (e) => e.stopPropagation());
+      modal.addEventListener('click', (e) => {
+        const choice = (e.target as HTMLElement).closest('button')?.dataset.start as StartChoice | undefined;
+        if (!choice) return;
+        modal.remove();
+        resolve(choice);
       });
     });
   }

@@ -56,6 +56,9 @@ export interface Entity {
   yaw?: number;
   /** Built from parts instead of drawn: see shared/structure. */
   structure?: Structure;
+  /** Force how this thing is drawn when it has a code-drawn figure (the gallery shows all three side by side);
+   *  undefined follows the viewer's Look setting. */
+  look?: 'sprite' | 'paper' | 'toon';
 }
 
 export interface PlayerState {

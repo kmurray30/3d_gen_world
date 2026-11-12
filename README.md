@@ -6,16 +6,18 @@ script of actions that play out with 2D cutout sprites on a flat 3D ground.
 
 ## Playing
 
-Open the hosted URL, enter the passcode once per device, and you get a fresh world at `/w/<slug>`.
-That link is the save file: open it on any device to continue, or share it. Type what should
+Open the hosted URL and enter the passcode once per device. The start screen offers the story
+village, the visuals demo, an empty meadow, or the world you were last in. Every world lives at
+`/w/<slug>`, and that link is the save file: open it on any device to continue, or share it. Type what should
 happen in the box ("water the flower", "a dragon flies in and breathes fire at the house", "make
 it huge" while looking at something). Desktop: click to look, WASD to walk, Shift to run, `/` to
 type. Phone: left thumb walks, right thumb looks, tap a thing to name it. Clicking or tapping a
 thing also pokes it: objects jiggle, animals and people turn to you and answer, and a building's
 door swings open or shut. The menu has Worlds (tap
 the title too), Undo, Reset and Copy link. Worlds lists every world you have opened on this device,
-starts a new one, and opens any world from its link or name; the bare site address reopens the
-world you used last. `?dev=1` opens a console that runs hand-written scripts.
+starts a new one, and opens any world from its link or name. The demos are reused per device:
+choosing the village or the visuals demo again reopens yours (Reset restores it). `?dev=1` opens a
+console that runs hand-written scripts.
 
 **Views.** The buttons at the top right (or `V`, `R`, `B` on a keyboard) switch between first
 person, third person and a free camera that flies with WASD, Space and C; cycle the third-person
@@ -30,9 +32,47 @@ no command is using it, favouring orientations you can see. Buildings can be cha
 ("add a story to the house", "paint the cottage blue"): the model sets new generator parameters
 and the structure regenerates with the rest kept.
 
+**Look.** The Look button (or `L`) switches how things that have a code-drawn figure are shown:
+the original sprites, layered paper cutouts, or 3D. Your own character follows it in third person
+and walks and runs with real leg and arm motion in paper and 3D.
+
+**Visuals demo.** Every code-drawn figure stands three times in labelled rows: its old sprite, the
+paper cutout and the 3D model. Click or tap one to make it react.
+
 **Village.** Worlds -> "+ New village" (or `?preset=village`) starts a meadow with one of each
 structure: three houses, a fenced yard, a gingerbread house, a witch's hut with a hat for a roof, a
 lighthouse and a three-level bunker with outside stairs you can climb. Reset brings the village back.
+
+## Code-drawn figures
+
+The sprites are AI-drawn images. Figures are drawn by code instead: a small tree of parts, each a
+joint carrying one simple solid (ball, capsule, rounded box, cylinder or cone, ring, gable prism).
+The same spec renders two ways.
+
+- **Paper** (`src/client/render/figure/paper.ts`): every part is flattened to its outline on the
+  paper plane, coloured with the crayon grain and inked. The pieces are re-laid every frame from
+  the 3D pose, so a swinging arm shortens and passes in front of or behind the body. From behind
+  the layers reverse, the face disappears and the back of the hair shows. People are drawn from the
+  front and animals in profile, like the cutouts. Round things (trees, rocks, barrels) stand as two
+  crossed cutouts so they never go edge-on.
+- **3D** (`src/client/render/figure/toon.ts`): the solids themselves, with a three-band toon ramp,
+  a soft rim light, outlines in a darker shade of each part's colour, and the face painted onto the
+  head. Joints are real pivots, so the same animation clips pose it.
+
+`src/shared/figure/` holds the spec and needs no browser: `kit.ts` has parametric builders (a
+person from height, skin, hair style and clothes; a four-legged animal from proportions, ears and
+tail; a bird), `items.ts` has the 27 sample figures (5 people, 7 animals, 5 nature, 6 village, 4
+things), and `anim.ts` has the clips. People have idle, walk and run loops, 16 reactions (wave,
+cheer, ta-da, point, shrug, jump, dance, think, scared, clap, bow, facepalm, stomp, laugh, love,
+yawn) and 12 facial expressions, plus blinking and talking. Animals hop, wag, look, shake, graze
+and rear. Props jiggle, and some do more: the house door opens, the well crank lowers its bucket,
+the wheelbarrow rolls. A click plays a random reaction with a face that suits it. Walking and
+running are picked from how fast the thing moves.
+
+Figures are stored as code and rendered on demand (drawings are cached per figure), so a style is
+just a renderer. Screenshot scripts for checking them: `scripts/shots-figures.mjs` (every trio,
+close up and from the side), `scripts/shots-anims.mjs` (reaction clips) and
+`scripts/shots-look.mjs` (the village under each Look, and the avatar walking).
 
 ## Run locally
 

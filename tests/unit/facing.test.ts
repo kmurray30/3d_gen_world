@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flipFor, normalOf, rightOf, visibility, visibleYaw, wrapDeg, yawAlong, yawFacing } from '../../src/shared/engine/facing';
+import { faceViewer, flipFor, normalOf, rightOf, visibility, visibleYaw, wrapDeg, yawAlong, yawFacing } from '../../src/shared/engine/facing';
 
 describe('facing math', () => {
   it('yawFacing points the paper front at the target', () => {
@@ -36,5 +36,11 @@ describe('facing math', () => {
     const back = visibleYaw(180, pos, cam, 0.75);
     expect(visibility(back, pos, cam)).toBeGreaterThanOrEqual(0.75 - 1e-9); // facing away is as visible as facing toward
     expect(Math.abs(wrapDeg(back - 180))).toBeLessThan(1e-6);
+  });
+
+  it('faceViewer picks the side of the paper whose front faces the viewer', () => {
+    const cam: [number, number, number] = [0, 1.6, 5];
+    expect(faceViewer(10, [0, 0, 0], cam)).toBe(10);
+    expect(Math.abs(wrapDeg(faceViewer(170, [0, 0, 0], cam) - -10))).toBeLessThan(1e-9);
   });
 });

@@ -6,6 +6,8 @@ async function enter(page: Page): Promise<void> {
   await page.goto('/');
   await page.fill('input[name=passcode]', 'test-pass');
   await page.press('input[name=passcode]', 'Enter');
+  // the bare address offers the demos; take a fresh meadow
+  await page.click('button[data-start=meadow]');
   await page.waitForURL(/\/w\/[a-z]+-[a-z]+-\d{4}/);
   await page.waitForFunction(() => !!(window as any).__game);
 }
@@ -104,8 +106,10 @@ test('worlds panel: create a new world, switch back, reopen the last one from th
   await page.press('.open-form input', 'Enter');
   await expect(page.locator('.worlds-msg')).toContainText('No world with that link');
 
-  // the bare link reopens the world used last on this device
+  // the bare link offers to continue the world used last on this device
   await page.goto('/');
+  await expect(page.locator('button[data-start=continue]')).toContainText('Continue');
+  await page.click('button[data-start=continue]');
   await page.waitForURL((u) => u.pathname === first);
   expect(firstSlug.length).toBeGreaterThan(3);
 });

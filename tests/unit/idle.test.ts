@@ -50,4 +50,17 @@ describe('idle life', () => {
     const n = [Math.sin((cat.yaw! * Math.PI) / 180), Math.cos((cat.yaw! * Math.PI) / 180)];
     expect((n[0] * dx + n[1] * dz) / Math.hypot(dx, dz)).toBeGreaterThan(0.99);
   });
+
+  it('things on display (state.stay) never turn or wander, only fidget', () => {
+    const engine = makeEngine(meadowWorld(), true);
+    engine.run([spawn('dog_1', 'dog', { rel: 'front' }, {}, 'animal', 0.6)]);
+    tick(engine, 1);
+    const dog = engine.world.get('dog_1')!;
+    dog.state.stay = true;
+    dog.yaw = 0;
+    const pos = [...dog.pos];
+    tick(engine, 60);
+    expect(dog.yaw).toBe(0);
+    expect(Math.hypot(dog.pos[0] - pos[0], dog.pos[2] - pos[2])).toBeLessThan(0.05);
+  });
 });

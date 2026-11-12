@@ -11,8 +11,9 @@ import { fence, yard } from './gen/fence';
 import { gingerbreadHouse, house, randomHouse } from './gen/house';
 import { witchHut } from './gen/hut';
 import { lighthouse, tower } from './gen/tower';
+import { signboard } from './gen/signboard';
 
-export const GENERATORS = ['house', 'gingerbread', 'fence', 'yard', 'tower', 'lighthouse', 'witch_hut', 'bunker', 'custom'] as const;
+export const GENERATORS = ['house', 'gingerbread', 'fence', 'yard', 'tower', 'lighthouse', 'witch_hut', 'bunker', 'signboard', 'custom'] as const;
 export type GenName = (typeof GENERATORS)[number];
 
 export type Params = Record<string, unknown>;
@@ -165,6 +166,8 @@ export function coerceParams(gen: GenName, raw: Params): Params {
       return clean({ r: num(p.r ?? p.radius), wallColor: colorOf(p.wallColor ?? p.color ?? p.colour), hatColor: colorOf(p.hatColor ?? p.roofColor), bandColor: colorOf(p.bandColor), tilt: num(p.tilt) });
     case 'bunker':
       return clean({ w: num(p.w ?? p.width), d: num(p.d ?? p.depth), levels: num(p.levels ?? p.stories ?? p.floors), color: colorOf(p.color ?? p.colour) });
+    case 'signboard':
+      return clean({ text: typeof (p.text ?? p.sign ?? p.label) === 'string' ? String(p.text ?? p.sign ?? p.label).slice(0, 24) : undefined, color: colorOf(p.color ?? p.colour) });
     case 'custom':
       return { parts: Array.isArray(p.parts) ? p.parts : [], label: typeof p.label === 'string' ? p.label : 'custom' };
   }
@@ -195,6 +198,8 @@ export function generate(gen: string, params: Params, seed: number, decals: Deca
       return witchHut(params, ctx, decals);
     case 'bunker':
       return bunker(params, ctx, decals);
+    case 'signboard':
+      return signboard(params, ctx, decals);
     case 'custom':
       return customStructure((params.parts as CustomPartSpec[]) ?? [], ctx, decals, params.label as string);
     default:
