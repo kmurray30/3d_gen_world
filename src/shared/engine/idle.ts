@@ -8,6 +8,7 @@ import type { Engine } from './index';
 import { footprints, findFreeSpot } from './place';
 import { footprintRadius } from './sizing';
 import { faceViewer, visibleYaw, wrapDeg } from './facing';
+import { isSolidFigure } from './transform';
 
 const SCRIPTED_COOLDOWN_S = 12;
 const WANDER_RADIUS_M = 3;
@@ -65,6 +66,8 @@ export class Idle {
     const engine = this.engine;
     const sign = engine.rng() < 0.5 ? -1 : 1;
     const want = wrapDeg((e.yaw ?? 0) + sign * (60 + engine.rng() * 90));
+    // a solid model just turns; a flat cutout keeps its face to the viewer so it never stands edge-on
+    if (isSolidFigure(e)) return engine.turn(e.id, want, e.flip, e.kind === 'animal' ? 'hop' : undefined, `idle_${engine.nextKey()}`);
     const yaw = faceViewer(visibleYaw(want, e.pos, engine.world.player.pos, 0.75), e.pos, engine.world.player.pos);
     const flip = engine.rng() < 0.5;
     engine.turn(e.id, yaw, flip, e.kind === 'animal' ? 'hop' : undefined, `idle_${engine.nextKey()}`);

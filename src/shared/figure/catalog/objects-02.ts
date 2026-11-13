@@ -3931,18 +3931,25 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [A.par(A.pose('cloak', { rot: [0, 360, 0], dur: 0.9 }), A.say('Swoosh!', 1)), A.pose('cloak', { rot: [0, 0, 0], dur: 0.01 })] })
       .done(),
   ),
-  // A twin-bell alarm clock on little feet: its hands spin round and the bells ring.
+  // A mahogany mantel clock, 42 cm wide (the plain "clock"; the alarm, cuckoo, grandfather and digital clocks have
+  // their own words): a "Napoleon hat" case swelling from low scrolled ends to a round hump, on a plinth with a
+  // brass-lined front, a cream dial in a brass bezel with hour marks and hands. Its hands sweep round and it chimes.
   e('clock', 'home', 'clocks', () => {
-    const b = m('clock')
-      .cyl([0.16, 0.06, 0.16], [0, 0.11, 0], { color: 'red', rot: [90, 0, 0], name: 'body' })
-      .cyl([0.13, 0.01, 0.13], [0, 0.11, 0.031], { color: 'white', rot: [90, 0, 0] })
-      .box([0.008, 0.045, 0.004], [0, 0.128, 0.037], { color: 'black', name: 'minute', pivot: [0, 0.11, 0.037] })
-      .box([0.035, 0.008, 0.004], [0.015, 0.11, 0.038], { color: 'black', name: 'hour', pivot: [0, 0.11, 0.038] })
-      .stick([0, 0.19, 0], [0, 0.22, 0], 0.01, 'silver');
-    b.pair((s) => b.ball([0.07, 0.05, 0.07], [s * 0.06, 0.19, 0], { color: 'silver', rot: [0, 0, s * -30], name: s > 0 ? 'bellL' : 'bellR' }).rod([s * 0.04, 0.05, 0], [s * 0.06, 0.012, 0], 0.016, 'darkgray'));
-    b.each(4, (i) => b.box([0.006, 0.014, 0.004], [Math.cos(i * 1.5708) * 0.052, 0.11 + Math.sin(i * 1.5708) * 0.052, 0.037], { color: 'black', rot: [0, 0, i * 90 + 90] }));
+    const b = m('clock', { edge: 'sharp' })
+      .box([0.44, 0.025, 0.13], [0, 0.0125, 0], { color: '#3e1f12', round: 0.25 })
+      .loft([0.12, 0.44, 0.42], [0, 0.025, 0], [[0, 0.85, 0.32, 0], [0.08, 0.9, 0.36, 0], [0.2, 0.95, 0.44, 0], [0.3, 1, 0.62, 0], [0.38, 1, 0.86, 0], [0.5, 1, 1, 0], [0.62, 1, 0.86, 0], [0.7, 1, 0.62, 0], [0.8, 0.95, 0.44, 0], [0.92, 0.9, 0.36, 0], [1, 0.85, 0.32, 0]], { color: '#5a2f1a', boxy: 0.85, cut: 'top', rot: [0, 90, 0], name: 'body' })
+      .box([0.36, 0.005, 0.002], [0, 0.042, 0.061], { color: 'brass', round: 0, noInk: true })
+      .cyl([0.14, 0.006, 0.14], [0, 0.118, 0.062], { color: 'cream', rot: [90, 0, 0] })
+      .torus([0.156, 0.156, 0.014], [0, 0.118, 0.064], { color: 'brass', tube: 0.12 })
+      .box([0.005, 0.05, 0.003], [0, 0.141, 0.067], { color: 'black', round: 0, name: 'minute', pivot: [0, 0.118, 0.067] })
+      .box([0.032, 0.007, 0.003], [-0.013, 0.118, 0.068], { color: 'black', round: 0, name: 'hour', pivot: [0, 0.118, 0.068] })
+      .ball(0.01, [0, 0.118, 0.069], { color: 'brass' });
+    b.each(12, (i) => {
+      const a = (i / 12) * Math.PI * 2;
+      b.box([0.004, i % 3 ? 0.008 : 0.014, 0.002], [Math.sin(a) * 0.056, 0.118 + Math.cos(a) * 0.056, 0.066], { color: 'black', rot: [0, 0, -i * 30], round: 0, noInk: true });
+    });
     return b
-      .act({ click: [A.par(A.pose('minute', { rot: [0, 0, -720], dur: 1.2 }), A.pose('hour', { rot: [0, 0, -60], dur: 1.2 })), A.par(A.anim('shake', 3), A.say('BRRRRING!', 1.5)), A.par(A.pose('minute', { rot: [0, 0, 0], dur: 0.01 }), A.pose('hour', { rot: [0, 0, 0], dur: 0.01 }))] })
+      .act({ click: [A.par(A.pose('minute', { rot: [0, 0, -720], dur: 1.2 }), A.pose('hour', { rot: [0, 0, -60], dur: 1.2 })), A.say('Bong... bong... bong!', 2.2), A.par(A.pose('minute', { rot: [0, 0, 0], dur: 0.01 }), A.pose('hour', { rot: [0, 0, 0], dur: 0.01 }))] })
       .done();
   }),
   // A wall clock face in a wooden rim on a little stand; its hands sweep round.

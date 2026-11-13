@@ -401,7 +401,50 @@ const pompoms = (c: string) => X((d) => [1, -1].map((s) => [`hand${s > 0 ? 'L' :
 const palette = (side: 'L' | 'R' = 'L') => inHand(side, (a) => [['ball', [a * 3.6, a * 2.6, a * 0.3], [a * 0.6, -a * 0.2, a * 1.2], 'lightwood', { srot: [-20, 0, 0] }], ...(['red', 'blue', 'yellow', 'green'] as const).map((c, i) => ['ball', [a * 0.6, a * 0.6, a * 0.3], [a * (-0.4 + i * 0.6), a * (0.3 - (i % 2) * 0.4), a * 1.4], c, { noInk: true, layer: 6 }] as HP)]);
 const dumbbell = (side: 'L' | 'R') => inHand(side, (a) => [['capsule', [a * 0.35, a * 3.2, a * 0.35], [0, -a * 0.2, a * 0.4], 'iron', { srot: [90, 0, 0] }], ['cyl', [a * 1.8, a * 0.5, a * 1.8], [0, -a * 0.2, a * 1.8], 'black', { srot: [90, 0, 0] }], ['cyl', [a * 1.8, a * 0.5, a * 1.8], [0, -a * 0.2, -a * 1.0], 'black', { srot: [90, 0, 0] }]]);
 const spyglass = (side: 'L' | 'R' = 'L') => inHand(side, (a) => [['cyl', [a * 0.8, a * 3, a * 0.8], [0, -a * 0.3, a * 1.2], 'brass', { srot: [90, 0, 0], taper: 0.7 }], ['cyl', [a * 0.9, a * 0.4, a * 0.9], [0, -a * 0.3, a * 2.7], 'darkbrown', { srot: [90, 0, 0] }]]);
-const kite = (c = 'red', side: 'L' | 'R' = 'L') => inHand(side, (a, d) => [['capsule', [a * 0.1, d.H * 0.6, a * 0.1], [d.H * 0.12, d.H * 0.28, a * 0.4], 'white', { noInk: true, srot: [0, 0, -25] }], ['box', [a * 3.4, a * 3.4, a * 0.2], [d.H * 0.25, d.H * 0.58, a * 0.4], c, { srot: [0, 0, 45], round: 0.05 }], ['ball', [a * 0.5, a * 0.5, a * 0.5], [d.H * 0.235, d.H * 0.58 - a * 2.6, a * 0.4], 'gold']]);
+/** A 0.9 m diamond kite (silk on cedar cross spars, a wire on top, a tail with bows) flying up and away to the
+ *  left on a long string from the left fist, with a key on the string. Put the left arm forward at shoulder
+ *  height (upper arm -50, forearm -40 about x, so the hand's frame is world axes turned -90 about x). The string
+ *  is the part 'kite' (its joint in the fist), so posing it sways the whole kite. */
+const KITE_ARM = { armL: [-50, 0, 0] as Vec3, foreL: [-40, 0, 0] as Vec3 };
+const kite = (c = 'red') => X((d) => {
+  const a = d.aw;
+  const P = (v: Vec3): Vec3 => [v[0], -v[2], v[1]]; // world axes -> the forward-pointing hand's frame
+  const S = (r: Vec3): Vec3 => [r[0] + 90, r[1], r[2]];
+  const g: Vec3 = [0, 0, a * 0.45]; // the grip, in the fist
+  const k: Vec3 = [0.95, 1.85, -0.75]; // from the grip to the kite's cross point
+  const len = Math.hypot(...k);
+  const u = k.map((v) => v / len) as Vec3;
+  const sr: Vec3 = [Math.atan2(u[2], u[1]) * (180 / Math.PI), 0, -Math.asin(u[0]) * (180 / Math.PI)];
+  const kp = (t: number): Vec3 => [g[0] + u[0] * t, g[1] + u[1] * t, g[2] + u[2] * t];
+  const key = kp(0.42);
+  const r: XP[] = [
+    ['handL', 'capsule', [0.012, len, 0.012], P(g), '#efe8d6', { name: 'kite', off: P(k.map((v) => v / 2) as Vec3), srot: S(sr), noInk: true }],
+    // the sail's frame: x across, y up the spine, z out of the face (turned to face the viewer and the flier)
+    ['kite', 'box', [0.02, 0.02, 0.02], P(k), c, { name: 'kiteSail', rot: S([-18, -22, 0]), noInk: true }],
+    ['kiteSail', 'wedge', [0.66, 0.3, 0.008], [0, 0.15, 0], c],
+    ['kiteSail', 'wedge', [0.66, 0.6, 0.008], [0, -0.3, 0], c, { srot: [0, 0, 180] }],
+    ['kiteSail', 'capsule', [0.018, 0.92, 0.018], [0, -0.15, 0], 'lightwood'],
+    ['kiteSail', 'capsule', [0.018, 0.68, 0.018], [0, 0, 0], 'lightwood', { srot: [0, 0, 90] }],
+    ['kiteSail', 'capsule', [0.008, 0.16, 0.008], [0, 0.36, 0], 'iron'],
+  ];
+  // the tail: string swinging down from the bottom tip, a bow at each knot
+  const tail: Vec3[] = [[0, -0.6, 0], [0.09, -0.84, -0.03], [0.02, -1.08, -0.06], [-0.07, -1.32, -0.08], [-0.01, -1.56, -0.1]];
+  const bows = ['white', 'yellow', 'white', 'yellow'];
+  for (let i = 1; i < tail.length; i++) {
+    const [p, q] = [tail[i - 1], tail[i]];
+    const t: Vec3 = [q[0] - p[0], q[1] - p[1], q[2] - p[2]];
+    const tl = Math.hypot(...t);
+    r.push(['kiteSail', 'capsule', [0.008, tl, 0.008], [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2], '#efe8d6', { noInk: true, srot: [Math.atan2(t[2] / tl, t[1] / tl) * (180 / Math.PI), 0, -Math.asin(t[0] / tl) * (180 / Math.PI)] }]);
+    for (const s of [1, -1]) r.push(['kiteSail', 'cyl', [0.075, 0.055, 0.02], [q[0] + s * 0.028, q[1], q[2]], bows[i - 1], { taper: 0, srot: [0, 0, s * 90] }]);
+  }
+  // the key, tied on the string near the hand
+  r.push(
+    ['kite', 'torus', [0.032, 0.032, 0.007], P([key[0] - g[0], key[1] - g[1] - 0.022, key[2] - g[2]]), 'brass', { tube: 0.3, srot: S([0, 0, 0]) }],
+    ['kite', 'capsule', [0.011, 0.065, 0.011], P([key[0] - g[0], key[1] - g[1] - 0.07, key[2] - g[2]]), 'brass', { srot: S([0, 0, 0]) }],
+    ['kite', 'box', [0.024, 0.02, 0.006], P([key[0] - g[0] + 0.014, key[1] - g[1] - 0.093, key[2] - g[2]]), 'brass', { round: 0.2, srot: S([0, 0, 0]) }],
+  );
+  return r;
+});
 const coil = (c: string, side: 'L' | 'R' = 'L') => inHand(side, (a) => [['torus', [a * 2.6, a * 2.6, a * 0.6], [0, -a * 1.4, a * 0.6], c, { tube: 0.25 }], ['torus', [a * 2.2, a * 2.2, a * 0.6], [0, -a * 1.4, a * 0.9], c, { tube: 0.25 }]]);
 /** A rope loop hanging from the right hand; raised overhead and spun (pose spin about y) it twirls. */
 const lasso = (c: string) => X((d) => {
@@ -735,8 +778,8 @@ export const ENTRIES: CatalogEntry[] = [
     [G('point', 'Your room is this way!')],
   )),
   // Bald with long grey sides, little glasses and a waistcoat, flying his kite with a key on the string.
-  e('benjamin franklin', 'town', 'history', () => act(W('benjamin franklin', { skin: 'skin1', hair: '#d4d7da', style: 'bald', top: 'brown', long: true, bottom: 'brown', legs: 'white', shoes: 'black', build: 1.15, acc: [sideHair('#d4d7da'), face('glasses', '#5a3a22'), wear('vest', 'tan'), kite('red')] }),
-    [A.par(A.effect('sparkle', { dur: 1.5 }), A.anim('gasp'), A.say('Electricity!', 2))],
+  e('benjamin franklin', 'town', 'history', () => act(W('benjamin franklin', { skin: 'skin1', hair: '#d4d7da', style: 'bald', top: 'brown', long: true, bottom: 'brown', legs: 'white', shoes: 'black', build: 1.15, acc: [sideHair('#d4d7da'), face('glasses', '#5a3a22'), wear('vest', 'tan'), rest(KITE_ARM), kite('red')] }),
+    [A.par(A.effect('sparkle', { dur: 1.5 }), A.expr('surprised'), A.pose('kite', { rot: [0, 7, 0], dur: 0.3, times: 3 }), A.say('Electricity!', 2)), A.expr('neutral')],
     [G('nod', 'Early to bed, early to rise.', 2.2)],
   )),
   // Sasquatch: 2.4 m, shaggy brown, big feet; shy, then roars.

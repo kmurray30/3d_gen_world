@@ -198,8 +198,8 @@ Ids: `'self'`, `'self.<socket>'` (whatever sits there; a step on it repeats for 
   animals rear graze look; birds peck crow flutter; dragons roar breathe. A gesture moves an arm from hanging
   down: a person with a rest stance (holding a tray, arms crossed) lets go of it on that arm while the gesture
   plays, unless the act itself is posing that arm.
-- A living thing that is clicked looks at the player while its act runs and then turns back; you do not need a
-  `face('player')` step (it is turned into that look).
+- Nothing turns to face the player when clicked: an act plays where the thing stands, facing the way it was.
+  A `face('player')` step in an act is ignored (a model that walks faces where it walks and keeps that facing).
 - `effect` names: fire smoke steam rain water_spray sparkle explosion snow hearts dust.
 - expressions: neutral happy sad angry surprised scared sleepy laughing confused.
 - `remove` how: pop fade sink fly_away explode. move speed: slow walk run fly instant; style walk hop slide fly.

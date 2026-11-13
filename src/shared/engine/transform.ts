@@ -7,16 +7,27 @@ import type { Figure } from '../figure/types';
 
 /** The code-drawn figure an entity shows as (null for buildings, forced sprites and words without one). */
 let figuresDrawn = true;
+let figuresSolid = true;
 /**
- * The client says whether code-drawn models are shown. In the sprites Look things are pictures: a model's acts,
- * part poses and sockets would not show, so the engine treats them as the drawings they are.
+ * The client says whether code-drawn models are shown, and whether they are solid (3D and cel) or flat (paper,
+ * origami). In the sprites Look things are pictures: a model's acts, part poses and sockets would not show, so the
+ * engine treats them as the drawings they are. Flat things turn their plane to stay readable; solid models just
+ * face where they go.
  */
-export function setFiguresDrawn(on: boolean): void {
+export function setFiguresDrawn(on: boolean, solid = on): void {
   figuresDrawn = on;
+  figuresSolid = on && solid;
+}
+
+/** A thing drawn as a solid model: its yaw is simply the way it faces (no turning its face to the viewer). */
+export function isSolidFigure(e: Entity): boolean {
+  if (!figureOfEntity(e)) return false;
+  // a thing with a look of its own (the visuals demo's rows) goes by that
+  return e.look ? e.look === 'toon' || e.look === 'cel' : figuresSolid;
 }
 
 export function figureOfEntity(e: Entity): Figure | null {
-  if (!figuresDrawn || e.structure || e.look === 'sprite') return null;
+  if (e.structure || e.look === 'sprite' || (!figuresDrawn && !e.look)) return null;
   // the same lookup the client draws with (a "pony" is drawn as the horse, so it moves as the horse)
   return figureFor(e.word);
 }

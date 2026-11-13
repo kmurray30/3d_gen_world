@@ -3,7 +3,6 @@ import type { ResolvedStep } from '../schema';
 import type { Bump } from './collide';
 import type { Engine, EngineEvent } from './index';
 import { dist2D } from './transform';
-import { yawFacing } from './facing';
 
 const BUMP_COOLDOWN_S = 0.8;
 const MAX_REACTIONS_PER_FRAME = 8;
@@ -59,7 +58,6 @@ export class Rules {
       case 'person':
         if (moving) this.run([{ op: 'anim', id: e.id, name: 'wobble' }]);
         else {
-          this.engine.turn(e.id, yawFacing(e.pos, this.engine.world.player.pos), undefined, undefined, `rule_${this.engine.nextKey()}`);
           this.run([
             { op: 'par', do: [{ op: 'move', id: e.id, to: { rel: rng() < 0.5 ? 'left' : 'right', of: 'player', dist: 'close', height: 'ground' }, speed: 'walk', style: 'walk' }, { op: 'say', id: e.id, text: pick(PERSON_LINES), dur: 1.5 }] },
           ]);

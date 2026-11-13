@@ -62,8 +62,6 @@ export class Engine {
   private keySeq = 0;
   private idSeq = 0;
   private readonly pokeUntil = new Map<string, number>();
-  /** Things looking at someone for a while: who, what they faced before, and the listener that ends it. */
-  private readonly looks = new Map<string, { who: string; before: string | undefined; off: () => void }>();
   /** Ids an act has promised to things it will spawn or take off (so two copies of it never share one). */
   private readonly reserved = new Set<string>();
   /** Each thing's running act script. */
@@ -109,7 +107,6 @@ export class Engine {
     if ((this.pokeUntil.get(key) ?? -1) > this.time) return false;
     this.pokeUntil.set(key, this.time + 0.6);
     const sid = `rule_poke_${this.nextKey()}`;
-    const toward = yawFacing(this.world.worldPos(e), this.world.player.pos);
     const pick = (arr: string[]) => arr[Math.floor(this.rng() * arr.length)];
     if (typeof e.state.piece_of === 'string' && this.world.has(e.state.piece_of)) {
       this.reattachPiece(id);
@@ -118,12 +115,12 @@ export class Engine {
     }
     const rig = e.sprite.file ? this.rigs(e.sprite.file) : undefined;
     const piece = rig && part ? rig.pieces.find((p) => p.id === part) : undefined;
-    if (piece && this.pokePiece(e, piece.id, piece.kind, !!piece.detach, toward, sid)) {
+    if (piece && this.pokePiece(e, piece.id, piece.kind, !!piece.detach, sid)) {
       this.emit({ type: 'poke', id, part });
       return true;
     }
     // a code-drawn thing does its act (the next one in its cycle); without one, a reaction that fits it, with
-    // words that fit the reaction
+    // words that fit the reaction. Nothing turns to face the player when clicked: it acts where it stands
     const fig = figureOfEntity(e);
     if (fig) {
       if (this.act(id)) {
@@ -131,8 +128,6 @@ export class Engine {
         return true;
       }
       const r = reactionFor(fig, this.rng);
-      const living = e.kind === 'animal' || e.kind === 'human' || e.kind === 'humanoid';
-      if (living) this.faceFor(id, 'player', 3.5, sid);
       if (r.line) this.run([{ op: 'say', id, text: r.line, dur: 1.8 }], `${sid}_say`);
       this.emit({ type: 'poke', id, clip: r.clip });
       return true;
@@ -148,10 +143,8 @@ export class Engine {
       this.emit({ type: 'poke', id, ...(m ? { part: m.name } : {}) });
       return true;
     } else if (e.kind === 'animal') {
-      this.turn(id, toward, undefined, undefined, `${sid}_t`);
       this.run([{ op: 'par', do: [{ op: 'anim', id, name: 'hop', times: 1 }, { op: 'say', id, text: pick(['!', '?', '!!']), dur: 1 }] }], sid);
     } else if (e.kind === 'human' || e.kind === 'humanoid') {
-      this.turn(id, toward, undefined, undefined, `${sid}_t`);
       this.run([{ op: 'par', do: [{ op: 'anim', id, name: 'nod', times: 1 }, { op: 'say', id, text: pick(['Hello!', 'Yes?', 'Oh, hi.', 'Hm?', 'Nice day.', 'Can I help you?']), dur: 1.8 }] }], sid);
     } else {
       this.run([{ op: 'anim', id, name: e.massClass === 'heavy' ? 'shake' : 'wobble', times: 1 }], sid);
@@ -161,7 +154,7 @@ export class Engine {
   }
 
   /** The part-by-part pokes. Returns false when the part has nothing special (the whole-thing poke runs). */
-  private pokePiece(e: Entity, piece: string, kind: string, detachable: boolean, toward: number, sid: string): boolean {
+  private pokePiece(e: Entity, piece: string, kind: string, detachable: boolean, sid: string): boolean {
     const living = e.kind === 'human' || e.kind === 'humanoid' || e.kind === 'animal';
     const say = (text: string, dur = 1.4) => ({ op: 'say' as const, id: e.id, text, dur });
     const face = (expression: 'happy' | 'surprised' | 'angry' | 'laughing') => ({ op: 'set' as const, id: e.id, expression });
@@ -178,7 +171,6 @@ export class Engine {
       return true;
     }
     if (!living) return kind === 'wheel' || kind === 'blade' || kind === 'clock_hand' ? (this.run([{ op: 'anim', id: e.id, name: 'wobble', times: 1 }], sid), true) : false;
-    this.turn(e.id, toward, undefined, undefined, `${sid}_t`);
     switch (kind) {
       case 'hand':
       case 'arm':
@@ -327,22 +319,19 @@ export class Engine {
     if (going && this.scheduler.scripts.has(going)) return true;
     const n = typeof e.state.act_n === 'number' ? e.state.act_n : 0;
     e.state.act_n = (n + 1) % cycle.length;
-    let steps = this.prepareAct(e, cycle[n % cycle.length]);
-    // a living thing looks at you while it acts and then goes back to what it was doing: an act's own
-    // "face the player" becomes that look instead of turning it toward you for good
-    if (e.kind === 'animal' || e.kind === 'human' || e.kind === 'humanoid') {
-      const keep = (st: ResolvedStep): ResolvedStep | null => {
-        if (st.op === 'par') {
-          const inner = st.do.map((x) => keep(x as ResolvedStep)).filter((x): x is ResolvedStep => !!x);
-          return inner.length ? ({ ...st, do: inner } as ResolvedStep) : null;
-        }
-        if (st.op !== 'set' || st.id !== id || st.face !== 'player') return st;
-        const { face: _face, ...rest } = st;
-        return Object.keys(rest).some((k) => !['op', 'id', 'delay', 'dur'].includes(k)) ? (rest as ResolvedStep) : null;
-      };
-      steps = steps.map(keep).filter((x): x is ResolvedStep => !!x);
-      this.faceFor(id, 'player', 4.5, `act_face_${id}_${this.nextKey()}`);
-    }
+    // an act plays where the thing stands: a "face the player" step in it is dropped, so nothing ends up turned
+    const keep = (st: ResolvedStep): ResolvedStep | null => {
+      if (st.op === 'par') {
+        const inner = st.do.map((x) => keep(x as ResolvedStep)).filter((x): x is ResolvedStep => !!x);
+        return inner.length ? ({ ...st, do: inner } as ResolvedStep) : null;
+      }
+      if (st.op !== 'set' || st.id !== id || st.face !== 'player') return st;
+      const { face: _face, ...rest } = st;
+      return Object.keys(rest).some((k) => !['op', 'id', 'delay', 'dur'].includes(k)) ? (rest as ResolvedStep) : null;
+    };
+    const steps = this.prepareAct(e, cycle[n % cycle.length])
+      .map(keep)
+      .filter((x): x is ResolvedStep => !!x);
     const sid = `act_${id}_${this.nextKey()}`;
     this.actScripts.set(id, sid);
     this.run(steps, sid);
@@ -434,35 +423,6 @@ export class Engine {
       }
     }
     return out;
-  }
-
-  /** Turn a living thing to look at someone for a while, then let it go back to how it stood. */
-  private faceFor(id: string, who: string, seconds: number, sid: string): void {
-    const e = this.world.get(id);
-    if (!e) return;
-    // looking again while still looking keeps what it was doing before the first look
-    const prev = this.looks.get(id);
-    const before = prev ? prev.before : e.facing;
-    prev?.off();
-    e.facing = who;
-    this.run([{ op: 'wait', dur: seconds }], `${sid}_face`);
-    const off = this.on((ev) => {
-      if (ev.type === 'scriptDone' && ev.id === `${sid}_face`) this.endLook(id);
-    });
-    this.looks.set(id, { who, before, off });
-  }
-
-  /** A look is over (or cut short by an undo or a reset): back to how it stood. */
-  private endLook(id: string): void {
-    const l = this.looks.get(id);
-    if (!l) return;
-    l.off();
-    this.looks.delete(id);
-    const now = this.world.get(id);
-    if (now && now.facing === l.who) {
-      if (l.before) now.facing = l.before;
-      else delete now.facing;
-    }
   }
 
   /**
@@ -688,7 +648,6 @@ export class Engine {
 
   cancelAll(): void {
     this.scheduler.cancelAll();
-    for (const id of [...this.looks.keys()]) this.endLook(id);
     this.reserved.clear();
     this.actScripts.clear();
     for (const t of this.world.transient.values()) {
@@ -798,17 +757,9 @@ export class Engine {
     return out;
   }
 
-  /** Saveable snapshot (a passing look at the player is not saved). */
+  /** Saveable snapshot. */
   snapshot(): World {
-    const w = this.world.toWorld();
-    if (this.looks.size)
-      for (const e of w.entities) {
-        const l = this.looks.get(e.id);
-        if (!l || e.facing !== l.who) continue;
-        if (l.before) e.facing = l.before;
-        else delete e.facing;
-      }
-    return w;
+    return this.world.toWorld();
   }
 }
 

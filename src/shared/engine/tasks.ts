@@ -1,7 +1,7 @@
 import type { Entity, Vec3 } from '../types';
 import type { AnimAction, EffectAction, MoveAction, OperateAction, PoseAction, ReattachAction, RemoveAction, ResolvedAction, ResolvedBuild, ResolvedDetach, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
 import type { Anchor, PartPose } from '../types';
-import { figureOfEntity } from './transform';
+import { figureOfEntity, isSolidFigure } from './transform';
 import { findPart, restFacing } from '../figure/pose';
 import { GESTURE_SECONDS, isGesture } from '../gestures';
 import { DEG, clamp, dir2, easeIn, easeInOut, easeOut, easeOutBack, lerp } from './math';
@@ -233,10 +233,20 @@ class MoveTask extends BaseTask {
     const step = this.speed * dt;
     if (dist > 0.02) {
       e.faceDir = [dx / dist, dz / dist];
-      // the paper turns to contain the direction of travel, nudged so the player still sees its face
-      const want = faceViewer(visibleYaw(yawAlong(dx / dist, dz / dist), e.pos, w.player.pos, 0.6), e.pos, w.player.pos);
-      e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
-      e.flip = flipFor(e.yaw, dx / dist, dz / dist);
+      const fig = isSolidFigure(e) ? figureOfEntity(e) : null;
+      if (fig) {
+        // a solid model faces where it is going (and stays facing that way when it stops); a side-view one stands
+        // a quarter turn round from its yaw
+        const heading = (Math.atan2(dx, dz) * 180) / Math.PI;
+        const want = fig.view === 'side' ? heading + 90 : heading;
+        e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
+        e.flip = false;
+      } else {
+        // the paper turns to contain the direction of travel, nudged so the player still sees its face
+        const want = faceViewer(visibleYaw(yawAlong(dx / dist, dz / dist), e.pos, w.player.pos, 0.6), e.pos, w.player.pos);
+        e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
+        e.flip = flipFor(e.yaw, dx / dist, dz / dist);
+      }
     }
     const dy = this.dest[1] - e.pos[1];
     if (dist <= step || this.elapsed > CHASE_CAP_S) {

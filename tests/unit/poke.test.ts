@@ -43,7 +43,7 @@ describe('poking things', () => {
     expect(e.state.door_open).toBe(true);
   });
 
-  it('code-drawn things react with a clip and a line that fits it, and look at you; plain drawings wobble', () => {
+  it('code-drawn things react with a clip and a line that fits it, without turning to you; plain drawings wobble', () => {
     const engine = makeEngine(meadowWorld());
     engine.run([spawn('dog_1', 'dog', { rel: 'front' }, {}, 'animal', 0.6), spawn('man_1', 'man', { rel: 'left' }, {}, 'human', 1.7), spawn('cup_1', 'cup', { rel: 'right' }, {}, 'object', 0.12)]);
     tick(engine, 1);
@@ -72,8 +72,8 @@ describe('poking things', () => {
     const pmSay = events.find((ev) => ev.type === 'say' && ev.id === 'pm_1') as Extract<EngineEvent, { type: 'say' }>;
     expect(pmPoke.clip).toBeTruthy();
     expect(REACTION_LINES[pmPoke.clip!]).toContain(pmSay.text);
-    // living things look at you for a while (front toward you, whatever way they were standing), then let go
-    expect(engine.world.get('dog_1')!.facing).toBe('player');
+    // nothing turns to face you when clicked: it acts where it stands, the way it was facing
+    expect(engine.world.get('dog_1')!.facing).toBeUndefined();
     tick(engine, 4);
     expect(engine.world.get('dog_1')!.facing).toBeUndefined();
     expect(engine.world.get('dog_1')!.yaw).toBe(90);

@@ -182,4 +182,22 @@ describe('acts, movers, sockets and pieces', () => {
     plain.held = ['armR', 'foreR'];
     expect(plain.pose().j.foreR).toEqual(x.j.foreR);
   });
+
+  it('a model faces where it walks and keeps facing that way; a click never turns it to the player', () => {
+    // a front-view model (the man) walks +x: his yaw is his heading, 90
+    const man: Entity = { ...thing('m', 'man', [0, 0, 0], 0), kind: 'human' };
+    // a side-view model (the bus) drives -z: it stands a quarter turn round from its heading, 180 + 90
+    const bus = thing('b', 'bus', [0, 0, 20], 0);
+    const e = world(man, bus);
+    e.run([{ op: 'move', id: 'm', to: { rel: 'near', of: 'player' }, dest: [6, 0, 0] } as never, { op: 'move', id: 'b', to: { rel: 'near', of: 'player' }, dest: [0, 0, 5] } as never]);
+    run(e, 8);
+    expect(Math.round(e.world.get('m')!.yaw!)).toBe(90);
+    expect(((Math.round(e.world.get('b')!.yaw!) % 360) + 360) % 360).toBe(270);
+    // the man's act has a face-the-player step: he waves where he stands
+    const before = e.world.get('m')!.yaw;
+    expect(e.poke('m')).toBe(true);
+    run(e, 4);
+    expect(e.world.get('m')!.facing).toBeUndefined();
+    expect(e.world.get('m')!.yaw).toBe(before);
+  });
 });

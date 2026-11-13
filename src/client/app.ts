@@ -168,7 +168,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   rig.setMode(settings.mode, engine.world.player);
   scene.fadeWalls = settings.fade;
   scene.look = atlas && settings.look === 'sprites' ? 'cel' : settings.look;
-  setFiguresDrawn(scene.look !== 'sprites');
+  setFiguresDrawn(scene.look !== 'sprites', scene.look === 'cel' || scene.look === 'toon');
   const LOOK_NAMES = { sprites: 'sprites', paper: 'paper', origami: 'origami', toon: '3D', cel: 'cel' } as const;
   const refreshViewLabels = () => {
     const sound = sounds!.mixer.soundMode;
@@ -177,7 +177,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   };
   const cycleLook = () => {
     scene.look = LOOKS[(LOOKS.indexOf(scene.look) + 1) % LOOKS.length];
-    setFiguresDrawn(scene.look !== 'sprites');
+    setFiguresDrawn(scene.look !== 'sprites', scene.look === 'cel' || scene.look === 'toon');
     hud.toast(
       scene.look === 'sprites'
         ? 'Look: the original sprites.'
