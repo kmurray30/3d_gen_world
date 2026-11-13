@@ -526,10 +526,25 @@ export const ENTRIES: CatalogEntry[] = [
     [A.par(A.pose('hips', { move: [0, 0.4, 0], dur: 1.0 }), A.pose('wingL', { rot: [0, -25, 15], dur: 0.5 }), A.pose('wingR', { rot: [0, 25, -15], dur: 0.5 }), A.effect('sparkle', { dur: 1.8 }), A.say('Peace on earth!', 2.2)), A.wait(1.2), A.par(A.pose('hips', { move: [0, 0, 0], dur: 1.0 }), A.pose('wingL', { rot: [0, 0, 0], dur: 0.8 }), A.pose('wingR', { rot: [0, 0, 0], dur: 0.8 }))],
     [G('wave', 'Bless you!')],
   )),
-  // Bucket hat, fishing vest and rod: casts the line, then holds up the fish that bit.
-  e('angler', 'town', 'outdoors', () => act(W('angler', { top: 'tan', bottom: 'darkgreen', shoes: 'darkgreen', acc: [bucket('olive'), wear('vest', 'olive'), boots('darkgreen'), held('fishing rod'), inHand('L', (a) => [['ball', [a * 1.0, a * 1.4, a * 3.4], [0, -a * 1.9, a * 0.6], 'silver', { srot: [85, 0, 0], name: 'catch', scale: 0 }]])] }),
+  // Bucket hat, fishing vest and a real 2.4 m rod (cork grip, reel, tapered blank, line down to a red and white
+  // float): casts the line, then holds up the fish that bit.
+  e('angler', 'town', 'outdoors', () => act(W('angler', { top: 'tan', bottom: 'darkgreen', shoes: 'darkgreen', acc: [bucket('olive'), wear('vest', 'olive'), boots('darkgreen'), inHand('R', (a) => {
+    const fy = -a * 0.6, fz = a * 0.5, dy = 0.7, dz = 0.714, ang = 45.6;
+    /** A point s metres along the rod from the fist, `off` below it. */
+    const P = (s: number, off = 0): Vec3 => [0, fy + dy * s - dz * off, fz + dz * s + dy * off];
+    const tip = P(2.0);
+    return [
+      ['cyl', [a * 0.42, 0.46, a * 0.42], P(-0.11), 'tan', { srot: [ang, 0, 0] }],
+      ['ball', [a * 0.5, a * 0.5, a * 0.5], P(-0.34), 'darkgray'],
+      ['cyl', [a * 0.24, 1.9, a * 0.24], P(1.07), '#2a2a2a', { srot: [ang, 0, 0], taper: 0.25 }],
+      ['cyl', [a * 0.95, a * 0.4, a * 0.95], P(0.03, a * 0.6), 'silver', { srot: [0, 0, 90], edge: 'sharp' }],
+      ['capsule', [a * 0.05, 1.7, a * 0.05], [0, tip[1] - 0.85, tip[2]], 'white', { noInk: true }],
+      ['ball', [a * 0.75, a * 0.85, a * 0.75], [0, tip[1] - 1.72, tip[2]], 'red'],
+      ['ball', [a * 0.55, a * 0.4, a * 0.55], [0, tip[1] - 1.62, tip[2]], 'white'],
+    ];
+  }), inHand('L', (a) => [['ball', [a * 1.0, a * 1.4, a * 3.4], [0, -a * 1.9, a * 0.6], 'silver', { srot: [85, 0, 0], name: 'catch', scale: 0 }], ['wedge', [a * 1.2, a * 1.0, a * 0.3], [0, -a * 3.6, a * 0.75], 'silver', { srot: [180, 90, 0], name: 'catchTail', scale: 0 }]])] }),
     [to({ armR: [40, 0, 0] }, undefined, 0.35), A.par(A.pose('armR', { rot: [-35, 0, 0], dur: 0.25 }), A.say('Here, fishy fishy...', 2)), A.wait(1.2), A.pose('armR', { rot: [0, 0, 0], dur: 0.5 })],
-    [A.par(A.pose('catch', { scale: 1, dur: 0.3 }), A.pose('armL', { rot: [0, 0, 120], dur: 0.4 }), A.say('Got one! A big one!', 2)), A.wait(1.6), A.par(A.pose('armL', { rot: [0, 0, 0], dur: 0.4 }), A.pose('catch', { scale: 0, dur: 0.3 }))],
+    [A.par(A.pose('catch', { scale: 1, dur: 0.3 }), A.pose('catchTail', { scale: 1, dur: 0.3 }), A.pose('armL', { rot: [0, 0, 120], dur: 0.4 }), A.say('Got one! A big one!', 2)), A.wait(1.6), A.par(A.pose('armL', { rot: [0, 0, 0], dur: 0.4 }), A.pose('catch', { scale: 0, dur: 0.3 }), A.pose('catchTail', { scale: 0, dur: 0.3 }))],
   )),
   // Raggedy Ann: red yarn hair, button nose, blue dress and white apron, floppy as a rag doll.
   e('ann', 'town', 'storybook', () => act(W('ann', { h: 'kid', skin: 'skin1', hair: 'red', style: 'short', top: 'skyblue', skirt: 'skyblue', legs: 'white', shoes: 'black', blush: 'red', acc: [mop('red'), wear('apron', 'white'), nose('red', 0.14), rings('red', 'shinL', [0.2, 0.4, 0.6, 0.8], 1.05), rings('red', 'shinR', [0.2, 0.4, 0.6, 0.8], 1.05)] }),
@@ -580,7 +595,7 @@ export const ENTRIES: CatalogEntry[] = [
   )),
   // Hooded and masked in a dark cloak, a dagger at hand; checks nobody saw, then vanishes in smoke.
   e('assassin', 'town', 'crime', () => act(W('assassin', { top: 'black', long: true, bottom: 'black', shoes: 'black', acc: [wear('cloak', '#1d1d1d'), hat('hood', '#1d1d1d'), face('mask', 'black'), wear('belt', 'darkred'), wear('sash', 'darkred'), gloves('#2a2726'), boots('#2a2726'), held('knife'), rest({ armL: [-30, 0, 20], foreL: [-60, 0, -30] })] }),
-    [G('look_around', 'Did anyone see me?')],
+    [G('look_around', 'Hmm... where is my target?')],
     [A.par(A.effect('smoke', { dur: 2 }), A.anim('spin'), A.say('Poof!', 1.2))],
   )),
   // A white spacesuit with life-support pack and a gold visor that flips up; floats in low gravity.
@@ -949,10 +964,25 @@ export const ENTRIES: CatalogEntry[] = [
     hold(TO_MOUTH, 'Tweeet! Line up, campers!', 1.4),
     [G('wave', 'Come on, everyone! S\'mores time!', 2.2)],
   )),
-  // A hungry diner with a napkin bib and a knife and fork held up, sniffing the air.
-  e('cannibal', 'town', 'villains', () => act(W('cannibal', { skin: 'skin1', hair: '#5a3a22', style: 'short', top: 'gray', long: true, bottom: 'gray', shoes: 'black', acc: [face('mask', '#8a5a35'), X((d) => [-0.16, 0, 0.16].map((xx) => ['head', 'box', [d.headW * 0.05, d.headH * 0.32, d.headW * 0.05], [d.headW * xx, d.headY - d.headH * 0.18, d.headD * 0.55], 'darkbrown', { layer: 6 }] as XP)), patch('white', 0.55, 0.42, 0.65), fork(), held('knife', 'silver', 'L')] }),
-    hold({ armR: [-55, 0, -18], foreR: [-55, 0, 0], armL: [-55, 0, 18], foreL: [-55, 0, 0] }, 'Dinner time!', 1.5),
-    [G('look_around', 'Mmm... who\'s cooking?')],
+  // A hungry diner in a dark suit, a white napkin tucked in at the collar, tongue out, a fork and a knife held up
+  // in his fists: bangs them impatiently, then wonders what is for dinner.
+  e('cannibal', 'town', 'villains', () => act(W('cannibal', { skin: 'skin1', hair: '#5a3a22', style: 'short', top: '#2b2b30', long: true, bottom: '#2b2b30', shoes: 'black', acc: [suitX('#2b2b30', 'darkred'), X((d) => {
+    const { W: w, Hh, D, y } = hd(d);
+    return [
+      ['torso', 'wedge', [d.tw * 0.78, d.torsoH * 0.62, d.td * 0.06], [0, d.torsoH * 0.62, d.td * 0.6], 'white', { srot: [0, 0, 180], layer: 6 }],
+      ...[1, -1].map((s) => ['torso', 'ball', [d.tw * 0.16, d.tw * 0.12, d.td * 0.1], [s * d.tw * 0.12, d.torsoH * 0.95, d.td * 0.5], 'white', { layer: 6 }] as XP),
+      ['head', 'ball', [w * 0.14, Hh * 0.08, w * 0.08], [w * 0.1, y - Hh * 0.25, D * 0.48], 'pink', { layer: 6 }],
+    ];
+  }), rest({ armR: [-15, 0, -10], foreR: [-70, 0, 0], armL: [-15, 0, 10], foreL: [-70, 0, 0] }), onPalm('R', (a) => [
+    ['capsule', [a * 0.32, 0.13, a * 0.32], [0, 0.05, a * 0.9], 'silver'],
+    ['box', [a * 1.05, a * 0.3, a * 0.22], [0, 0.125, a * 0.9], 'silver', { round: 0.5 }],
+    ...[-0.45, -0.15, 0.15, 0.45].map((x) => ['capsule', [a * 0.13, a * 1.3, a * 0.13], [x * a, 0.125 + a * 0.6, a * 0.9], 'silver'] as HP),
+  ]), onPalm('L', (a) => [
+    ['capsule', [a * 0.34, 0.11, a * 0.34], [0, 0.04, a * 0.9], 'darkwood'],
+    ['box', [a * 0.14, 0.15, a * 0.5], [0, 0.17, a * 0.95], 'silver', { round: 0.6, edge: 'sharp' }],
+  ])] }),
+    [A.par(A.pose('foreR', { rot: [-22, 0, 0], dur: 0.18, times: 3 }), A.pose('foreL', { rot: [-22, 0, 0], dur: 0.18, times: 3 }), A.say('Dinner time! Dinner time!', 2))],
+    [G('look_around', 'Hmm... what is on the menu tonight?')],
   )),
   // A sea captain: white peaked cap, beard, pipe and a ship's wheel he turns.
   e('captain', 'town', 'sailors', () => act(W('captain', { top: 'navy', long: true, bottom: 'white', shoes: 'black', hair: 'white', style: 'short', acc: [hat('police', 'white'), nameHat(), face('beard', 'white'), buttons('gold', 3, 0.18), buttons('gold', 3, -0.18), rings('gold', 'foreR', [0.75]), rings('gold', 'foreL', [0.75]), pipe(), X((d) => {
@@ -989,7 +1019,7 @@ export const ENTRIES: CatalogEntry[] = [
   )),
   // Striped jumper, beanie and mask, a sack of loot and a torch that clicks on.
   e('cat burglar', 'town', 'crime', () => act(W('cat burglar', { top: 'black', long: true, bottom: 'black', shoes: 'black', acc: [hat('beanie', 'black'), nameHat(), eyemask('black'), bands('white', [0.25, 0.5, 0.75]), gloves('black'), sack('gray', '$'), inHand('R', (a) => [['cyl', [a * 0.7, a * 2.2, a * 0.7], [0, -a * 0.2, a * 1.2], 'black', { srot: [90, 0, 0], edge: 'sharp' }], ['cyl', [a * 0.75, a * 0.2, a * 0.75], [0, -a * 0.2, a * 2.35], 'yellow', { srot: [90, 0, 0], glow: true, name: 'torch', mover: { kind: 'light' } }]])] }),
-    [A.operate('torch', 'on'), G('look_around', 'Shh... nobody\'s home.'), A.operate('torch', 'off')],
+    [A.operate('torch', 'on'), G('look_around', 'Hmm... now where is the safe?'), A.operate('torch', 'off')],
     [G('cover_eyes', 'Uh oh. The alarm!')],
   )),
   // Black catsuit, cat ears, goggles, tail and whip: cracks it, then winks.
@@ -1279,7 +1309,7 @@ export const ENTRIES: CatalogEntry[] = [
   // An army corporal: helmet, two gold stripes on each sleeve, backpack and rifle.
   e('corporal', 'town', 'military', () => act(W('corporal', { top: 'olive', long: true, bottom: 'olive', shoes: 'black', acc: [hat('military'), nameHat(), X((d) => [1, -1].flatMap((s) => [0, 1].map((i) => [`arm${s > 0 ? 'L' : 'R'}`, 'box', [d.aw * 0.3, d.aw * 0.18, d.aw * 0.9], [s * d.aw * 0.5, -d.upper * (0.3 + i * 0.14), 0], 'gold', { srot: [0, 0, s * 6] }] as XP))), wear('belt', 'black'), wear('backpack', 'olive'), boots('black'), held('blaster', 'darkgreen')] }),
     hold(SALUTE, 'Yes, sir!', 1.4),
-    [G('look_around', 'All clear!')],
+    [G('thumbs_up', 'All clear!')],
   )),
   // A cowboy in a ten-gallon hat, vest and neckerchief: twirls his lasso, tips his hat.
   e('cowboy', 'town', 'western', () => act(W('cowboy', { top: 'red', long: true, bottom: 'denim', shoes: 'brown', acc: [hat('cowboy'), nameHat(), wear('vest', 'brown'), wear('scarf', 'yellow'), wear('belt', 'darkbrown'), boots('brown'), lasso('tan')] }),
@@ -1446,7 +1476,7 @@ export const ENTRIES: CatalogEntry[] = [
   )),
   // A dog warden in uniform with a net on a pole: searches, then brings in a puppy.
   e('dog catcher', 'town', 'law and order', () => act(W('dog catcher', { top: 'tan', bottom: 'olive', shoes: 'black', acc: [hat('cap', 'olive'), nameHat(), wear('badge'), wear('belt', 'black'), held('net')] }),
-    [G('look_around', 'Here, doggy, doggy...')],
+    [G('look_around', 'Hmm... where did that pup go?')],
     show('puppy', 'Gotcha! Off to a nice home.', 'thumbs_up', 'fade'),
   )),
   // A trainer with a whistle and a leash, and her dog, who jumps when told to speak.
@@ -1532,7 +1562,7 @@ export const ENTRIES: CatalogEntry[] = [
   )),
   // Edgar Allan Poe: black suit and bow, a mustache, the raven on his shoulder: it speaks.
   e('edgar', 'town', 'arts', () => act(W('edgar', { skin: 'skin1', hair: '#1d1d1d', style: 'short', top: 'white', long: true, bottom: 'black', shoes: 'black', acc: [suitX('black', 'black', true), face('mustache', '#1d1d1d'), raven(), held('book', 'darkred', 'L')] }),
-    [A.par(A.pose('raven', { rot: [25, 0, 0], dur: 0.2 }), A.say('Caw! Nevermore!', 1.8)), A.pose('raven', { rot: [0, 0, 0], dur: 0.3 }), G('gasp', 'Quoth the raven...')],
+    [A.par(A.pose('raven', { rot: [25, 0, 0], dur: 0.2 }), A.say('Caw! Nevermore!', 1.8)), A.pose('raven', { rot: [0, 0, 0], dur: 0.3 }), G('gasp', 'Ah! Grim and ghastly bird!')],
     [G('nod', 'Once upon a midnight dreary...', 2.4)],
   )),
   // An ordinary young man: waistcoat, bow tie, round glasses, a good book.

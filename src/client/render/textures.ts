@@ -87,7 +87,7 @@ export class TextureStore {
     if (text.startsWith('@map:') && townMap) {
       const tex = new THREE.CanvasTexture(drawTownMap(townMap, text));
       finishTexture(tex);
-      this.slots.set(key, { tex, bytes: 1024 * 666 * 4, last: ++this.tick });
+      this.insert(key, tex, 1024 * 666 * 4 * 1.34);
       return tex;
     }
     const h = 128;

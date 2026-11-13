@@ -3,8 +3,8 @@
  * with crisp or soft edges chosen per part, named movers / pieces / sockets where the real thing has them, and an
  * act (what it does when clicked).
  */
-import { e, x, type CatalogEntry } from './types';
-import { A, col, m, around, withAct, withParts, type M } from '../dsl';
+import { e, type CatalogEntry } from './types';
+import { A, col, m, around, withAct, type M } from '../dsl';
 import { face, hat, held, wear, who } from '../accessories';
 
 type V = [number, number, number];
@@ -134,91 +134,6 @@ function arrows3(b: M, c: V, size: number, color = '#2e9e4f', o: { noInk?: boole
   }
   return b;
 }
-/** A little building: walls, gable (or flat) roof, door, two windows and a sign over the door. */
-function bld(key: string, sign: string, o: { w?: number; h?: number; d?: number; wall: string; roof?: string; flat?: boolean; door?: string; signBg?: string; win?: string }): M {
-  const w = o.w ?? 4, h = o.h ?? 3, d = o.d ?? 3;
-  const b = m(key).box([w, h, d], [0, h / 2, 0], { color: o.wall, round: 0.04 });
-  if (o.flat) b.box([w + 0.2, 0.25, d + 0.2], [0, h + 0.12, 0], { color: o.roof ?? 'darkgray', round: 0.1 });
-  else b.wedge([w + 0.4, h * 0.5, d + 0.3], [0, h * 1.25, 0], { color: o.roof ?? 'darkred' });
-  b.box([0.9, 1.7, 0.08], [0, 0.85, d / 2 + 0.03], { color: o.door ?? 'darkwood', round: 0.1 });
-  b.pair((s) => b.box([0.8, 0.8, 0.06], [s * w * 0.3, h * 0.42, d / 2 + 0.03], { color: o.win ?? 'glass', round: 0.1 }));
-  return b.label(sign, [Math.min(w * 0.7, 3.2), 0.5], [0, h - 0.42, d / 2 + 0.06], { color: o.signBg ?? 'cream' });
-}
-
-/** Wheels on both sides of a side-view vehicle at the given z positions; the first is the named 'wheel'. */
-function wheels(b: M, zs: number[], x: number, dia: number, hub = 'silver', named = true): M {
-  zs.forEach((z, i) =>
-    b.pair((s) => {
-      b.torus([dia, dia, dia * 0.38], [s * x, dia / 2, z], { color: 'rubber', rot: [0, 90, 0], tube: 0.35, name: named && i === 0 && s === 1 ? 'wheel' : undefined });
-      b.cyl([dia * 0.45, dia * 0.4, dia * 0.45], [s * x, dia / 2, z], { color: hub, rot: [0, 0, 90] });
-    }),
-  );
-  return b;
-}
-
-/** A shirt or coat shape standing upright as if on a dress form: body and two sleeves. */
-function garment(b: M, o: { w: number; len: number; y0?: number; color: string; sleeve: number; arm?: string; depth?: number }): M {
-  const y0 = o.y0 ?? 0, top = y0 + o.len, d = o.depth ?? o.w * 0.4;
-  b.box([o.w, o.len, d], [0, y0 + o.len / 2, 0], { color: o.color, round: 0.3 });
-  if (o.sleeve > 0) b.pair((s) => b.rod([s * o.w * 0.4, top - o.w * 0.12, 0], [s * (o.w * 0.4 + o.sleeve * 0.45), top - o.w * 0.12 - o.sleeve * 0.85, 0], o.w * 0.27, o.arm ?? o.color));
-  return b;
-}
-
-/** Recycling arrows: three green arrows chasing round a triangle in the x-y plane. */
-function recycleMark(b: M, c: V, size: number, color = '#2e9e4f', noInk = false): M {
-  const P: Array<[number, number]> = [[0, 0.55], [0.5, -0.32], [-0.5, -0.32]];
-  for (let i = 0; i < 3; i++) {
-    const [ax, ay] = P[i], [bx, by] = P[(i + 1) % 3];
-    const p = (t: number): V => [c[0] + (ax + (bx - ax) * t) * size, c[1] + (ay + (by - ay) * t) * size, c[2]];
-    b.rod(p(0.12), p(0.62), size * 0.13, color, { noInk });
-    const dx = bx - ax, dy = by - ay;
-    b.cone([size * 0.3, size * 0.24, size * 0.1], p(0.72), { color, noInk, rot: [0, 0, -Math.atan2(dx, dy) / D2R] });
-  }
-  return b;
-}
-
-/** A sign board on a post: rectangular, diamond, round or triangular. */
-function postSign(key: string, text: string, o: { h: number; w: number; bh?: number; bg: string; shape?: 'box' | 'diamond' | 'round' | 'tri'; post?: string; edge?: string }): M {
-  const bh = o.bh ?? o.w * 0.6, cy = o.h - bh / 2;
-  const b = m(key).cyl([0.3, 0.12, 0.3], [0, 0.06, 0], { color: 'darkgray' }).stick([0, 0, 0], [0, cy, -0.04], 0.06, o.post ?? 'gray');
-  const sh = o.shape ?? 'box';
-  if (sh === 'box') b.box([o.w, bh, 0.04], [0, cy, 0], { color: o.edge ?? o.bg, round: 0.1 }).label(text, [o.w * 0.9, bh * 0.85], [0, cy, 0.02], { color: o.bg });
-  if (sh === 'diamond') b.box([o.w * 0.72, o.w * 0.72, 0.04], [0, cy, 0], { color: o.edge ?? 'black', rot: [0, 0, 45], round: 0.1 }).box([o.w * 0.64, o.w * 0.64, 0.04], [0, cy, 0.01], { color: o.bg, rot: [0, 0, 45], round: 0.1 }).label(text, [o.w * 0.5, o.w * 0.3], [0, cy, 0.03], { color: o.bg });
-  if (sh === 'round') b.cyl([o.w, 0.04, o.w], [0, cy, 0], { color: o.edge ?? o.bg, rot: [90, 0, 0] }).label(text, [o.w * 0.6, o.w * 0.3], [0, cy, 0.03], { color: o.bg });
-  if (sh === 'tri') b.wedge([o.w, bh, 0.04], [0, cy, 0], { color: o.edge ?? 'red' }).wedge([o.w * 0.75, bh * 0.72, 0.04], [0, cy - bh * 0.06, 0.01], { color: o.bg }).label(text, [o.w * 0.3, bh * 0.25], [0, cy - bh * 0.15, 0.03], { color: o.bg });
-  return b;
-}
-
-/** A horse's head and neck on a plinth with a bridle; reins hang from the bit in a loop (one strap if single). */
-function horseBust(key: string, single: boolean): M {
-  const hc = '#9a6038', lc = '#2a2726';
-  const b = m(key)
-    .box([0.36, 0.12, 0.34], [0, 0.06, 0], { color: 'darkwood' })
-    .rod([0, 0.12, -0.08], [0, 0.6, -0.02], 0.2, hc)
-    .ball([0.17, 0.19, 0.2], [0, 0.66, 0.0], { color: hc })
-    .box([0.12, 0.13, 0.26], [0, 0.58, 0.14], { color: hc, round: 0.6, rot: [30, 0, 0] })
-    .box([0.04, 0.16, 0.01], [0, 0.63, 0.115], { color: 'white', noInk: true, rot: [30, 0, 0] })
-    .rod([0, 0.14, -0.17], [0, 0.76, -0.06], 0.06, lc);
-  b.pair((s) => {
-    b.cone([0.05, 0.1, 0.04], [s * 0.05, 0.78, -0.03], { color: hc, rot: [-10, 0, s * -10] });
-    b.ball(0.03, [s * 0.075, 0.68, 0.06], { color: 'black', eye: true });
-    b.rod([s * 0.075, 0.74, -0.01], [s * 0.065, 0.53, 0.2], 0.018, lc);
-    b.torus([0.05, 0.05, 0.012], [s * 0.07, 0.51, 0.21], { color: 'silver', rot: [0, 90, 0], tube: 0.22 });
-    if (s === 1 || !single) b.rod([s * 0.075, 0.5, 0.22], [s * 0.1, 0.24, 0.28], 0.022, lc).rod([s * 0.1, 0.24, 0.28], [s * 0.1, 0.36, 0.0], 0.022, lc);
-  });
-  if (!single) b.rod([-0.1, 0.24, 0.28], [0.1, 0.24, 0.28], 0.022, lc);
-  return b.rod([-0.068, 0.56, 0.24], [0.068, 0.56, 0.24], 0.018, lc);
-}
-
-/** An open boat hull along z: body, pointed bow, a wooden floor seen from above and a stripe. */
-function hull(b: M, len: number, w: number, h: number, color: string, inside = 'wood', stripe = 'white'): M {
-  const body = len - w * 0.7;
-  b.box([w, h, body], [0, h / 2, -w * 0.35], { color, round: 0.4 });
-  b.wedge([w, w * 0.9, h], [0, h / 2, body / 2 - w * 0.35 + w * 0.42], { color, rot: [90, 0, 0] });
-  b.box([w * 0.82, h * 0.06, body * 0.9], [0, h * 0.98, -w * 0.35], { color: inside, round: 0.3 });
-  return b.pair((s) => b.box([0.02, h * 0.12, body * 0.9], [s * w * 0.5, h * 0.78, -w * 0.35], { color: stripe, noInk: true }));
-}
-
 /** A sneaker along z at x (scaled by k, lifted by y0): sole, upper, toe, tongue and laces (optionally riding a
  *  parent part). */
 function sneaker(b: M, x: number, up: string, k = 1, y0 = 0, z = 0, parent?: string): M {
@@ -243,25 +158,6 @@ function plank(b: M, a: V, c: V, w: number, t: number, color: string, o: { noInk
 /** A flat shape on a small wooden plinth (ideas: shapes). */
 const plinth = (b: M, w = 0.1): M => b.box([w, 0.025, 0.05], [0, 0.0125, 0], { color: 'wood' });
 
-/** A jar of something: filled body, lid and a paper label band. */
-function jar(key: string, fill: string, lid: string, h = 0.13, dia = 0.08, band = 'paper'): M {
-  return m(key)
-    .cyl([dia, h * 0.84, dia], [0, h * 0.42, 0], { color: fill })
-    .cyl([dia * 1.04, h * 0.16, dia * 1.04], [0, h * 0.92, 0], { color: lid })
-    .cyl([dia * 1.02, h * 0.34, dia * 1.02], [0, h * 0.4, 0], { color: band });
-}
-
-/** A bottle: body, shoulder, neck and cap, with an optional label band. */
-function bottle(b: M, at: V, h: number, dia: number, color: string, cap = 'white', band?: string): M {
-  const [x, y, z] = at;
-  b.cyl([dia, h * 0.6, dia], [x, y + h * 0.3, z], { color });
-  b.cyl([dia, h * 0.15, dia], [x, y + h * 0.675, z], { color, taper: 0.4 });
-  b.cyl([dia * 0.4, h * 0.15, dia * 0.4], [x, y + h * 0.825, z], { color });
-  b.cyl([dia * 0.46, h * 0.1, dia * 0.46], [x, y + h * 0.95, z], { color: cap });
-  if (band) b.cyl([dia * 1.03, h * 0.3, dia * 1.03], [x, y + h * 0.32, z], { color: band });
-  return b;
-}
-
 /** A bowl (wider at the top) at a position, with an optional mound of food in it. */
 function bowl(b: M, dia: number, color: string, food?: string, at: V = [0, 0, 0]): M {
   const [x, y, z] = at;
@@ -272,14 +168,6 @@ function bowl(b: M, dia: number, color: string, food?: string, at: V = [0, 0, 0]
 
 /** A plate. */
 const plate = (b: M, dia: number, color = 'white', at: V = [0, 0, 0]): M => b.cyl([dia, dia * 0.07, dia], [at[0], at[1] + dia * 0.035, at[2]], { color, taper: 1.15 });
-
-/** A gem standing on its point: pavilion cone below a crown with a table. */
-function gem(key: string, color: string, s = 0.08): M {
-  return m(key)
-    .cone([s, s * 0.55, s], [0, s * 0.275, 0], { color, rot: [180, 0, 0], segs: 8 })
-    .cyl([s, s * 0.22, s], [0, s * 0.66, 0], { color, taper: 0.62, segs: 8 })
-    .ball([s * 0.3, s * 0.1, s * 0.3], [0, s * 0.62, s * 0.3], { color: 'white', noInk: true });
-}
 
 export const ENTRIES: CatalogEntry[] = [
   // A log raft two people can stand on (3.2 m x 2.1 m): seven soft logs with pale cut ends, lashed to two cross
@@ -1337,7 +1225,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([7, 0.15, 14], [0, 0.42, 9], { color: '#4f9bd6' });
     b.each(6, (i) => i !== 2 && i !== 3 && b.box([1.2, 10, 1.2], [-10 + i * 4, 5.2, 2.2], { color: '#b8b5ac', round: 0.05 }));
     b.pair((s) => b.stick([-12.4, 11.1, s * 2.4], [12.4, 11.1, s * 2.4], 0.08, '#9da3a8').each(5, (i) => b.stick([-12 + i * 6, 10.6, s * 2.4], [-12 + i * 6, 11.15, s * 2.4], 0.08, '#9da3a8')));
-    b.box([3, 3, 3], [7, 12.1, 0], { color: '#e8e4dc' }).pyramid([4, 1.6, 4], [7, 14.4, 0], 4, { color: '#a3322a', rot: [0, 45, 0] });
+    b.box([3, 3, 3], [7, 12.1, 0], { color: '#e8e4dc' }).pyramid([3.4 * Math.SQRT2, 1.6, 3.4 * Math.SQRT2], [7, 14.4, 0], 4, { color: '#a3322a' });
     door(b, [7, 11.7, 1.53], 0.9, 2.0, '#3f6f9a');
     b.box([4, 0.4, 11], [0, 5.3, 3.6], { color: '#d4d7da', rot: [-60, 0, 0] })
       .box([3.4, 0.1, 10.6], [0, 5.5, 3.6], { color: '#7fc4ef', rot: [-60, 0, 0], noInk: true })
@@ -1564,8 +1452,8 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.05, 0.08, 0.04], [0, 0.2, -0.5], { color: '#3a3633', round: 0.4 });
     return b.act({ click: [A.operate('bolt', 'out'), A.say('Click-clack!', 1.2), A.operate('bolt', 'in')] }).done();
   }),
-  // A diamond ring in a red velvet ring box (6 cm): a gold band with a claw-set faceted diamond in a cushion
-  // slot, and a hinged lid that opens. Click: the lid opens and the diamond sparkles.
+  // A diamond ring in an open red velvet ring box (6 cm): a gold band with a claw-set faceted diamond in its
+  // cushion slot. Click: the ring rises, turns and sparkles, then settles back.
   e('ring', 'wardrobe', 'jewellery', () => {
     const v = '#a3222a';
     const b = m('ring', { edge: 'sharp' })
@@ -1805,7 +1693,7 @@ export const ENTRIES: CatalogEntry[] = [
     });
     b.each(4, (i) => {
       const a = i * 90 + 45;
-      b.wedge([0.25, 3.4, 1.8], [Math.sin(a * D2R) * 2.7, 5.0, Math.cos(a * D2R) * 2.7], { color: '#2a2726', rot: [0, a + 90, 0], apex: -0.5, parent: 'rocket' });
+      b.wedge([1.8, 3.4, 0.25], [Math.sin(a * D2R) * 2.9, 5.0, Math.cos(a * D2R) * 2.9], { color: '#2a2726', rot: [0, a + 90, 0], apex: 0.5, parent: 'rocket' });
       b.box([0.12, 4.5, 1.5], [Math.sin(a * D2R) * 2.28, 19.5, Math.cos(a * D2R) * 2.28], { color: '#2a2726', rot: [0, a, 0], parent: 'rocket', noInk: true });
     });
     b.cyl([4.62, 0.6, 4.62], [0, 22.6, 0], { color: '#2a2726', parent: 'rocket' })
@@ -3541,7 +3429,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.35, 0.08, 0.04], [0.15, 8.7, 7.54], { color: '#2a2726' });
     b.each(3, (i) => b.box([6.4 - i * 0.4, 0.2, 1.0 - i * 0.2], [0, 0.3 + i * 0.2, 8.2 - i * 0.2], { color: '#c9c6bd' }));
     b.box([2.2, 2.4, 2.2], [0, 9.8, 0], { color: tr })
-      .pyramid([3.0, 1.6, 3.0], [0, 11.8, 0], 4, { color: '#3f6a4a', rot: [0, 45, 0] })
+      .pyramid([2.6 * Math.SQRT2, 1.6, 2.6 * Math.SQRT2], [0, 11.8, 0], 4, { color: '#3f6a4a' })
       .cone([0.9, 0.8, 0.9], [0, 9.6, 1.15], { color: '#d0a84a', name: 'bell', pivot: [0, 10.2, 1.15] });
     b.stick([-9, 0.2, 9], [-9, 12, 9], 0.14, '#c9ccd1').box([1.8, 1.1, 0.04], [-8.05, 11.3, 9], { color: '#3f6fb5', round: 0.1 });
     return b
@@ -3647,7 +3535,7 @@ export const ENTRIES: CatalogEntry[] = [
     b.pair((s) => b.stick([0, 6.8, 4.75], [s * 3.4, 4.2, 4.75], 0.18, wt));
     b.box([1.5, 0.3, 1.5], [0, 6.6, 3.3], { color: wt })
       .box([1.3, 0.25, 1.3], [0, 8.3, 3.3], { color: wt })
-      .pyramid([2.0, 1.4, 2.0], [0, 9.1, 3.3], 4, { color: '#4a4c50', rot: [0, 45, 0] })
+      .pyramid([1.7 * Math.SQRT2, 1.4, 1.7 * Math.SQRT2], [0, 9.1, 3.3], 4, { color: '#4a4c50' })
       .cyl([0.7, 0.65, 0.7], [0, 7.75, 3.3], { color: '#d0a84a', taper: 0.55, name: 'bell', pivot: [0, 8.15, 3.3] });
     b.pair((s) => b.pair((t) => b.stick([s * 0.6, 6.7, 3.3 + t * 0.6], [s * 0.6, 8.2, 3.3 + t * 0.6], 0.12, wt)));
     door(b, [0, 1.75, 4.53], 1.2, 2.3, '#7a2a20', { frame: wt });
@@ -4172,17 +4060,26 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [[A.operate('cap', 'open'), A.par(A.pose('bubbles', { scale: 1.6, dur: 0.8 }), A.effect('sparkle', { dur: 1.2 }), A.say('Squish! Bubbles!', 1.5))], [A.par(A.pose('bubbles', { scale: 1, dur: 0.3 }), A.operate('cap', 'close'), A.say('Pop!', 0.8))]] })
       .done(),
   ),
-  // An electric rotary shaver (15 cm) in its charging stand: a black grip with a silver panel, three round
-  // cutting heads under a clear guard, a blue charge light. Click: it buzzes, heads whirring.
+  // An electric rotary shaver (19 cm) in its charging stand: a moulded black grip that waists in and widens to
+  // the head, a silver front panel with the power button and a blue charge light, and the trefoil head of three
+  // silver cutters with their slotted rings. Click: it buzzes, heads whirring.
   e('shaver', 'home', 'bathroom', () => {
     const b = m('shaver', { edge: 'sharp' })
-      .box([0.08, 0.03, 0.07], [0, 0.015, 0], { color: '#3a3633', round: 0.3 })
-      .box([0.052, 0.13, 0.036], [0, 0.095, 0], { color: '#2a2726', round: 0.6, edge: 'soft' })
-      .box([0.042, 0.06, 0.008], [0, 0.1, 0.018], { color: '#c9ccd1', round: 0.5 })
-      .ball(0.01, [0, 0.07, 0.022], { color: '#4ab0ff', name: 'led', mover: { kind: 'light' } })
-      .box([0.075, 0.025, 0.06], [0, 0.17, 0], { color: '#5c6166', round: 0.4 })
-      .cyl([0.06, 0.008, 0.06], [0, 0.186, 0], { color: '#3a3633', name: 'heads', mover: { kind: 'spin', axis: 'y', amount: 900 } });
-    b.each(3, (i) => b.cyl([0.024, 0.006, 0.024], [Math.cos(i * 2.094 + 1.57) * 0.017, 0.19, Math.sin(i * 2.094 + 1.57) * 0.017], { color: '#c9ccd1', parent: 'heads' }).box([0.018, 0.003, 0.003], [Math.cos(i * 2.094 + 1.57) * 0.017, 0.194, Math.sin(i * 2.094 + 1.57) * 0.017], { color: '#5c6166', parent: 'heads', noInk: true }));
+      .box([0.085, 0.022, 0.075], [0, 0.011, 0], { color: '#3a3633', round: 0.4 })
+      .box([0.066, 0.035, 0.05], [0, 0.035, 0], { color: '#3a3633', round: 0.4 })
+      .loft([0.056, 0.042, 0.14], [0, 0.09, 0], [[0, 0.78, 0.8, 0], [0.35, 0.72, 0.76, 0], [0.75, 0.95, 0.95, 0], [1, 1, 0.98, 0]], { color: '#2a2726', rot: [-90, 0, 0], boxy: 0.5, edge: 'soft' })
+      .box([0.03, 0.07, 0.006], [0, 0.1, 0.0175], { color: '#c9ccd1', round: 0.5 })
+      .cyl([0.014, 0.004, 0.014], [0, 0.118, 0.021], { color: '#8f99a3', rot: [90, 0, 0] })
+      .ball(0.008, [0, 0.077, 0.0205], { color: '#4ab0ff', name: 'led', mover: { kind: 'light' } })
+      .cyl([0.044, 0.016, 0.036], [0, 0.166, 0], { color: '#3a3f44', round: 0.3 })
+      .cyl([0.016, 0.01, 0.016], [0, 0.178, 0], { color: '#3a3f44', name: 'heads', mover: { kind: 'spin', axis: 'y', amount: 900 } });
+    b.each(3, (i) => {
+      const a = i * 2.094 + 1.57, x = Math.cos(a) * 0.019, z = Math.sin(a) * 0.019;
+      b.cyl([0.04, 0.018, 0.04], [x, 0.181, z], { color: '#4a4f55', parent: 'heads', edge: 'soft' })
+        .cyl([0.03, 0.006, 0.03], [x, 0.192, z], { color: '#c9ccd1', parent: 'heads' })
+        .torus([0.022, 0.022, 0.002], [x, 0.1955, z], { color: '#5c6166', rot: [90, 0, 0], tube: 0.12, parent: 'heads', noInk: true })
+        .cyl([0.009, 0.007, 0.009], [x, 0.193, z], { color: '#3a3f44', parent: 'heads' });
+    });
     return b.act({ click: [A.par(A.operate('heads', 'on'), A.operate('led', 'on')), A.par(A.anim('shake', 2), A.say('Bzzzzzzz!', 1.5)), A.par(A.operate('heads', 'off'), A.operate('led', 'off'))] }).done();
   }),
   // Pruning shears (secateurs, 21 cm) stood on their red handles with a cut twig: a curved bypass blade and
@@ -4269,10 +4166,12 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.045, 0.012, 0.018], [0, 0.008, -0.04], { color: c2, round: 0.3 })
       .ball(0.022, [0, 0.022, 0.0], { color: '#f7f2ea', name: 'pearl' })
       .box([0.045, 0.012, 0.018], [0, 0.022, -0.04], { color: c2, round: 0.3, name: 'lid', pivot: [0, 0.016, -0.045], mover: { kind: 'swing', axis: 'x', amount: -65 } });
+    b.dome([0.1, 0.012, 0.085], [0, 0.006, 0.0], { color: c1 })
+      .dome([0.1, 0.022, 0.085], [0, 0.027, 0.0], { color: c1, parent: 'lid' });
     b.each(9, (i) => {
-      const a = (-64 + i * 16) * D2R, c = i % 2 ? c1 : '#f6dcc4';
-      b.ball([0.022, 0.012, 0.09], [Math.sin(a) * 0.045, 0.008, -0.04 + Math.cos(a) * 0.045], { color: c, rot: [0, a / D2R, 0] });
-      b.ball([0.022, 0.016, 0.09], [Math.sin(a) * 0.045, 0.026, -0.04 + Math.cos(a) * 0.045], { color: c, rot: [-4, a / D2R, 0], parent: 'lid' });
+      const a = (-60 + i * 15) * D2R, c = i % 2 ? c2 : '#f6dcc4';
+      b.ball([0.01, 0.008, 0.06], [Math.sin(a) * 0.035, 0.009, -0.035 + Math.cos(a) * 0.035], { color: c, rot: [0, a / D2R, 0], noInk: true });
+      b.ball([0.01, 0.01, 0.06], [Math.sin(a) * 0.035, 0.032, -0.035 + Math.cos(a) * 0.035], { color: c, rot: [-6, a / D2R, 0], parent: 'lid', noInk: true });
     });
     return b.act({ click: [[A.operate('lid', 'open'), A.effect('sparkle', { dur: 1.2 })], [A.operate('lid', 'close'), A.say('Clap!', 1)]] }).done();
   }),
@@ -4409,8 +4308,8 @@ export const ENTRIES: CatalogEntry[] = [
     sneaker(b, 0, '#3f6fb5', 9, 5.1, 1.5, 'sign');
     return b.act({ click: [A.par(A.operate('door', 'open'), A.say('Ding!', 1), A.pose('sign', { move: [0, 0.6, 0], dur: 0.2, times: 2 })), A.wait(2), A.operate('door', 'close')] }).done();
   }),
-  // An orange shoebox (34 cm) with its lid off, tissue paper inside and a new pair of shoes. Click: the lid goes
-  // back on; click again and it comes off.
+  // An orange shoebox (34 cm) holding a new pair of shoes in tissue paper. Click: the lid comes off to show them;
+  // click again, it goes back on.
   e('shoebox', 'wardrobe', 'shoes', () => {
     const b = m('shoebox', { edge: 'sharp' })
       .box([0.34, 0.12, 0.21], [0, 0.06, 0], { color: '#f0923b', round: 0.05, name: 'box' })
@@ -4626,306 +4525,668 @@ export const ENTRIES: CatalogEntry[] = [
     b.pair((s) => b.ball(0.02, [s * 0.04, 0.27, 0.095], { color: '#5c6166', noInk: true }));
     return b.act({ click: [A.par(A.pose('cap', { rot: [0, 0, 8], dur: 0.2, times: 2 }), A.effect('water_spray', { dur: 1 }), A.say('Splish, splash!', 1.2))] }).done();
   }),
+  // A shower curtain (1.8 m drop) on a rail over a white bathtub: two pleated halves on rings, printed with
+  // rubber ducks. Click: the curtain slides open; click again, it closes.
   e('shower curtain', 'home', 'bathroom', () => {
-    const b = m('shower curtain').stick([-0.9, 2.0, 0], [0.9, 2.0, 0], 0.035, 'silver');
-    b.pair((s) => b.stick([s * 0.9, 0, -0.05], [s * 0.9, 2.02, -0.05], 0.05, 'silver').cyl([0.22, 0.14, 0.22], [s * 0.9, 0.07, -0.05], { color: 'silver' }));
-    b.each(8, (i) => b.box([0.22, 1.85, 0.06], [-0.77 + i * 0.22, 1.02, (i % 2) * 0.05], { color: i % 2 ? '#a8dcf0' : '#c8ecf8', round: 0.5 }).torus([0.06, 0.06, 0.012], [-0.77 + i * 0.22, 2.0, 0.02], { color: 'silver', rot: [0, 90, 0], tube: 0.2 }));
-    return b.each(4, (i) => b.ball([0.12, 0.06, 0.02], [-0.5 + i * 0.35, 0.7 + (i % 2) * 0.5, 0.08], { color: 'orange', noInk: true })).done();
+    const b = m('shower curtain')
+      .box([1.7, 0.55, 0.75], [0, 0.275, -0.1], { color: '#f7f5ef', round: 0.25, edge: 'sharp' })
+      .box([1.5, 0.05, 0.55], [0, 0.53, -0.1], { color: '#9fd0ea', round: 0.4 })
+      .stick([-0.9, 2.05, 0.28], [0.9, 2.05, 0.28], 0.03, '#c9ccd1', { edge: 'sharp' });
+    b.pair((s) => b.stick([s * 0.86, 0.55, 0.28], [s * 0.86, 2.06, 0.28], 0.04, '#c9ccd1', { edge: 'sharp' }));
+    b.pair((s) => {
+      const nm = s > 0 ? 'curtainL' : 'curtainR';
+      b.box([0.86, 0.02, 0.02], [s * 0.44, 2.0, 0.3], { color: '#a8dcf0', name: nm, mover: { kind: 'slide', axis: 'x', amount: s * 0.55 } });
+      b.each(4, (i) => {
+        const xx = s * (0.11 + i * 0.21);
+        b.box([0.22, 1.8, 0.04], [xx, 1.08, 0.3 + (i % 2) * 0.04], { color: i % 2 ? '#a8dcf0' : '#c8ecf8', round: 0.5, parent: nm, edge: 'soft' });
+        b.torus([0.05, 0.05, 0.01], [xx, 2.04, 0.3], { color: '#c9ccd1', rot: [0, 90, 0], tube: 0.2, parent: nm });
+      });
+      b.each(2, (i) => b.ball([0.1, 0.07, 0.01], [s * (0.25 + i * 0.35), 0.8 + i * 0.6, 0.35], { color: '#f6d24a', noInk: true, parent: nm }));
+    });
+    return b.act({ click: [A.operate('curtain'), A.say('Shhk!', 1)] }).done();
   }),
-  e('shower head', 'home', 'bathroom', () => {
-    const b = m('shower head').box([0.1, 0.3, 0.03], [0, 0.15, -0.1], { color: 'white', round: 0.2 }).rod([0, 0.27, -0.09], [0, 0.29, 0.02], 0.02, 'silver')
-      .cyl([0.11, 0.03, 0.11], [0, 0.27, 0.06], { color: 'silver', rot: [-25, 0, 0] });
-    return b.each(5, (i) => b.stick([-0.03 + i * 0.015, 0.255, 0.06], [-0.07 + i * 0.035, 0.0, 0.12], 0.008, 'skyblue', { noInk: true })).done();
-  }),
+  // A rain shower head (25 cm) on its arm from a tiled wall plate, with a wall valve. Click: water streams down;
+  // click again, it stops.
+  e('shower head', 'home', 'bathroom', () =>
+    m('shower head', { edge: 'sharp' })
+      .box([0.3, 0.42, 0.03], [0, 0.21, -0.12], { color: '#e8eef2', round: 0.1 })
+      .box([0.31, 0.005, 0.032], [0, 0.14, -0.12], { color: '#c9d4da', noInk: true })
+      .box([0.31, 0.005, 0.032], [0, 0.28, -0.12], { color: '#c9d4da', noInk: true })
+      .cyl([0.06, 0.02, 0.06], [0, 0.38, -0.1], { color: '#c9ccd1', rot: [90, 0, 0] })
+      .rod([0, 0.38, -0.1], [0, 0.4, 0.05], 0.022, '#c9ccd1')
+      .cyl([0.16, 0.025, 0.16], [0, 0.39, 0.1], { color: '#c9ccd1', rot: [-10, 0, 0] })
+      .cyl([0.14, 0.004, 0.14], [0, 0.376, 0.1], { color: '#9da3a8', rot: [-10, 0, 0], noInk: true })
+      .cyl([0.08, 0.02, 0.08], [0, 0.18, -0.1], { color: '#c9ccd1', rot: [90, 0, 0] })
+      .box([0.08, 0.015, 0.02], [0.02, 0.18, -0.08], { color: '#9da3a8', name: 'valve', pivot: [0, 0.18, -0.08] })
+      .cone([0.16, 0.36, 0.16], [0, 0.19, 0.12], { color: '#9fd8f0', rot: [180, 0, 0], name: 'spray', scale: 0, edge: 'soft' })
+      .act({ click: [[A.pose('valve', { rot: [0, 0, 90], dur: 0.3 }), A.par(A.pose('spray', { scale: 1, dur: 0.3 }), A.effect('water_spray', { dur: 2 }), A.say('Shhhhh!', 1.5))], [A.par(A.pose('valve', { rot: [0, 0, 0], dur: 0.3 }), A.pose('spray', { scale: 0, dur: 0.3 }), A.say('Drip.', 0.8))]] })
+      .done(),
+  ),
+  // The seven ball (5.7 cm, real size) on a patch of green baize: maroon with a white circle and a black 7.
+  // Click: it rolls away, clack; click again, it rolls back.
   e('seven ball', 'sports', 'billiards', () =>
     m('seven ball')
-      .ball(0.06, [0, 0.03, 0], { color: '#7a1a2a' })
-      .ball([0.03, 0.03, 0.006], [0, 0.035, 0.028], { color: 'white', noInk: true })
-      .box([0.014, 0.003, 0.003], [0, 0.043, 0.032], { color: 'black', noInk: true })
-      .box([0.003, 0.016, 0.003], [0.002, 0.034, 0.032], { color: 'black', noInk: true, rot: [0, 0, -20] })
+      .box([0.3, 0.01, 0.16], [0.05, 0.005, 0], { color: '#2e8a4a', round: 0.3, edge: 'sharp' })
+      .ball(0.057, [0, 0.0385, 0], { color: '#7a1a2a', name: 'ball' })
+      .ball([0.028, 0.028, 0.006], [0, 0.042, 0.027], { color: 'white', noInk: true, parent: 'ball' })
+      .label('7', [0.018, 0.02], [0, 0.042, 0.03], { color: 'white', depth: 0.002, parent: 'ball' })
+      .ball([0.014, 0.008, 0.004], [-0.012, 0.058, 0.018], { color: '#ffffff', noInk: true })
+      .act({ click: [[A.pose('ball', { move: [0.17, 0, 0], rot: [0, 0, -340], dur: 0.8 }), A.say('Clack!', 1)], [A.pose('ball', { move: [0, 0, 0], rot: [0, 0, 0], dur: 0.8 })]] })
       .done(),
   ),
+  // Shrapnel in a museum tray (16 cm): jagged, twisted fragments of iron and a copper driving band. Click:
+  // they glint, clink.
   e('shrapnel', 'armory', 'explosives', () => {
-    const b = m('shrapnel');
-    for (const [x, z, w, r] of [[0, 0, 0.06, 20], [0.05, 0.03, 0.04, 70], [-0.05, 0.02, 0.045, -40], [0.02, -0.05, 0.035, 120], [-0.03, -0.04, 0.03, 200]]) b.wedge([w, w * 0.9, w * 0.4], [x, w * 0.35, z], { color: r % 3 ? 'iron' : 'darkgray', rot: [r * 0.3, r, r * 0.2], apex: 0.3 });
-    return b.box([0.03, 0.006, 0.02], [0.07, 0.003, -0.03], { color: 'copper', rot: [0, 30, 0] }).done();
+    const b = m('shrapnel', { edge: 'sharp' })
+      .box([0.2, 0.012, 0.14], [0, 0.006, 0], { color: '#3a3633', round: 0.2 })
+      .box([0.18, 0.004, 0.12], [0, 0.013, 0], { color: '#a3222a', round: 0.3, noInk: true });
+    for (const [xx, z, w, r] of [[0, 0, 0.05, 20], [0.05, 0.03, 0.035, 70], [-0.05, 0.02, 0.04, -40], [0.03, -0.035, 0.03, 120], [-0.035, -0.03, 0.028, 200]] as Array<[number, number, number, number]>)
+      b.wedge([w, w * 0.8, w * 0.35], [xx, 0.015 + w * 0.3, z], { color: r % 3 ? '#55595e' : '#7a7f85', rot: [r * 0.3, r, r * 0.2], apex: 0.3 });
+    b.arc([0.03, 0.03, 0.008], [0.065, 0.02, -0.04], { color: '#c87a4a', rot: [70, 30, 0], tube: 0.25, arc: 220 });
+    return b.act({ click: [A.par(A.effect('sparkle', { dur: 1 }), A.say('Clink!', 0.8))] }).done();
   }),
+  // A paper shredder (55 cm) on its bin: a dark cutting head with a feed slot and buttons, a window into the bin
+  // full of strips, and a sheet waiting in the slot. Click: grrrr, the sheet is pulled in and shredded; click
+  // again, a new sheet.
   e('shredder', 'study', 'office machines', () =>
-    m('shredder')
-      .box([0.36, 0.4, 0.26], [0, 0.2, 0], { color: 'darkgray', round: 0.1 })
-      .box([0.2, 0.25, 0.01], [0, 0.2, 0.13], { color: 'glass' })
-      .box([0.38, 0.1, 0.28], [0, 0.45, 0], { color: 'black', round: 0.3 })
-      .box([0.22, 0.2, 0.004], [0, 0.56, 0.0], { color: 'paper' })
-      .box([0.012, 0.15, 0.002], [-0.06, 0.2, 0.136], { color: 'paper', noInk: true })
-      .box([0.012, 0.18, 0.002], [-0.02, 0.18, 0.136], { color: 'paper', noInk: true })
-      .box([0.012, 0.14, 0.002], [0.02, 0.2, 0.136], { color: 'paper', noInk: true })
-      .box([0.012, 0.17, 0.002], [0.06, 0.19, 0.136], { color: 'paper', noInk: true })
-      .ball(0.016, [0.15, 0.48, 0.12], { color: 'lime', glow: true })
+    m('shredder', { edge: 'sharp' })
+      .box([0.36, 0.42, 0.26], [0, 0.21, 0], { color: '#5c6166', round: 0.1 })
+      .box([0.22, 0.26, 0.01], [0, 0.22, 0.13], { color: '#9fc6d8' })
+      .box([0.38, 0.1, 0.28], [0, 0.47, 0], { color: '#2a2726', round: 0.3 })
+      .box([0.26, 0.012, 0.02], [0, 0.522, 0.0], { color: '#1e1c1b' })
+      .box([0.22, 0.24, 0.004], [0, 0.64, 0.0], { color: '#faf6ea', name: 'sheet' })
+      .box([0.012, 0.15, 0.002], [-0.06, 0.2, 0.136], { color: '#faf6ea', noInk: true })
+      .box([0.012, 0.18, 0.002], [-0.02, 0.18, 0.136], { color: '#faf6ea', noInk: true })
+      .box([0.012, 0.14, 0.002], [0.02, 0.2, 0.136], { color: '#faf6ea', noInk: true })
+      .box([0.012, 0.17, 0.002], [0.06, 0.19, 0.136], { color: '#faf6ea', noInk: true })
+      .ball(0.016, [0.15, 0.5, 0.13], { color: '#7cff6a', glow: true })
+      .box([0.03, 0.015, 0.03], [0.1, 0.525, 0.1], { color: '#d8312a' })
+      .act({ click: [[A.par(A.pose('sheet', { move: [0, -0.2, 0], scale: 0.2, dur: 1 }), A.anim('shake', 2), A.say('Grrrrrr!', 1.5)), A.pose('sheet', { scale: 0, dur: 0 })], [A.pose('sheet', { move: [0, 0, 0], dur: 0 }), A.pose('sheet', { scale: 1, dur: 0.4 })]] })
       .done(),
   ),
+  // A small Shinto shrine (6 m): a vermilion torii gate over a stone path, a little hall with a sweeping dark
+  // roof and gilt ridge, an offering box and a bell on a thick rope. Click: the rope swings and the bell rings.
   e('shrine', 'places', 'temples', () => {
-    const b = m('shrine').box([2.6, 0.2, 2.4], [0, 0.1, -0.6], { color: 'stone' }).box([1.4, 1.0, 1.1], [0, 0.7, -1.1], { color: 'wood', round: 0.05 }).wedge([2.0, 0.7, 1.6], [0, 1.55, -1.1], { color: 'darkgray', rot: [0, 90, 0] });
-    b.pair((s) => b.stick([s * 0.8, 0, 0.9], [s * 0.75, 1.9, 0.9], 0.14, 'red'));
-    b.box([2.3, 0.14, 0.18], [0, 1.95, 0.9], { color: 'black', round: 0.3 }).box([2.0, 0.12, 0.14], [0, 2.08, 0.9], { color: 'red', round: 0.3 }).box([1.9, 0.1, 0.12], [0, 1.6, 0.9], { color: 'red' });
-    return b.label('SHRINE', [0.6, 0.2], [0, 1.78, 0.98], { color: 'black' }).done();
+    const v = '#d8402a';
+    const b = m('shrine', { edge: 'sharp' })
+      .box([7, 0.15, 9], [0, 0.075, 0.5], { color: '#a7a7a0' })
+      .box([1.4, 0.05, 6], [0, 0.17, 2.0], { color: '#c9c6bd' })
+      .box([3.6, 0.6, 3.2], [0, 0.45, -2.0], { color: '#8f8c86' })
+      .box([3.0, 2.0, 2.6], [0, 1.75, -2.0], { color: '#9a6a3e' })
+      .wedge([3.0, 1.4, 4.2], [0, 3.45, -2.0], { color: '#3a3f45', rot: [0, 90, 0] })
+      .box([4.4, 0.2, 0.25], [0, 4.15, -2.0], { color: '#d0a84a' })
+      .box([2.0, 1.6, 0.1], [0, 1.55, -0.68], { color: '#f2e6cf' })
+      .box([0.9, 0.4, 0.5], [0, 0.95, -0.2], { color: '#7a5230' })
+      .stick([0, 2.7, -0.55], [0, 1.25, -0.55], 0.12, '#f2e6cf', { name: 'rope', pivot: [0, 2.7, -0.55] })
+      .ball(0.3, [0, 2.6, -0.55], { color: '#d0a84a', parent: 'rope' });
+    b.pair((s) => b.stick([s * 1.2, 0.15, 4.0], [s * 1.1, 4.0, 4.0], 0.32, v));
+    b.box([3.8, 0.3, 0.4], [0, 4.1, 4.0], { color: '#2a2726', round: 0.3 }).box([3.3, 0.28, 0.32], [0, 3.85, 4.0], { color: v }).box([2.8, 0.22, 0.24], [0, 3.2, 4.0], { color: v });
+    b.box([0.4, 0.5, 0.06], [0, 3.52, 4.12], { color: '#2a2726' });
+    b.pair((s) => b.box([0.5, 0.8, 0.5], [s * 1.8, 0.55, 1.5], { color: '#b8b5ac' }).box([0.7, 0.2, 0.7], [s * 1.8, 1.05, 1.5], { color: '#b8b5ac' }));
+    return b.act({ click: [A.pose('rope', { rot: [25, 0, 10], dur: 0.3, times: 2 }), A.par(A.say('Clang, clang!', 1.5), A.effect('sparkle', { dur: 1 }))] }).done();
   }),
+  // A linen dust sheet (a shroud) draped over an armchair in a closed-up room. Click: it is whisked off to show the
+  // red chair; click again, it is put back.
   e('shroud', 'home', 'linens', () => {
-    const c = '#e6e4dc';
-    const b = m('shroud').box([1.9, 0.1, 0.62], [0, 0.55, 0], { color: 'darkbrown' });
-    b.pair((s) => b.stick([s * 0.8, 0, 0], [s * 0.8, 0.52, 0], 0.08, 'darkbrown').stick([s * 0.8, 0.15, -0.25], [s * 0.8, 0.15, 0.25], 0.05, 'darkbrown'));
-    b.box([1.95, 0.04, 0.66], [0, 0.62, 0], { color: c, round: 0.4 }).capsule([0.34, 1.2, 0.24], [0.15, 0.74, 0], { color: c, rot: [0, 0, 90] }).ball([0.26, 0.26, 0.24], [-0.68, 0.79, 0], { color: c });
-    b.pair((s) => b.ball([0.08, 0.14, 0.08], [0.8, 0.74, s * 0.06], { color: c }));
-    b.each(4, (i) => b.box([0.02, 0.3, 0.02], [-0.6 + i * 0.4, 0.48, 0.34], { color: '#cfcdc4', noInk: true }));
-    return b.box([1.95, 0.22, 0.02], [0, 0.52, 0.33], { color: c, round: 0.3 }).done();
+    const c = '#ebe8de';
+    const b = m('shroud')
+      .box([0.9, 0.4, 0.85], [0, 0.25, 0], { color: '#a3322a', round: 0.4 })
+      .box([0.7, 0.75, 0.22], [0, 0.75, -0.32], { color: '#a3322a', round: 0.5 });
+    b.pair((s) => b.box([0.18, 0.55, 0.85], [s * 0.4, 0.42, 0], { color: '#8a2420', round: 0.5 }).box([0.06, 0.06, 0.06], [s * 0.36, 0.03, 0.34], { color: '#3a2a1e' }));
+    b.box([1.08, 0.66, 0.98], [0, 0.39, 0.02], { color: c, round: 0.5, name: 'sheet', pivot: [0, 1.3, 0] })
+      .box([0.86, 0.6, 0.36], [0, 0.85, -0.32], { color: c, round: 0.6, parent: 'sheet' })
+      .ball([0.9, 0.2, 0.5], [0, 1.15, -0.25], { color: c, parent: 'sheet' });
+    b.each(4, (i) => b.box([0.03, 0.5, 0.03], [-0.42 + i * 0.28, 0.3, 0.5], { color: '#d6d2c4', noInk: true, parent: 'sheet' }));
+    return b.act({ click: [[A.pose('sheet', { move: [0.8, 0.8, 0.4], rot: [0, 0, -40], scale: 0.4, dur: 0.6 }), A.pose('sheet', { scale: 0, dur: 0.1 }), A.say('Whoosh!', 1)], [A.pose('sheet', { move: [0, 0, 0], rot: [0, 0, 0], dur: 0 }), A.pose('sheet', { scale: 1, dur: 0.5 })]] }).done();
   }),
+  // A rounded garden shrub (1.5 m): soft clumps of foliage on woody stems, dotted with white flowers. Click: it
+  // rustles and a sparrow flutters out.
   e('shrub', 'garden', 'shrubs', () => {
-    const b = m('shrub').stick([0, 0, 0], [0, 0.4, 0], 0.08, 'bark');
-    for (const [x, y, z, r, c] of [[0, 0.75, 0, 0.9, 'leaf'], [0.35, 0.6, 0.15, 0.6, 'darkgreen'], [-0.35, 0.6, 0.1, 0.6, 'green'], [0.1, 1.0, -0.1, 0.6, 'green'], [-0.15, 0.55, 0.35, 0.5, 'leaf']] as Array<[number, number, number, number, string]>) b.ball(r, [x, y, z], { color: c });
-    return b.done();
+    const b = m('shrub')
+      .stick([0, 0, 0], [0, 0.35, 0], 0.09, '#7a5134')
+      .stick([0.05, 0, 0.05], [0.25, 0.4, 0.1], 0.05, '#7a5134')
+      .stick([-0.05, 0, 0.0], [-0.25, 0.4, -0.05], 0.05, '#7a5134')
+      .ball([1.2, 0.9, 1.1], [0, 0.75, 0], { color: '#4f9a48', name: 'top' });
+    for (const [xx, y, z, r, c] of [[0.4, 0.6, 0.15, 0.62, '#3f7a3a'], [-0.4, 0.62, 0.1, 0.62, '#5aa553'], [0.1, 1.1, -0.1, 0.65, '#5aa553'], [-0.15, 0.55, 0.4, 0.5, '#4f9a48'], [0.2, 0.9, 0.35, 0.45, '#5aa553']] as Array<[number, number, number, number, string]>) b.ball(r, [xx, y, z], { color: c, parent: 'top' });
+    b.each(14, (i) => b.ball(0.06, surf([0, 0.78, 0], [0.62, 0.48, 0.58], -110 + ((i * 47) % 220), -10 + ((i * 31) % 60)), { color: i % 3 ? 'white' : '#f8e0ec', parent: 'top', noInk: true }));
+    return b.act({ click: [A.par(A.pose('top', { rot: [0, 0, 4], dur: 0.15, times: 3 }), A.say('Rustle!', 1)), A.spawn('bird', 'sparrow', { rel: 'near', of: 'self', dist: 'close' }), A.say('Tweet!', 1, 'bird'), A.remove('bird', 'fly_away')] }).done();
   }),
+  // A cottage window with a pair of green louvred shutters (wall section 2 m): a white sash window with glazing
+  // bars and a sill, shutters on hinges either side. Click: the shutters swing shut; click again, open.
   e('shutter', 'home', 'windows', () => {
-    const b = m('shutter').box([1.8, 1.3, 0.15], [0, 0.65, -0.1], { color: 'cream', round: 0.03 }).box([0.62, 0.82, 0.06], [0, 0.65, 0.0], { color: 'white', round: 0.1 }).box([0.52, 0.72, 0.05], [0, 0.65, 0.02], { color: 'glass' }).box([0.75, 0.06, 0.14], [0, 0.22, 0.04], { color: 'white' });
-    b.box([0.04, 0.72, 0.06], [0, 0.65, 0.04], { color: 'white' }).box([0.52, 0.04, 0.06], [0, 0.65, 0.04], { color: 'white' });
-    b.box([0.32, 0.84, 0.05], [-0.48, 0.65, 0.02], { color: 'darkgreen', round: 0.1, name: 'door', pivot: [-0.32, 0.65, 0.02] });
-    b.box([0.32, 0.84, 0.05], [0.48, 0.65, 0.02], { color: 'darkgreen', round: 0.1 });
-    return b.each(7, (i) => b.pair((s) => b.box([0.28, 0.025, 0.02], [s * 0.48, 0.32 + i * 0.11, 0.05], { color: '#2f5a2c', noInk: true, parent: s < 0 ? 'door' : undefined }))).done();
+    const b = m('shutter', { edge: 'sharp' })
+      .box([2.0, 1.6, 0.2], [0, 0.8, -0.12], { color: '#f2e6cf', round: 0.03 });
+    win(b, [0, 0.85, 0.0], 0.66, 0.9, { frame: 'white' });
+    b.pair((s) => {
+      const nm = s > 0 ? 'shutterL' : 'shutterR';
+      b.box([0.34, 0.92, 0.04], [s * 0.53, 0.85, 0.02], { color: '#2f6a3a', round: 0.1, name: nm, pivot: [s * 0.36, 0.85, 0.02], mover: { kind: 'swing', axis: 'y', amount: s * -175 } });
+      b.each(8, (i) => b.box([0.26, 0.02, 0.02], [s * 0.53, 0.47 + i * 0.1, 0.045], { color: '#22522c', noInk: true, rot: [20, 0, 0], parent: nm }));
+      b.box([0.03, 0.06, 0.02], [s * 0.36, 1.15, 0.05], { color: '#2a2726' }).box([0.03, 0.06, 0.02], [s * 0.36, 0.55, 0.05], { color: '#2a2726' });
+    });
+    b.box([0.6, 0.15, 0.2], [0, 0.32, 0.15], { color: '#a0503a' });
+    b.each(3, (i) => b.ball(0.1, [-0.2 + i * 0.2, 0.44, 0.15], { color: ['#e0473b', '#f6d24a', '#d64fa0'][i], edge: 'soft' }));
+    return b.act({ click: [[A.operate('shutter', 'close'), A.say('Clap!', 1)], [A.operate('shutter', 'open'), A.say('Creak.', 1)]] }).done();
   }),
+  // A sickle (50 cm) beside a sheaf of standing wheat: a crescent steel blade on a turned wooden handle. Click: it
+  // swings and the wheat ears fly.
   e('sickle', 'farm', 'farm tools', () => {
-    const b = m('sickle').cyl([0.05, 0.22, 0.05], [0, 0.11, 0], { color: 'wood' }).cyl([0.055, 0.03, 0.055], [0, 0.235, 0], { color: 'steel' });
+    const b = m('sickle')
+      .box([0.4, 0.03, 0.3], [0.1, 0.015, 0], { color: '#8a6440', edge: 'sharp' })
+      .cyl([0.05, 0.22, 0.05], [0, 0.14, 0], { color: '#9a6a3e', name: 'sickle', pivot: [0, 0.03, 0] })
+      .cyl([0.055, 0.03, 0.055], [0, 0.265, 0], { color: '#8f99a3', parent: 'sickle' });
     const pts: V[] = [];
     for (let i = 0; i <= 6; i++) {
       const a = (180 - i * 40) * D2R;
-      pts.push([0.16 + Math.cos(a) * 0.18, 0.4 + Math.sin(a) * 0.17, 0]);
+      pts.push([0.16 + Math.cos(a) * 0.18, 0.43 + Math.sin(a) * 0.17, 0]);
     }
-    b.rod([0, 0.24, 0], pts[0], 0.035, 'steel');
-    for (let i = 0; i < 6; i++) b.rod(pts[i], pts[i + 1], 0.06 - i * 0.008, 'silver');
-    return b.done();
+    b.rod([0, 0.27, 0], pts[0], 0.03, '#8f99a3', { parent: 'sickle', edge: 'sharp' });
+    for (let i = 0; i < 6; i++) b.rod(pts[i], pts[i + 1], 0.05 - i * 0.007, '#c9ccd1', { parent: 'sickle', edge: 'sharp' });
+    b.each(7, (i) => b.stick([0.2 + (i % 4) * 0.03, 0.03, -0.05 + Math.floor(i / 4) * 0.06], [0.2 + (i % 4) * 0.035, 0.45, -0.06 + Math.floor(i / 4) * 0.07], 0.008, '#d9b44a').capsule([0.02, 0.07, 0.02], [0.2 + (i % 4) * 0.035, 0.48, -0.06 + Math.floor(i / 4) * 0.07], { color: '#e8c35a' }));
+    return b.act({ click: [A.pose('sickle', { rot: [0, 0, 35], dur: 0.25 }), A.par(A.pose('sickle', { rot: [0, 0, -25], dur: 0.3 }), A.effect('dust', { dur: 1 }), A.say('Swish!', 1)), A.pose('sickle', { rot: [0, 0, 0], dur: 0.3 })] }).done();
   }),
+  // A mesh sieve (20 cm) with a long handle resting over a mixing bowl, flour in the mesh. Click: it is shaken
+  // and flour snows down into the bowl.
   e('sieve', 'kitchen', 'utensils', () => {
-    const b = m('sieve').cyl([0.1, 0.08, 0.1], [0, 0.04, 0], { color: 'lightgray', taper: 1.8 }).torus([0.19, 0.19, 0.012], [0, 0.08, 0], { color: 'silver', rot: [90, 0, 0], tube: 0.08 });
-    b.each(4, (i) => b.torus([0.18 - i * 0.03, 0.18 - i * 0.03, 0.004], [0, 0.081, 0], { color: 'gray', rot: [90, 0, 0], tube: 0.05, noInk: true }));
-    return b.rod([0.09, 0.08, 0], [0.3, 0.12, 0], 0.016, 'silver').torus([0.03, 0.03, 0.01], [0.32, 0.125, 0], { color: 'silver', rot: [90, 0, 0], tube: 0.25 }).done();
+    const b = m('sieve')
+      .cyl([0.22, 0.1, 0.22], [0, 0.05, 0], { color: '#f2f2ee', taper: 1.4, edge: 'sharp' })
+      .cyl([0.16, 0.08, 0.16], [0, 0.15, 0], { color: '#b9c2ca', taper: 1.8, name: 'sieve' })
+      .torus([0.27, 0.27, 0.012], [0, 0.19, 0], { color: '#c9ccd1', rot: [90, 0, 0], tube: 0.06, parent: 'sieve' })
+      .dome([0.2, 0.03, 0.2], [0, 0.17, 0], { color: '#fbf9f2', parent: 'sieve' });
+    b.each(3, (i) => b.torus([0.24 - i * 0.05, 0.24 - i * 0.05, 0.004], [0, 0.192, 0], { color: '#8f99a3', rot: [90, 0, 0], tube: 0.05, noInk: true, parent: 'sieve' }));
+    b.rod([0.13, 0.19, 0], [0.34, 0.22, 0], 0.016, '#c9ccd1', { parent: 'sieve' }).torus([0.035, 0.035, 0.01], [0.36, 0.225, 0], { color: '#c9ccd1', rot: [90, 0, 0], tube: 0.25, parent: 'sieve' });
+    return b.act({ click: [A.par(A.pose('sieve', { move: [0.02, 0.01, 0], dur: 0.1, times: 6 }), A.effect('snow', { dur: 1.5 }), A.say('Shake, shake!', 1.2))] }).done();
   }),
+  // A hanging inn sign (2.6 m): a painted board swinging on chains from the arm of a wooden post. Click: it
+  // swings and creaks in the wind.
   e('sign', 'ideas', 'signs', () => {
-    const b = m('sign').box([1.3, 0.75, 0.1], [0, 1.55, 0], { color: 'wood', round: 0.15 }).label('NOTICE', [1.1, 0.55], [0, 1.55, 0.06], { color: 'cream' });
-    return b.pair((s) => b.stick([s * 0.5, 0, -0.08], [s * 0.5, 1.95, -0.08], 0.15, 'darkwood').ball([0.3, 0.14, 0.3], [s * 0.5, 0.03, -0.08], { color: 'grass' })).done();
+    const b = m('sign', { edge: 'sharp' })
+      .box([0.5, 0.1, 0.5], [0, 0.05, 0], { color: '#a7a7a0' })
+      .box([0.15, 2.6, 0.15], [-0.6, 1.3, 0], { color: '#5a3a22' })
+      .box([1.5, 0.12, 0.12], [0.08, 2.5, 0], { color: '#5a3a22' })
+      .rod([-0.55, 2.1, 0], [-0.1, 2.45, 0], 0.06, '#5a3a22')
+      .box([1.0, 0.08, 0.08], [0.15, 2.4, 0], { color: '#2a2726', name: 'board', pivot: [0.15, 2.48, 0] })
+      .stick([-0.25, 2.4, 0], [-0.25, 2.2, 0], 0.015, '#55595e', { parent: 'board' })
+      .stick([0.55, 2.4, 0], [0.55, 2.2, 0], 0.015, '#55595e', { parent: 'board' })
+      .box([1.0, 0.7, 0.06], [0.15, 1.83, 0], { color: '#2f4f8f', round: 0.1, parent: 'board' })
+      .box([0.92, 0.62, 0.065], [0.15, 1.83, 0], { color: '#e8d29a', round: 0.1, parent: 'board' })
+      .label('WELCOME', [0.8, 0.22], [0.15, 1.92, 0.035], { color: '#e8d29a', depth: 0.01, parent: 'board' })
+      .star(0.18, [0.15, 1.7, 0.04], { color: '#d8312a', parent: 'board' });
+    return b.act({ click: [A.pose('board', { rot: [20, 0, 0], dur: 0.4, times: 2 }), A.say('Creak... creak...', 1.5)] }).done();
   }),
+  // A wooden fingerpost (2.6 m) at a crossroads: three pointed arms to NORTH, TOWN and LAKE on a post with a
+  // cap, in a tuft of grass. Click: the arms whirl round and settle back.
   e('signpost', 'ideas', 'road signs', () => {
-    const b = m('signpost').cyl([0.6, 0.2, 0.6], [0, 0.1, 0], { color: 'grass' }).stick([0, 0, 0], [0, 2.5, 0], 0.13, 'darkwood').cone([0.17, 0.12, 0.17], [0, 2.56, 0], { color: 'darkwood' });
-    for (const [y, a, t, c] of [[2.2, 20, 'NORTH', 'cream'], [1.85, 160, 'TOWN', 'lightwood'], [1.5, 60, 'LAKE', 'cream']] as Array<[number, number, string, string]>) {
+    const b = m('signpost', { edge: 'sharp' })
+      .cyl([0.7, 0.15, 0.7], [0, 0.075, 0], { color: '#6ab04c', edge: 'soft' })
+      .box([0.13, 2.5, 0.13], [0, 1.25, 0], { color: '#7a5230' })
+      .pyramid([0.2, 0.14, 0.2], [0, 2.57, 0], 4, { color: '#5a3a22' })
+      .cyl([0.05, 0.05, 0.05], [0, 2.2, 0], { color: '#7a5230', name: 'arms', pivot: [0, 2.2, 0] });
+    for (const [y, a, t, c] of [[2.25, 20, 'NORTH', '#f2e6cf'], [1.9, 160, 'TOWN', '#d8b07a'], [1.55, 60, 'LAKE', '#f2e6cf']] as Array<[number, number, string, string]>) {
       const dx = Math.cos(a * D2R), dz = -Math.sin(a * D2R);
-      b.box([0.7, 0.2, 0.05], [dx * 0.4, y, dz * 0.4], { color: c, rot: [0, a, 0], round: 0.1 }).wedge([0.24, 0.12, 0.05], [dx * 0.8, y, dz * 0.8], { color: c, rot: [0, a, -90] });
-      b.label(t, [0.5, 0.14], [dx * 0.4 - dz * 0.03, y, dz * 0.4 + dx * 0.03], { color: c, rot: [0, a, 0] });
+      b.box([0.7, 0.2, 0.05], [dx * 0.42, y, dz * 0.42], { color: c, rot: [0, a, 0], round: 0.1, parent: 'arms' }).wedge([0.24, 0.12, 0.05], [dx * 0.84, y, dz * 0.84], { color: c, rot: [0, a, -90], parent: 'arms' });
+      b.label(t, [0.5, 0.14], [dx * 0.42 - dz * 0.03, y, dz * 0.42 + dx * 0.03], { color: c, rot: [0, a, 0], depth: 0.01, parent: 'arms' });
     }
-    return b.done();
+    return b.act({ click: [A.pose('arms', { rot: [0, 720, 0], dur: 1 }), A.par(A.pose('arms', { rot: [0, 0, 0], dur: 0 }), A.say('Whirr... this way!', 1.5))] }).done();
   }),
+  // A bolt of shimmering pink silk on a cardboard tube with a length unrolled and draped over the table edge.
+  // Click: it ripples and shimmers.
   e('silk', 'wardrobe', 'fabrics', () => {
     const c = '#d64f9a';
-    const b = m('silk').cyl([0.16, 0.5, 0.16], [0, 0.08, -0.1], { color: c, rot: [0, 0, 90] }).cyl([0.05, 0.54, 0.05], [0, 0.08, -0.1], { color: 'tan', rot: [0, 0, 90] });
-    b.box([0.48, 0.012, 0.2], [0, 0.07, 0.05], { color: c, rot: [-25, 0, 0], round: 0.2 }).capsule([0.06, 0.48, 0.06], [0, 0.04, 0.18], { color: c, rot: [0, 0, 90] }).box([0.48, 0.012, 0.2], [0, 0.01, 0.3], { color: '#e870b0', round: 0.2 });
-    return b.each(3, (i) => b.box([0.012, 0.004, 0.18], [-0.12 + i * 0.12, 0.018, 0.3], { color: '#f6c8e0', noInk: true })).done();
+    const b = m('silk')
+      .box([0.7, 0.03, 0.5], [0, 0.015, 0], { color: '#9a6a3e', edge: 'sharp' })
+      .cyl([0.16, 0.52, 0.16], [0, 0.11, -0.12], { color: c, rot: [0, 0, 90] })
+      .cyl([0.05, 0.56, 0.05], [0, 0.11, -0.12], { color: '#c9a46a', rot: [0, 0, 90] })
+      .box([0.5, 0.01, 0.3], [0, 0.04, 0.06], { color: c, round: 0.2, name: 'drape', pivot: [0, 0.1, -0.06] })
+      .capsule([0.05, 0.5, 0.05], [0, 0.04, 0.22], { color: '#e870b0', rot: [0, 0, 90], parent: 'drape' })
+      .box([0.5, 0.2, 0.01], [0, -0.06, 0.25], { color: c, round: 0.3, parent: 'drape' });
+    b.each(3, (i) => b.box([0.012, 0.004, 0.28], [-0.15 + i * 0.15, 0.047, 0.06], { color: '#f6c8e0', noInk: true, parent: 'drape' }));
+    return b.act({ click: [A.par(A.pose('drape', { rot: [6, 0, 0], dur: 0.25, times: 2 }), A.effect('sparkle', { dur: 1.5 }), A.say('Shimmer!', 1.2))] }).done();
   }),
-  e('silo', 'farm', 'farm buildings', () =>
-    m('silo')
-      .cyl([2.6, 7, 2.6], [0, 3.5, 0], { color: '#c9ccd1' })
-      .ball([2.6, 1.8, 2.6], [0, 7.0, 0], { color: 'silver' })
-      .torus([2.7, 2.7, 0.1], [0, 2.4, 0], { color: 'steel', rot: [90, 0, 0], tube: 0.04 })
-      .torus([2.7, 2.7, 0.1], [0, 4.8, 0], { color: 'steel', rot: [90, 0, 0], tube: 0.04 })
-      .stick([0.5, 0, 1.25], [0.5, 7.4, 1.0], 0.06, 'darkgray')
-      .stick([0.8, 0, 1.18], [0.8, 7.2, 0.9], 0.06, 'darkgray')
-      .box([2.4, 2.2, 1.6], [-2.0, 1.1, 0.6], { color: 'darkred', round: 0.04 })
-      .wedge([2.7, 1.0, 1.9], [-2.0, 2.7, 0.6], { color: 'darkgray', rot: [0, 90, 0] })
-      .rod([0, 7.5, 0], [-2.0, 3.2, 0.6], 0.25, 'gray')
-      .done(),
-  ),
+  // A grain silo (14 m): a corrugated steel bin with a conical roof and top hatch, a caged ladder, the bucket
+  // elevator leg with its spout, and a red farm truck waiting under the chute. Click: grain pours out of the
+  // spout into the truck; click again, the chute swings back.
+  e('silo', 'farm', 'farm buildings', () => {
+    const b = m('silo', { edge: 'sharp' })
+      .box([14, 0.2, 12], [1.5, 0.1, 1], { color: '#a7a7a0' })
+      .cyl([6, 10, 6], [0, 5.2, 0], { color: '#c9ccd1' })
+      .cone([6.4, 2.6, 6.4], [0, 11.5, 0], { color: '#dfe3e8' })
+      .cyl([0.8, 0.5, 0.8], [0, 12.8, 0], { color: '#9da3a8' });
+    b.each(9, (i) => b.torus([6.06, 6.06, 0.08], [0, 0.8 + i * 1.1, 0], { color: '#9da3a8', rot: [90, 0, 0], tube: 0.02, noInk: true }));
+    b.pair((s) => b.stick([s * 0.25 + 1.0, 0.2, 3.0], [s * 0.25 + 1.0, 10.6, 3.0], 0.06, '#5c6166'));
+    b.each(10, (i) => b.stick([0.75, 0.6 + i * 1.0, 3.0], [1.25, 0.6 + i * 1.0, 3.0], 0.04, '#5c6166'));
+    b.each(5, (i) => b.torus([0.8, 0.8, 0.05], [1.0, 3.0 + i * 1.6, 3.2], { color: '#7a7f85', rot: [90, 0, 0], tube: 0.05, noInk: true }));
+    b.box([0.8, 13.5, 0.8], [4.0, 6.95, -1.0], { color: '#9da3a8' })
+      .box([1.2, 1.0, 1.2], [4.0, 13.9, -1.0], { color: '#7a7f85' })
+      .rod([4.0, 13.6, -1.0], [0.6, 12.6, 0], 0.3, '#9da3a8')
+      .rod([4.0, 6.0, -0.6], [6.0, 3.6, 1.2], 0.35, '#e8a02a', { name: 'chute', pivot: [4.0, 6.0, -0.6] });
+    b.box([2.4, 1.4, 3.0], [6.2, 1.3, 3.2], { color: '#d8312a', round: 0.1 })
+      .box([2.4, 1.6, 1.8], [6.2, 1.4, 5.6], { color: '#d8312a', round: 0.1 })
+      .box([2.2, 0.6, 0.06], [6.2, 1.9, 6.52], { color: '#9fd0ea' })
+      .dome([2.0, 0.6, 2.6], [6.2, 2.0, 3.2], { color: '#e2c35a', name: 'grain', edge: 'soft' });
+    axle(b, 'F', 5.6, 2.2, 0.9, 0.3);
+    axle(b, 'B', 2.6, 2.2, 0.9, 0.4);
+    return b
+      .act({ click: [[A.pose('chute', { rot: [0, 0, -8], dur: 0.4 }), A.par(A.effect('dust', { dur: 2.5 }), A.pose('grain', { scale: 1.3, dur: 2.5 }), A.say('Whoosh!', 2))], [A.par(A.pose('chute', { rot: [0, 0, 0], dur: 0.4 }), A.pose('grain', { scale: 1, dur: 0.4 }))]] })
+      .done();
+  }),
+  // Silver as a material: a pyramid of stamped silver ingots and a stack of silver coins beside it. Click: they
+  // gleam, ting!
   e('silver (material)', 'workshop', 'materials', () => {
-    const b = m('silver (material)');
-    for (const [x, y] of [[-0.25, 0.04], [0, 0.04], [0.25, 0.04], [-0.125, 0.12], [0.125, 0.12], [0, 0.2]]) b.box([0.24, 0.08, 0.11], [x, y, 0], { color: '#dfe3e8', round: 0.15 }).box([0.1, 0.03, 0.005], [x, y, 0.056], { color: 'gray', noInk: true });
-    return b.cyl([0.07, 0.012, 0.07], [0.42, 0.006, 0.12], { color: '#dfe3e8' }).cyl([0.07, 0.012, 0.07], [0.44, 0.018, 0.09], { color: '#dfe3e8' }).done();
+    const b = m('silver (material)', { edge: 'sharp' });
+    for (const [xx, y] of [[-0.25, 0.04], [0, 0.04], [0.25, 0.04], [-0.125, 0.12], [0.125, 0.12], [0, 0.2]] as Array<[number, number]>) b.box([0.24, 0.08, 0.11], [xx, y, 0], { color: '#dfe3e8', round: 0.15 }).label('999', [0.08, 0.025], [xx, y + 0.041, 0.0], { color: '#dfe3e8', rot: [-90, 0, 0], depth: 0.002 });
+    b.each(5, (i) => b.cyl([0.07, 0.01, 0.07], [0.42 + (i % 2) * 0.003, 0.005 + i * 0.011, 0.12], { color: '#d4d7da' }));
+    b.cyl([0.07, 0.01, 0.07], [0.5, 0.005, 0.04], { color: '#d4d7da', rot: [0, 0, 8] });
+    return b.act({ click: [A.par(A.effect('sparkle', { dur: 1.5 }), A.say('Ting!', 1))] }).done();
   }),
+  // A silver bullet (7 cm cartridge) standing on a little black velvet cushion: a brass case with its rim and
+  // primer, and the gleaming silver bullet. Click: it glints with a gleam of moonlight.
   e('silver bullet', 'armory', 'ammo', () =>
     m('silver bullet')
-      .cyl([0.03, 0.05, 0.03], [0, 0.025, 0], { color: 'brass' })
-      .cyl([0.032, 0.006, 0.032], [0, 0.003, 0], { color: 'brass' })
-      .cyl([0.03, 0.02, 0.03], [0, 0.06, 0], { color: 'silver', taper: 0.85 })
-      .ball([0.026, 0.04, 0.026], [0, 0.075, 0], { color: 'silver' })
-      .star(0.03, [0.03, 0.09, 0.0], { color: 'white', glow: true })
+      .box([0.08, 0.02, 0.08], [0, 0.01, 0], { color: '#2a2726', round: 0.6 })
+      .cyl([0.03, 0.05, 0.03], [0, 0.045, 0], { color: '#d0a84a', edge: 'sharp', name: 'bullet' })
+      .cyl([0.032, 0.006, 0.032], [0, 0.023, 0], { color: '#d0a84a', edge: 'sharp', parent: 'bullet' })
+      .cyl([0.03, 0.02, 0.03], [0, 0.08, 0], { color: '#dfe3e8', taper: 0.85, parent: 'bullet' })
+      .ball([0.026, 0.04, 0.026], [0, 0.095, 0], { color: '#eef2f5', parent: 'bullet' })
+      .act({ click: [A.par(A.pose('bullet', { rot: [0, 360, 0], dur: 1 }), A.effect('sparkle', { dur: 1.2 }), A.say('Gleam!', 1)), A.pose('bullet', { rot: [0, 0, 0], dur: 0 })] })
       .done(),
   ),
+  // A kitchen sink unit at real size (worktop 0.9 m): a white cabinet with two doors, a dark worktop with a
+  // stainless basin and drainer, a swan-neck mixer tap with a lever, a sponge and washing-up liquid. Click: the
+  // tap runs; click again, it stops.
   e('sink', 'kitchen', 'fixtures', () =>
-    m('sink')
-      .box([0.9, 0.82, 0.6], [0, 0.41, 0], { color: 'white', round: 0.05 })
-      .box([0.94, 0.05, 0.64], [0, 0.845, 0], { color: 'darkgray', round: 0.1 })
-      .box([0.6, 0.02, 0.4], [0, 0.86, 0.04], { color: 'steel', round: 0.3 })
-      .box([0.52, 0.01, 0.32], [0, 0.866, 0.04], { color: '#5c6166', round: 0.3, noInk: true })
-      .rod([0, 0.86, -0.22], [0, 1.15, -0.2], 0.035, 'silver')
-      .rod([0, 1.15, -0.2], [0, 1.12, -0.02], 0.03, 'silver')
-      .box([0.4, 0.62, 0.02], [-0.21, 0.4, 0.3], { color: 'white', round: 0.1, name: 'door', pivot: [-0.42, 0.4, 0.3] })
-      .box([0.4, 0.62, 0.02], [0.21, 0.4, 0.3], { color: 'white', round: 0.1 })
-      .box([0.02, 0.1, 0.03], [-0.05, 0.6, 0.32], { color: 'silver', parent: 'door' })
-      .box([0.02, 0.1, 0.03], [0.05, 0.6, 0.32], { color: 'silver' })
+    m('sink', { edge: 'sharp' })
+      .box([1.0, 0.84, 0.6], [0, 0.42, 0], { color: '#f2f2ee', round: 0.04 })
+      .box([1.04, 0.05, 0.64], [0, 0.865, 0], { color: '#3a3f45', round: 0.1 })
+      .box([0.5, 0.02, 0.42], [-0.18, 0.88, 0.03], { color: '#b9c2ca', round: 0.3 })
+      .box([0.44, 0.01, 0.36], [-0.18, 0.886, 0.03], { color: '#5c6166', round: 0.3, noInk: true })
+      .box([0.34, 0.012, 0.42], [0.28, 0.881, 0.03], { color: '#c9ccd1', round: 0.2 })
+      .rod([-0.18, 0.88, -0.24], [-0.18, 1.2, -0.22], 0.035, '#c9ccd1')
+      .arc([0.26, 0.24, 0.035], [-0.18, 1.08, -0.1], { color: '#c9ccd1', rot: [0, 90, 0], tube: 0.13 })
+      .box([0.03, 0.02, 0.1], [-0.12, 1.15, -0.22], { color: '#9da3a8', name: 'lever', pivot: [-0.12, 1.15, -0.27] })
+      .stick([-0.18, 1.06, 0.03], [-0.18, 0.9, 0.03], 0.03, '#9fd8f0', { name: 'water', scale: 0, edge: 'soft' })
+      .box([0.1, 0.05, 0.07], [0.25, 0.905, 0.1], { color: '#f6d24a', round: 0.4, edge: 'soft' })
+      .box([0.1, 0.012, 0.07], [0.25, 0.934, 0.1], { color: '#5aa553', round: 0.2 })
+      .box([0.07, 0.18, 0.05], [0.38, 0.97, -0.15], { color: '#4fc3a5', round: 0.4, edge: 'soft' })
+      .box([0.47, 0.66, 0.02], [-0.24, 0.42, 0.31], { color: '#f7f5ef', round: 0.1, name: 'doorL', pivot: [-0.48, 0.42, 0.31], mover: { kind: 'swing', axis: 'y', amount: -100 } })
+      .box([0.02, 0.12, 0.03], [-0.04, 0.6, 0.33], { color: '#c9ccd1', parent: 'doorL' })
+      .box([0.47, 0.66, 0.02], [0.24, 0.42, 0.31], { color: '#f7f5ef', round: 0.1 })
+      .box([0.02, 0.12, 0.03], [0.04, 0.6, 0.33], { color: '#c9ccd1' })
+      .act({ click: [[A.pose('lever', { rot: [-30, 0, 0], dur: 0.2 }), A.par(A.pose('water', { scale: 1, dur: 0.2 }), A.effect('water_spray', { dur: 2 }), A.say('Splish!', 1))], [A.par(A.pose('lever', { rot: [0, 0, 0], dur: 0.2 }), A.pose('water', { scale: 0, dur: 0.2 }), A.say('Drip.', 0.8))]] })
       .done(),
   ),
-  e('sinkhole', 'nature', 'landforms', () =>
-    m('sinkhole')
-      .box([6, 2.0, 4.5], [0, 1.0, 0], { color: 'dirt', round: 0.05 })
-      .box([6.05, 0.6, 4.55], [0, 0.3, 0], { color: 'rock', round: 0.05 })
-      .box([6.1, 0.3, 4.6], [0, 2.15, 0], { color: 'grass', round: 0.1 })
-      .cyl([2.6, 0.06, 2.0], [0.2, 2.3, 0.2], { color: '#2a2726' })
-      .torus([2.8, 2.8, 0.25], [0.2, 2.28, 0.2], { color: 'dirt', rot: [90, 0, 0], tube: 0.1 })
-      .cyl([0.25, 1.4, 0.25], [-1.6, 2.9, -1.0], { color: 'bark', rot: [0, 0, 20] })
-      .ball([1.0, 1.0, 1.0], [-1.85, 3.7, -1.0], { color: 'leaf' })
-      .done(),
-  ),
+  // A sinkhole (12 m patch of ground): a dark pit that has swallowed part of a road, broken asphalt slabs tipping
+  // into it, warning cones and a barrier with tape, a tree leaning at the edge. Click: rumble, another slab of
+  // road breaks off and slides in; click again, the scene settles back.
+  e('sinkhole', 'nature', 'landforms', () => {
+    const b = m('sinkhole', { edge: 'sharp' })
+      .box([12, 0.3, 12], [0, 0.15, 0], { color: '#6ab04c' })
+      .box([4, 0.32, 12], [3.5, 0.16, 0], { color: '#4a4c50' })
+      .cyl([5.2, 0.05, 4.6], [0.5, 0.33, 0.3], { color: '#1e1c1b' })
+      .torus([5.6, 5.0, 0.4], [0.5, 0.3, 0.3], { color: '#8a6440', rot: [90, 0, 0], tube: 0.1, edge: 'soft' })
+      .box([1.6, 0.3, 1.2], [2.5, 0.1, 0.3], { color: '#4a4c50', rot: [0, 10, 25], name: 'slab', pivot: [3.3, 0.3, 0.3] })
+      .box([1.2, 0.3, 1.0], [2.4, -0.1, -1.0], { color: '#4a4c50', rot: [10, -15, 35] })
+      .cyl([0.35, 3.2, 0.35], [-2.3, 1.7, -2.0], { color: '#7a5134', rot: [0, 0, 18] })
+      .ball([2.0, 1.6, 1.8], [-2.9, 3.5, -2.0], { color: '#4f9a48', edge: 'soft' });
+    for (const [xx, z] of [[3.2, 3.6], [4.4, 3.6], [3.2, -3.4], [4.4, -3.4], [-2.4, 3.0]] as Array<[number, number]>) b.box([0.38, 0.04, 0.38], [xx, 0.34, z], { color: '#2a2726' }).cyl([0.3, 0.65, 0.3], [xx, 0.68, z], { color: '#f0782a', taper: 0.14, edge: 'soft' }).cyl([0.22, 0.08, 0.22], [xx, 0.7, z], { color: 'white', taper: 0.75, edge: 'soft' });
+    b.stick([3.2, 0.9, 3.6], [-2.4, 0.9, 3.0], 0.04, '#f6d24a').stick([3.2, 0.9, -3.4], [4.4, 0.9, -3.4], 0.04, '#f6d24a');
+    return b.act({ click: [[A.par(A.pose('slab', { rot: [0, 0, 30], move: [-0.6, -0.6, 0], dur: 0.8 }), A.effect('dust', { dur: 2 }), A.anim('shake', 2), A.say('Rumble...', 2))], [A.pose('slab', { rot: [0, 0, 0], move: [0, 0, 0], dur: 0.6 })]] }).done();
+  }),
+  // A skate park (16 m x 12 m): a concrete half-pipe of two curved plywood walls with decks, coping and rails, a
+  // grind rail, a funbox with ramps, and graffiti. Click: a skater rolls up, thumbs up, "Gnarly!", and leaves.
   e('skate park', 'places', 'parks', () => {
-    const b = m('skate park').box([7, 0.2, 4.5], [0, 0.1, 0], { color: 'lightgray', round: 0.03 });
-    b.wedge([2.0, 1.6, 4.0], [-2.4, 1.0, 0], { color: '#9aa4aa', apex: -0.5 }).wedge([2.0, 1.6, 4.0], [2.4, 1.0, 0], { color: '#9aa4aa', apex: 0.5 });
-    b.pair((s) => b.stick([s * 3.4, 1.8, -2.0], [s * 3.4, 1.8, 2.0], 0.1, 'steel'));
-    b.box([1.0, 0.4, 1.2], [0, 0.4, -0.8], { color: 'gray', round: 0.1 }).stick([-0.8, 0.6, 1.2], [0.8, 0.6, 1.2], 0.08, 'yellow');
-    b.pair((s) => b.stick([s * 0.7, 0.2, 1.2], [s * 0.7, 0.6, 1.2], 0.06, 'yellow'));
-    return b.ball([1.0, 0.5, 0.05], [-2.3, 1.0, 2.02], { color: 'magenta', noInk: true }).ball([0.8, 0.4, 0.05], [2.3, 0.8, 2.02], { color: 'lime', noInk: true }).done();
+    const b = m('skate park', { edge: 'sharp' }), R = 1.8, W = 4, n = 8;
+    b.box([16, 0.2, 13], [0, 0.1, 0], { color: '#c4c2b8', round: 0.01 });
+    b.pair((s) => {
+      const cx = s * 2.2;
+      b.each(n, (i) => {
+        const ph = ((i + 0.5) / n) * 90 * D2R;
+        b.box([R * (Math.PI / 2 / n) + 0.05, 0.05, W], [cx + s * R * Math.sin(ph), 0.2 + R - R * Math.cos(ph), -2], { color: i % 2 ? '#a7a39a' : '#b8b5ac', rot: [0, 0, s * (ph / D2R)], round: 0.1 });
+      });
+      b.each(5, (k) => {
+        const yy = 0.2 + (k + 0.5) * (R / 5), xx = cx + s * Math.sqrt(Math.max(0, R * R - (R - (yy - 0.2)) * (R - (yy - 0.2))));
+        const outer = cx + s * (R + 1.3);
+        b.box([Math.abs(outer - xx), R / 5 + 0.01, 0.1], [(xx + outer) / 2, yy, -2 + s * 0 + W / 2], { color: '#8f8c86' });
+        b.box([Math.abs(outer - xx), R / 5 + 0.01, 0.1], [(xx + outer) / 2, yy, -2 - W / 2], { color: '#8f8c86' });
+      });
+      b.box([1.3, 0.08, W + 0.1], [cx + s * (R + 0.65), 0.2 + R + 0.02, -2], { color: '#9a6a3e' });
+      b.stick([cx + s * R, 0.2 + R + 0.05, -2 - W / 2], [cx + s * R, 0.2 + R + 0.05, -2 + W / 2], 0.07, '#c9ccd1');
+      b.stick([cx + s * (R + 1.25), 0.2 + R, -2 - W / 2], [cx + s * (R + 1.25), 0.2 + R + 1.0, -2 - W / 2], 0.06, '#8f99a3').stick([cx + s * (R + 1.25), 0.2 + R, -2 + W / 2], [cx + s * (R + 1.25), 0.2 + R + 1.0, -2 + W / 2], 0.06, '#8f99a3').stick([cx + s * (R + 1.25), 0.2 + R + 1.0, -2 - W / 2], [cx + s * (R + 1.25), 0.2 + R + 1.0, -2 + W / 2], 0.06, '#8f99a3');
+      b.ball([1.4, 0.7, 0.04], [cx + s * (R + 0.6), 1.0, -2 + W / 2 + 0.06], { color: s > 0 ? '#d64fa0' : '#9be34d', noInk: true });
+    });
+    b.box([4.4, 0.2, W], [0, 0.3, -2], { color: '#b8b5ac' });
+    b.stick([-3, 0.6, 3.5], [3, 0.6, 3.5], 0.08, '#f6d24a');
+    b.pair((s) => b.stick([s * 2.6, 0.2, 3.5], [s * 2.6, 0.6, 3.5], 0.08, '#f6d24a'));
+    b.box([2.4, 0.6, 1.6], [-4.5, 0.5, 4.5], { color: '#b8b5ac' }).wedge([1.6, 0.6, 1.6], [-6.3, 0.5, 4.5], { color: '#a7a39a', rot: [0, 90, 0], apex: 0.5 });
+    return b.act({ click: [A.spawn('sk', 'skater', { rel: 'front', of: 'self', dist: 'near' }), A.par(A.anim('thumbs_up', 1, 'sk'), A.say('Gnarly!', 1.8, 'sk')), A.wait(0.5), A.remove('sk', 'fade')] }).done();
   }),
+  // A skateboard (80 cm) stood up on its tail: the printed graphic on the underside, black grip tape on top,
+  // trucks with four cream wheels. Click: it drops onto its wheels, clack; click again, it pops back up.
   e('skateboard', 'sports', 'skating', () => {
-    const b = m('skateboard').box([0.21, 0.8, 0.025], [0, 0.42, 0], { color: 'black', round: 0.6 }).box([0.17, 0.6, 0.006], [0, 0.42, 0.014], { color: 'orange', noInk: true, round: 0.6 });
-    b.star(0.12, [0, 0.42, 0.02], { color: 'yellow', noInk: true });
-    for (const y of [0.17, 0.67]) {
-      b.box([0.14, 0.04, 0.04], [0, y, 0.035], { color: 'silver', round: 0.3 });
-      b.pair((s) => b.cyl([0.065, 0.06, 0.065], [s * 0.1, y, 0.06], { color: 'cream', rot: [0, 0, 90] }));
+    const b = m('skateboard')
+      .box([0.21, 0.8, 0.02], [0, 0.43, 0], { color: '#2a2726', round: 0.6, edge: 'sharp', name: 'board', pivot: [0, 0.03, -0.01] })
+      .box([0.19, 0.7, 0.006], [0, 0.43, 0.012], { color: '#f0923b', noInk: true, round: 0.6, parent: 'board' })
+      .star(0.12, [0, 0.43, 0.018], { color: '#f6d24a', noInk: true, parent: 'board' });
+    for (const y of [0.18, 0.68]) {
+      b.box([0.14, 0.04, 0.04], [0, y, 0.035], { color: '#c9ccd1', round: 0.3, parent: 'board', edge: 'sharp' });
+      b.pair((s) => b.cyl([0.06, 0.05, 0.06], [s * 0.1, y, 0.06], { color: '#f2e6cf', rot: [0, 0, 90], parent: 'board' }));
     }
-    return b.done();
+    return b.act({ click: [[A.pose('board', { rot: [90, 0, 0], move: [0, 0.07, 0], dur: 0.35 }), A.say('Clack!', 1)], [A.pose('board', { rot: [0, 0, 0], move: [0, 0, 0], dur: 0.3 }), A.say('Pop!', 0.8)]] }).done();
   }),
+  // An anatomy-class skeleton on its stand (1.75 m): skull with a hinged jaw, spine, rib cage, collarbones, pelvis,
+  // arm and leg bones with kneecaps, hands and feet. Click: its jaw chatters, clack clack; click again, it waves.
   e('skeleton', 'clinic', 'bones', () => {
     const bone = '#efe8d6';
     const b = m('skeleton')
-      .ball([0.2, 0.22, 0.22], [0, 1.6, 0], { color: bone })
-      .box([0.13, 0.07, 0.12], [0, 1.47, 0.04], { color: bone, round: 0.5 })
-      .capsule([0.04, 0.6, 0.04], [0, 1.1, -0.06], { color: bone })
-      .ball([0.3, 0.14, 0.18], [0, 0.85, 0], { color: bone })
-      .box([0.08, 0.025, 0.01], [0, 1.47, 0.1], { color: 'darkgray', noInk: true });
-    b.each(5, (i) => b.torus([0.32 - Math.abs(i - 1.5) * 0.03, 0.2, 0.025], [0, 1.37 - i * 0.07, 0.0], { color: bone, rot: [100, 0, 0], tube: 0.12 }));
-    b.pair((s) => {
-      b.ball([0.06, 0.07, 0.03], [s * 0.05, 1.62, 0.1], { color: 'black' });
-      b.rod([s * 0.03, 1.4, 0.03], [s * 0.2, 1.42, -0.02], 0.03, bone);
-      b.rod([s * 0.21, 1.4, 0], [s * 0.25, 1.1, 0], 0.04, bone).rod([s * 0.25, 1.1, 0], [s * 0.27, 0.82, 0.04], 0.035, bone).ball([0.06, 0.08, 0.03], [s * 0.28, 0.75, 0.05], { color: bone });
-      b.rod([s * 0.1, 0.82, 0], [s * 0.11, 0.46, 0.01], 0.05, bone).rod([s * 0.11, 0.46, 0.01], [s * 0.11, 0.07, 0], 0.045, bone).box([0.09, 0.04, 0.17], [s * 0.11, 0.03, 0.05], { color: bone, round: 0.5 });
+      .cyl([0.4, 0.04, 0.4], [0, 0.02, -0.05], { color: '#5c6166', edge: 'sharp' })
+      .stick([0, 0.04, -0.14], [0, 1.45, -0.14], 0.03, '#9da3a8', { edge: 'sharp' })
+      .ball([0.16, 0.19, 0.19], [0, 1.6, 0], { color: bone })
+      .box([0.12, 0.05, 0.11], [0, 1.5, 0.03], { color: bone, round: 0.5 })
+      .box([0.1, 0.035, 0.09], [0, 1.465, 0.035], { color: bone, round: 0.5, name: 'jaw', pivot: [0, 1.49, -0.02] })
+      .box([0.07, 0.012, 0.01], [0, 1.483, 0.08], { color: 'white', parent: 'jaw' })
+      .box([0.07, 0.012, 0.01], [0, 1.495, 0.085], { color: 'white' })
+      .cone([0.025, 0.03, 0.01], [0, 1.53, 0.09], { color: '#3a3633', rot: [180, 0, 0] });
+    b.pair((s) => b.ball([0.05, 0.05, 0.03], [s * 0.035, 1.6, 0.08], { color: '#2a2726' }));
+    b.each(14, (i) => b.box([0.04, 0.03, 0.035], [0, 0.96 + i * 0.037, -0.08], { color: '#e2d9c2', round: 0.5 }));
+    b.each(7, (i) => {
+      const w = 0.24 + 0.08 * Math.sin(((i + 1.5) / 8) * Math.PI);
+      b.arc([w, w * 0.75, 0.016], [0, 1.37 - i * 0.045, -0.06 + w * 0.05], { color: bone, rot: [-102, 0, 0], arc: 300, tube: 0.07 });
     });
-    return b.done();
+    b.box([0.035, 0.18, 0.02], [0, 1.25, 0.06], { color: bone, round: 0.4, rot: [-8, 0, 0] });
+    b.ball([0.28, 0.12, 0.14], [0, 0.92, -0.04], { color: bone }).ball([0.12, 0.08, 0.06], [0, 0.88, 0.02], { color: '#2a2726', noInk: true });
+    b.pair((s) => {
+      b.rod([s * 0.02, 1.4, 0.03], [s * 0.17, 1.42, -0.03], 0.025, bone);
+      const arm = s > 0 ? 'armL' : 'armR';
+      b.rod([s * 0.19, 1.38, -0.02], [s * 0.23, 1.1, -0.02], 0.035, bone, { name: arm, pivot: [s * 0.19, 1.39, -0.02] });
+      b.rod([s * 0.23, 1.1, -0.02], [s * 0.26, 0.85, 0.02], 0.022, bone, { parent: arm }).rod([s * 0.245, 1.1, -0.04], [s * 0.275, 0.85, 0.0], 0.018, bone, { parent: arm });
+      b.box([0.05, 0.07, 0.02], [s * 0.27, 0.8, 0.02], { color: bone, round: 0.4, parent: arm });
+      b.each(3, (i) => b.rod([s * (0.26 + i * 0.012), 0.77, 0.02], [s * (0.265 + i * 0.014), 0.71, 0.03], 0.01, bone, { parent: arm }));
+      b.rod([s * 0.09, 0.9, -0.02], [s * 0.1, 0.5, 0.0], 0.045, bone);
+      b.ball(0.045, [s * 0.1, 0.5, 0.03], { color: bone });
+      b.rod([s * 0.1, 0.48, 0.0], [s * 0.1, 0.08, -0.01], 0.035, bone).rod([s * 0.125, 0.47, -0.02], [s * 0.125, 0.09, -0.02], 0.02, bone);
+      b.box([0.08, 0.035, 0.18], [s * 0.1, 0.045, 0.05], { color: bone, round: 0.5 });
+    });
+    return b
+      .act({
+        click: [
+          [A.pose('jaw', { rot: [20, 0, 0], dur: 0.1, times: 4 }), A.say('Clack clack clack!', 1.5)],
+          [A.pose('armR', { rot: [0, 0, -150], dur: 0.4 }), A.par(A.pose('armR', { rot: [0, 0, -120], dur: 0.2, times: 2 }), A.say('Rattle, rattle!', 1.5)), A.pose('armR', { rot: [0, 0, 0], dur: 0.4 })],
+        ],
+      })
+      .done();
   }),
+  // A pencil sketch of a house on a pad propped on a little tabletop easel, with the pencil and an eraser. Click:
+  // the pencil draws a new line; click again, the eraser rubs it out.
   e('sketch', 'study', 'art supplies', () => {
-    const b = m('sketch').box([0.26, 0.03, 0.08], [0, 0.015, 0.02], { color: 'wood' }).rod([0, 0.0, -0.08], [0, 0.26, -0.02], 0.015, 'wood').box([0.26, 0.02, 0.03], [0, 0.045, 0.03], { color: 'wood' });
-    b.box([0.22, 0.24, 0.006], [0, 0.17, 0.01], { color: 'paper', rot: [-12, 0, 0] });
-    b.torus([0.08, 0.08, 0.004], [-0.03, 0.21, 0.02], { color: 'darkgray', noInk: true, rot: [-12, 0, 0], tube: 0.06 });
-    b.rod([-0.08, 0.12, 0.03], [0.07, 0.12, 0.03], 0.004, 'darkgray', { noInk: true }).rod([0.02, 0.12, 0.03], [0.05, 0.2, 0.02], 0.004, 'darkgray', { noInk: true }).rod([0.05, 0.2, 0.02], [0.08, 0.12, 0.03], 0.004, 'darkgray', { noInk: true });
-    return b.stick([-0.1, 0.065, 0.05], [0.08, 0.065, 0.05], 0.01, 'yellow').cone([0.01, 0.02, 0.01], [0.09, 0.065, 0.05], { color: 'tan', rot: [0, 0, -90] }).done();
+    const g = '#5c6166', t = -12;
+    const P = (xx: number, y: number): V => [xx, y, 0.018 - (y - 0.17) * Math.tan(-t * D2R)];
+    const b = m('sketch', { edge: 'sharp' })
+      .box([0.28, 0.03, 0.12], [0, 0.015, 0.02], { color: '#9a6a3e' })
+      .rod([0, 0.0, -0.08], [0, 0.26, -0.02], 0.015, '#9a6a3e')
+      .box([0.28, 0.025, 0.035], [0, 0.045, 0.03], { color: '#9a6a3e' })
+      .box([0.24, 0.26, 0.008], [0, 0.17, 0.01], { color: '#faf6ea', rot: [t, 0, 0] });
+    b.rod(P(-0.07, 0.1), P(0.07, 0.1), 0.004, g, { noInk: true }).rod(P(-0.07, 0.1), P(-0.07, 0.19), 0.004, g, { noInk: true }).rod(P(0.07, 0.1), P(0.07, 0.19), 0.004, g, { noInk: true });
+    b.rod(P(-0.09, 0.19), P(0, 0.26), 0.004, g, { noInk: true }).rod(P(0, 0.26), P(0.09, 0.19), 0.004, g, { noInk: true }).rod(P(-0.09, 0.19), P(0.09, 0.19), 0.004, g, { noInk: true });
+    b.rod(P(-0.015, 0.1), P(-0.015, 0.15), 0.004, g, { noInk: true }).rod(P(0.015, 0.1), P(0.015, 0.15), 0.004, g, { noInk: true }).rod(P(-0.015, 0.15), P(0.015, 0.15), 0.004, g, { noInk: true });
+    b.torus([0.045, 0.045, 0.003], P(0.075, 0.26), { color: g, noInk: true, rot: [t, 0, 0], tube: 0.08 });
+    b.rod(P(-0.1, 0.085), P(0.1, 0.085), 0.004, g, { noInk: true, name: 'line', scale: 0 });
+    b.stick([0.06, 0.075, 0.07], [0.16, 0.16, 0.06], 0.009, '#f6d24a', { name: 'pencil' }).cone([0.009, 0.02, 0.009], [0.052, 0.068, 0.07], { color: '#e2c08a', rot: [0, 0, 130], parent: 'pencil' });
+    b.box([0.04, 0.02, 0.025], [-0.1, 0.07, 0.065], { color: '#f4a1c0', round: 0.4, name: 'eraser' });
+    return b
+      .act({
+        click: [
+          [A.par(A.pose('pencil', { move: [-0.03, -0.01, 0], dur: 0.15, times: 3 }), A.pose('line', { scale: 1, dur: 0.9 }), A.say('Scritch!', 1))],
+          [A.par(A.pose('eraser', { move: [0.06, 0.02, 0], dur: 0.15, times: 3 }), A.pose('line', { scale: 0, dur: 0.9 }), A.effect('dust', { dur: 0.8 }))],
+        ],
+      })
+      .done();
   }),
+  // A kebab skewer (30 cm) over a little charcoal grill: chunks of meat, green and red pepper, onion and tomato on
+  // a steel skewer above glowing coals. Click: it is turned over, sizzling.
   e('skewer', 'food', 'grilled food', () => {
-    const b = m('skewer').box([0.1, 0.03, 0.1], [0, 0.015, 0], { color: 'wood', round: 0.2 }).stick([0, 0.03, 0], [0, 0.32, 0], 0.006, 'silver');
-    ['meat', 'green', 'meat', 'red', 'cream', 'meat'].forEach((c, i) => b.box(c === 'meat' ? 0.04 : [0.045, 0.03, 0.04], [0, 0.07 + i * 0.04, 0], { color: c === 'meat' ? '#8a4a2a' : c, round: 0.3, rot: [0, i * 35, 0] }));
-    return b.done();
+    const b = m('skewer')
+      .box([0.4, 0.08, 0.2], [0, 0.1, 0], { color: '#2a2726', round: 0.2, edge: 'sharp' })
+      .box([0.36, 0.02, 0.17], [0, 0.135, 0], { color: '#e8502a', glow: true });
+    b.pair((s) => b.pair((t) => b.stick([s * 0.17, 0, t * 0.08], [s * 0.17, 0.07, t * 0.08], 0.015, '#2a2726')));
+    b.each(6, (i) => b.stick([-0.19, 0.15, -0.075 + i * 0.03], [0.19, 0.15, -0.075 + i * 0.03], 0.006, '#9da3a8', { noInk: true }));
+    b.stick([-0.22, 0.18, 0], [0.22, 0.18, 0], 0.006, '#c9ccd1', { name: 'skewer', edge: 'sharp' });
+    ['#8a4a2a', '#5aa553', '#8a4a2a', '#e0473b', '#f2ece0', '#8a4a2a', '#e0473b'].forEach((c, i) => b.box(c === '#8a4a2a' ? 0.04 : [0.035, 0.035, 0.04], [-0.12 + i * 0.04, 0.18, 0], { color: c, round: 0.3, rot: [i * 35, 0, 0], parent: 'skewer' }));
+    b.torus([0.025, 0.025, 0.006], [0.235, 0.18, 0], { color: '#c9ccd1', tube: 0.25, rot: [0, 90, 0], parent: 'skewer' });
+    return b.act({ click: [A.par(A.pose('skewer', { rot: [180, 0, 0], dur: 0.6 }), A.effect('smoke', { dur: 2 }), A.say('Sizzle!', 1.5)), A.pose('skewer', { rot: [0, 0, 0], dur: 0 })] }).done();
   }),
+  // A ski hill (16 m): a snowy mountain with groomed runs marked by slalom flags, pine trees on its flanks, a
+  // line of chairlift towers up the slope and a timber lodge at the bottom. Click: fresh snow falls; click
+  // again, a skier swooshes up, thumbs up.
   e('ski hill', 'sports', 'ski resort', () => {
-    const b = m('ski hill').ball([7, 6, 5], [0, 0, -0.5], { color: 'snow' }).ball([3, 3, 2.5], [-2.2, 0.5, 0.3], { color: 'snow' });
-    for (const [x, z, h] of [[2.6, 0.8, 1.2], [3.1, -0.2, 1.4], [-3.2, 1.0, 1.1], [1.8, 1.6, 1.0]]) b.cone([h * 0.6, h, h * 0.6], [x, h / 2 + 0.3, z], { color: 'darkgreen' });
-    b.each(4, (i) => b.stick([-0.5 + i * 0.35, 2.7 - i * 0.6, 1.2 + i * 0.4], [-0.5 + i * 0.35, 3.0 - i * 0.6, 1.2 + i * 0.4], 0.04, i % 2 ? 'red' : 'blue'));
-    return b.box([1.3, 0.8, 1.0], [0.8, 0.4, 2.6], { color: 'darkwood', round: 0.05 }).wedge([1.5, 0.6, 1.2], [0.8, 1.1, 2.6], { color: 'snow' }).done();
-  }),
-  e('ski jump', 'sports', 'ski resort', () => {
-    const b = m('ski jump').box([0.4, 0.15, 0.5], [-1.3, 1.2, 0], { color: 'darkwood' });
-    plank(b, [-1.3, 1.15, 0], [0.0, 0.45, 0], 0.4, 0.06, 'snow');
-    plank(b, [-0.02, 0.45, 0], [0.3, 0.5, 0], 0.4, 0.06, 'snow');
-    b.each(4, (i) => b.stick([-1.3 + i * 0.4, 0, 0], [-1.3 + i * 0.4, 1.15 - i * 0.22, 0], 0.08, 'wood'));
-    b.wedge([1.8, 0.4, 0.9], [1.3, 0.2, 0], { color: 'snow', apex: -0.5 });
-    b.pair((s) => b.stick([-1.2, 1.25, s * 0.22], [0.0, 0.55, s * 0.22], 0.025, 'red'));
-    return b.done();
-  }),
-  e('ski lift', 'sports', 'ski resort', () => {
-    const b = m('ski lift').ball([7, 1.2, 3], [0, 0, 0], { color: 'snow' }).box([1.4, 1.4, 1.4], [3.0, 0.7, 0], { color: 'darkwood', round: 0.05 }).wedge([1.7, 0.6, 1.6], [3.0, 1.7, 0], { color: 'red' });
-    for (const x of [-2.6, 0.6]) b.stick([x, 0, 0], [x, 4.0, 0], 0.18, 'steel').stick([x, 4.0, -0.7], [x, 4.0, 0.7], 0.12, 'steel');
-    b.pair((s) => b.stick([-2.6, 4.0, s * 0.6], [3.0, 1.4 + 0.6, s * 0.6], 0.03, 'black'));
-    for (const [x, z] of [[-1.3, 0.6], [1.6, -0.6]]) {
-      const y = 4.0 - ((x + 2.6) / 5.6) * 2.0;
-      b.stick([x, y, z], [x, y - 1.0, z], 0.04, 'darkgray').box([0.5, 0.06, 0.4], [x, y - 1.0, z + 0.1], { color: 'blue' }).box([0.5, 0.35, 0.06], [x, y - 0.8, z - 0.1], { color: 'blue' });
-    }
-    return b.done();
-  }),
-  e('ski mask', 'wardrobe', 'winter wear', () => {
-    const b = m('ski mask').cyl([0.1, 0.06, 0.1], [0, 0.03, 0], { color: 'darkgray' }).ball([0.19, 0.25, 0.21], [0, 0.17, 0], { color: 'black' });
-    b.box([0.15, 0.045, 0.04], [0, 0.19, 0.085], { color: 'skin2', round: 0.5 }).ball([0.05, 0.04, 0.02], [0, 0.11, 0.1], { color: 'skin2' });
-    b.torus([0.2, 0.2, 0.03], [0, 0.24, 0], { color: 'red', rot: [90, 0, 0], tube: 0.15, noInk: true });
-    return b.pair((s) => b.ball(0.025, [s * 0.035, 0.19, 0.1], { color: 'black', eye: true })).done();
-  }),
-  e('ski pole', 'sports', 'skiing', () => {
-    const b = m('ski pole').ball([0.6, 0.3, 0.4], [0, 0, 0], { color: 'snow' });
-    b.pair((s) => {
-      b.stick([s * 0.12, 0.0, 0], [s * -0.18, 1.2, 0.05], 0.025, 'silver');
-      b.cyl([0.04, 0.14, 0.04], [s * -0.19, 1.25, 0.05], { color: 'black', rot: [0, 0, s * 14] });
-      b.torus([0.05, 0.08, 0.01], [s * -0.2, 1.18, 0.08], { color: 'red', tube: 0.2 });
-      b.cyl([0.11, 0.015, 0.11], [s * 0.09, 0.2, 0.005], { color: 'red', rot: [0, 0, s * 14] });
+    const b = m('ski hill', { edge: 'sharp' })
+      .box([34, 0.2, 30], [0, 0.1, 0], { color: '#f4f8fb' })
+      .dome([28, 16, 22], [0, 8.1, -4], { color: '#f4f8fb', edge: 'soft' })
+      .dome([12, 6, 10], [-10, 3.1, 4], { color: '#eaf2f7', edge: 'soft' });
+    for (const [xx, z, h] of [[9, 4, 4], [11, 1, 5], [-12, -2, 4.5], [-8, 8, 3.5], [12, -6, 5], [7, 8, 3]] as V[]) b.cyl([0.4, 1, 0.4], [xx, 0.6, z], { color: '#7a5134' }).cone([h * 0.6, h, h * 0.6], [xx, h / 2 + 1, z], { color: '#2f6a34', edge: 'soft' });
+    b.each(6, (i) => {
+      const t = i / 6, yy = 1 + t * 12, z = 6.5 - t * 8.5;
+      b.stick([-1.5 + (i % 2) * 3, yy - 0.2, z], [-1.5 + (i % 2) * 3, yy + 1.2, z], 0.08, i % 2 ? '#d8312a' : '#3f6fb5').box([0.5, 0.4, 0.02], [-1.25 + (i % 2) * 3, yy + 1.0, z], { color: i % 2 ? '#d8312a' : '#3f6fb5' });
     });
-    return b.done();
+    b.each(4, (i) => b.stick([5, 1 + i * 3.6, 7.5 - i * 3], [5, 4.5 + i * 3.6, 7.5 - i * 3], 0.25, '#9da3a8').stick([4.2, 4.5 + i * 3.6, 7.5 - i * 3], [5.8, 4.5 + i * 3.6, 7.5 - i * 3], 0.15, '#9da3a8'));
+    b.stick([5, 4.5, 7.5], [5, 15.3, -1.5], 0.06, '#2a2726');
+    b.box([5, 3, 4], [-5, 1.7, 11], { color: '#7a5230' }).wedge([5.6, 2, 4.6], [-5, 4.2, 11], { color: '#f4f8fb', rot: [0, 90, 0] }).stick([-3.8, 3, 10.5], [-3.8, 5.2, 10.5], 0.4, '#8f8c86');
+    door(b, [-5, 1.3, 13.03], 1.0, 2.2, '#5a3a22', { frame: '#3a2a1e' });
+    b.pair((s) => win(b, [-5 + s * 1.5, 1.9, 13.03], 0.8, 0.8, { frame: '#3a2a1e' }));
+    return b
+      .act({
+        click: [
+          [A.par(A.effect('snow', { dur: 3 }), A.say('Fresh powder!', 2))],
+          [A.spawn('sk', 'skier', { rel: 'front', of: 'self', dist: 'near' }), A.par(A.anim('thumbs_up', 1, 'sk'), A.say('Whoo-hoo!', 1.5, 'sk')), A.remove('sk', 'fade')],
+        ],
+      })
+      .done();
   }),
+  // A training ski jump (4 m): a timber in-run on a scaffold with a start platform, the take-off table, a snowy
+  // landing slope with marker flags, and a crouching jumper waiting at the top. Click: the jumper races down,
+  // flies and lands; click again, the next jumper is at the top.
+  e('ski jump', 'sports', 'ski resort', () => {
+    const b = m('ski jump', { edge: 'sharp' })
+      .box([12, 0.1, 4], [1.5, 0.05, 0], { color: '#f4f8fb' })
+      .box([0.9, 0.12, 1.4], [-3.4, 2.9, 0], { color: '#7a5230' });
+    plank(b, [-3.0, 2.9, 0], [0.0, 0.85, 0], 1.0, 0.12, '#f4f8fb');
+    plank(b, [0.0, 0.85, 0], [0.5, 0.88, 0], 1.0, 0.12, '#f4f8fb');
+    b.pair((s) => plank(b, [-3.0, 3.0, s * 0.52], [0.4, 0.95, s * 0.52], 0.04, 0.12, '#d8312a'));
+    b.each(5, (i) => {
+      const xx = -3.6 + i * 0.85, top = Math.min(2.85, 2.85 - (xx + 3.0) * (2.05 / 3.0));
+      b.pair((s) => b.stick([xx, 0.1, s * 0.45], [xx, Math.max(0.6, top), s * 0.45], 0.1, '#9a6a3e'));
+    });
+    b.wedge([6, 1.0, 3.6], [3.5, 0.6, 0], { color: '#f4f8fb', apex: -0.5, edge: 'soft' });
+    b.each(4, (i) => b.stick([1.5 + i * 1.4, 0.1, 1.7], [1.5 + i * 1.4, 1.1 - i * 0.2, 1.7], 0.04, '#2a2726').box([0.3, 0.2, 0.02], [1.65 + i * 1.4, 1.0 - i * 0.2, 1.7], { color: i % 2 ? '#3f6fb5' : '#d8312a' }));
+    b.box([1.6, 0.03, 0.06], [-3.3, 3.0, 0.1], { color: '#3f6fb5', name: 'jumper', round: 0.4 })
+      .box([1.6, 0.03, 0.06], [-3.3, 3.0, -0.1], { color: '#3f6fb5', round: 0.4, parent: 'jumper' })
+      .rod([-3.35, 3.05, 0.05], [-3.2, 3.38, 0.05], 0.08, '#2a2726', { parent: 'jumper' })
+      .rod([-3.35, 3.05, -0.05], [-3.2, 3.38, -0.05], 0.08, '#2a2726', { parent: 'jumper' })
+      .capsule([0.24, 0.42, 0.2], [-3.1, 3.5, 0], { color: '#d8312a', rot: [0, 0, -55], parent: 'jumper' })
+      .ball(0.2, [-2.9, 3.68, 0], { color: '#f6d24a', parent: 'jumper' })
+      .rod([-3.15, 3.5, 0.12], [-3.45, 3.35, 0.14], 0.06, '#d8312a', { parent: 'jumper' })
+      .rod([-3.15, 3.5, -0.12], [-3.45, 3.35, -0.14], 0.06, '#d8312a', { parent: 'jumper' });
+    return b
+      .act({
+        click: [
+          [A.pose('jumper', { move: [3.1, -2.05, 0], rot: [0, 0, -30], dur: 0.9 }), A.par(A.pose('jumper', { move: [5.6, -1.6, 0], rot: [0, 0, -15], dur: 0.6 }), A.say('Wheee!', 1.5)), A.pose('jumper', { move: [8.2, -2.85, 0], rot: [0, 0, -5], dur: 0.6 }), A.par(A.pose('jumper', { move: [9.5, -2.9, 0], rot: [0, 0, 0], dur: 0.4 }), A.effect('snow', { dur: 1 }))],
+          [A.pose('jumper', { move: [0, 0, 0], rot: [0, 0, 0], dur: 0 }), A.say('Next jumper!', 1.2)],
+        ],
+      })
+      .done();
+  }),
+  // A chairlift (10.5 m): the bottom station with its bullwheel, two lattice towers with cross-arms and sheaves,
+  // the haul rope up and down, three chairs with foot rests and safety bars, and the top station on the hill.
+  // Click: the bullwheel turns and the chairs ride up the line.
+  e('ski lift', 'sports', 'ski resort', () => {
+    const b = m('ski lift', { edge: 'sharp' })
+      .box([22, 0.2, 8], [0, 0.1, 0], { color: '#f4f8fb' })
+      .dome([10, 5.4, 8], [8, 2.9, 0], { color: '#f4f8fb', edge: 'soft' })
+      .box([2.4, 2.4, 3.2], [-9, 1.4, 0], { color: '#7a5230' })
+      .wedge([3.6, 0.8, 2.8], [-9, 3.0, 0], { color: '#d8312a', rot: [0, 90, 0] })
+      .box([2.4, 0.4, 3.2], [-8.6, 3.8, 0], { color: '#5c6166' })
+      .torus([2.8, 2.8, 0.2], [-8.6, 4.2, 0], { color: '#9da3a8', rot: [90, 0, 0], tube: 0.06, name: 'bullwheel', mover: { kind: 'spin', axis: 'y', amount: 120 } })
+      .box([2.0, 1.6, 2.4], [8.5, 6.3, 0], { color: '#7a5230' })
+      .wedge([2.9, 0.6, 2.3], [8.5, 7.4, 0], { color: '#d8312a', rot: [0, 90, 0] });
+    const top = (xx: number) => 4.2 + ((xx + 8.6) / 17.1) * 3.4;
+    for (const xx of [-3, 3]) {
+      const h = top(xx) + 2.4;
+      b.box([0.5, h, 0.5], [xx, h / 2 + 0.2, 0], { color: '#9da3a8' }).box([0.2, 0.2, 3.0], [xx, h + 0.1, 0], { color: '#5c6166' });
+      b.pair((s) => b.box([0.6, 0.15, 0.25], [xx, h - 0.05, s * 1.2], { color: '#2a2726' }));
+    }
+    b.pair((s) => b.stick([-8.6, 4.2, s * 1.2], [8.5, 7.6, s * 1.2], 0.05, '#2a2726'));
+    b.box([0.05, 0.05, 0.05], [0, 0.5, 0], { color: '#f4f8fb', name: 'chairs' });
+    for (const xx of [-6, -0.5, 5]) {
+      const y = top(xx) + 0.0;
+      b.stick([xx, y, 1.2], [xx, y - 1.5, 1.2], 0.05, '#2a2726', { parent: 'chairs' })
+        .box([1.0, 0.08, 0.5], [xx, y - 1.6, 1.25], { color: '#3f6fb5', round: 0.3, parent: 'chairs' })
+        .box([1.0, 0.45, 0.07], [xx, y - 1.35, 1.0], { color: '#3f6fb5', round: 0.3, parent: 'chairs' })
+        .stick([xx - 0.5, y - 1.1, 1.55], [xx + 0.5, y - 1.1, 1.55], 0.03, '#c9ccd1', { parent: 'chairs' });
+    }
+    return b
+      .socket('seat', [-6, top(-6) - 1.55, 1.25], 'seat', { part: 'chairs' })
+      .act({ click: [A.operate('bullwheel', 'on'), A.par(A.pose('chairs', { move: [3.4, 0.68, 0], dur: 3 }), A.say('Clunk... whirrr...', 2)), A.pose('chairs', { move: [0, 0, 0], dur: 0 }), A.operate('bullwheel', 'off')] })
+      .done();
+  }),
+  // A knitted balaclava (ski mask) on a head form: black wool with a red stripe, an opening for the eyes and one
+  // for the mouth. Click: brrr, a flurry of snow and a shiver.
+  e('ski mask', 'wardrobe', 'winter wear', () => {
+    const b = m('ski mask')
+      .cyl([0.14, 0.03, 0.14], [0, 0.015, 0], { color: '#9da3a8', edge: 'sharp' })
+      .cyl([0.09, 0.08, 0.09], [0, 0.07, 0], { color: '#2a2726' })
+      .ball([0.19, 0.25, 0.21], [0, 0.22, 0], { color: '#2a2726' })
+      .box([0.15, 0.045, 0.04], [0, 0.24, 0.085], { color: '#e8e4dc', round: 0.5 })
+      .ball([0.05, 0.035, 0.02], [0, 0.155, 0.098], { color: '#e8e4dc' })
+      .torus([0.2, 0.2, 0.03], [0, 0.29, 0], { color: '#d8312a', rot: [90, 0, 0], tube: 0.15, noInk: true });
+    b.pair((s) => b.ball(0.022, [s * 0.035, 0.24, 0.1], { color: '#5c6166', noInk: true }));
+    return b.act({ click: [A.par(A.effect('snow', { dur: 2 }), A.anim('shake'), A.say('Brrr!', 1.2))] }).done();
+  }),
+  // A pair of ski poles (1.2 m) stuck in a heap of snow: aluminium shafts, black grips with red wrist straps, and
+  // round baskets near the tips. Click: they wobble, shhk.
+  e('ski pole', 'sports', 'skiing', () => {
+    const b = m('ski pole').dome([0.7, 0.2, 0.5], [0, 0.1, 0], { color: '#f4f8fb' });
+    b.pair((s) => {
+      const nm = s > 0 ? 'poleL' : 'poleR';
+      b.stick([s * 0.12, 0.0, 0], [s * -0.18, 1.2, 0.05], 0.022, '#c9ccd1', { name: nm, pivot: [s * 0.12, 0.05, 0], edge: 'sharp' });
+      b.cyl([0.04, 0.15, 0.04], [s * -0.19, 1.26, 0.05], { color: '#2a2726', rot: [0, 0, s * 14], parent: nm });
+      b.torus([0.05, 0.08, 0.01], [s * -0.2, 1.18, 0.08], { color: '#d8312a', tube: 0.2, parent: nm });
+      b.cyl([0.11, 0.015, 0.11], [s * 0.07, 0.24, 0.005], { color: '#d8312a', rot: [0, 0, s * 14], parent: nm });
+    });
+    return b.act({ click: [A.par(A.pose('poleL', { rot: [0, 0, 6], dur: 0.15, times: 2 }), A.pose('poleR', { rot: [0, 0, -6], dur: 0.15, times: 2 }), A.say('Shhk!', 1))] }).done();
+  }),
+  // A pot of skin cream (9 cm): a white jar of thick cream whipped into a peak, its pink lid beside it. Click: the
+  // lid goes back on and it gleams; click again, off it comes.
   e('skin cream', 'home', 'bathroom', () =>
     m('skin cream')
-      .cyl([0.09, 0.05, 0.09], [0, 0.025, 0], { color: 'white' })
-      .cyl([0.08, 0.004, 0.08], [0, 0.051, 0], { color: 'cream' })
-      .ball([0.04, 0.025, 0.04], [0, 0.058, 0], { color: 'cream' })
-      .cone([0.015, 0.025, 0.015], [0.005, 0.078, 0], { color: 'cream', rot: [0, 0, -30] })
-      .cyl([0.095, 0.022, 0.095], [0.08, 0.04, -0.03], { color: 'pink', rot: [60, 0, -20] })
+      .cyl([0.09, 0.05, 0.09], [0, 0.025, 0], { color: 'white', edge: 'sharp' })
+      .cyl([0.08, 0.004, 0.08], [0, 0.051, 0], { color: '#fff3d6' })
+      .ball([0.05, 0.025, 0.05], [0, 0.058, 0], { color: '#fff3d6' })
+      .cone([0.015, 0.025, 0.015], [0.005, 0.078, 0], { color: '#fff3d6', rot: [0, 0, -30] })
+      .label('CREAM', [0.05, 0.014], [0, 0.025, 0.046], { color: 'white', depth: 0.002 })
+      .cyl([0.095, 0.022, 0.095], [0.09, 0.04, -0.03], { color: '#f4a1c0', rot: [60, 0, -20], name: 'lid', edge: 'sharp' })
+      .act({ click: [[A.pose('lid', { move: [-0.09, 0.025, 0.03], rot: [-60, 0, 20], dur: 0.5 }), A.effect('sparkle', { dur: 1 })], [A.pose('lid', { move: [0, 0, 0], rot: [0, 0, 0], dur: 0.5 }), A.say('Smooth!', 1)]] })
       .done(),
   ),
+  // A red pleated skirt on a dressmaker's waist form (1.1 m): a waistband with a button and knife pleats all
+  // round. Click: it twirls and flares.
   e('skirt', 'wardrobe', 'dresses', () => {
-    const b = m('skirt').cyl([0.5, 0.52, 0.42], [0, 0.29, 0], { color: 'red', taper: 0.55 }).cyl([0.28, 0.06, 0.24], [0, 0.57, 0], { color: 'darkred' });
-    return b.each(8, (i) => b.rod(surf([0, 0.55, 0], [0.135, 0, 0.115], -90 + i * 25, 0), surf([0, 0.04, 0], [0.24, 0, 0.2], -90 + i * 25, 0), 0.01, 'darkred', { noInk: true })).done();
+    const b = m('skirt')
+      .cyl([0.36, 0.03, 0.36], [0, 0.015, 0], { color: '#7a5230', edge: 'sharp' })
+      .stick([0, 0.03, 0], [0, 0.5, 0], 0.04, '#7a5230', { edge: 'sharp' })
+      .cyl([0.3, 0.26, 0.22], [0, 1.0, 0], { color: '#f2e6cf', taper: 1.15 })
+      .cyl([0.5, 0.52, 0.42], [0, 0.6, 0], { color: '#d8312a', taper: 0.55, name: 'skirt', pivot: [0, 0.86, 0] })
+      .cyl([0.28, 0.06, 0.24], [0, 0.87, 0], { color: '#a3322a', parent: 'skirt' })
+      .ball(0.02, [0.0, 0.87, 0.12], { color: '#e2b23a', parent: 'skirt' });
+    b.each(10, (i) => b.rod(surf([0, 0.84, 0], [0.135, 0, 0.115], -90 + i * 20, 0), surf([0, 0.35, 0], [0.245, 0, 0.205], -90 + i * 20, 0), 0.01, '#a3322a', { noInk: true, parent: 'skirt' }));
+    return b.act({ click: [A.par(A.pose('skirt', { rot: [0, 360, 0], scale: 1.12, dur: 0.8 }), A.say('Twirl!', 1)), A.pose('skirt', { rot: [0, 0, 0], scale: 1, dur: 0.3 })] }).done();
   }),
+  // A pair of skis (1.7 m) standing upright in the snow, tips curled, red and blue tops with bindings. Click: they
+  // clack together.
   e('skis', 'sports', 'skiing', () => {
-    const b = m('skis').ball([0.6, 0.3, 0.4], [0, 0, 0], { color: 'snow' });
+    const b = m('skis').dome([0.7, 0.2, 0.5], [0, 0.1, 0], { color: '#f4f8fb' });
     b.pair((s) => {
-      b.box([0.09, 1.5, 0.025], [s * 0.06, 0.8, 0], { color: s > 0 ? 'red' : 'blue', round: 0.4 });
-      b.rod([s * 0.06, 1.54, 0.0], [s * 0.06, 1.66, 0.06], 0.03, s > 0 ? 'red' : 'blue');
-      b.box([0.08, 0.12, 0.06], [s * 0.06, 0.8, 0.035], { color: 'darkgray', round: 0.3 });
+      const nm = s > 0 ? 'skiL' : 'skiR', c = s > 0 ? '#d8312a' : '#3f6fb5';
+      b.box([0.085, 1.55, 0.022], [s * 0.06, 0.8, 0], { color: c, round: 0.4, name: nm, pivot: [s * 0.06, 0.05, 0], edge: 'sharp' });
+      b.rod([s * 0.06, 1.56, 0.0], [s * 0.06, 1.68, 0.06], 0.03, c, { parent: nm });
+      b.box([0.08, 0.14, 0.06], [s * 0.06, 0.8, 0.035], { color: '#3a3633', round: 0.3, parent: nm, edge: 'sharp' });
+      b.box([0.087, 0.5, 0.004], [s * 0.06, 1.1, 0.012], { color: 'white', noInk: true, parent: nm });
     });
-    return b.done();
+    return b.act({ click: [A.par(A.pose('skiL', { rot: [0, 0, 4], dur: 0.12, times: 2 }), A.pose('skiR', { rot: [0, 0, -4], dur: 0.12, times: 2 }), A.say('Clack, clack!', 1))] }).done();
   }),
+  // A human skull (22 cm, real size): the rounded cranium, deep eye sockets, cheekbones, the nasal opening, a row
+  // of upper teeth, and a hinged jaw with its own teeth. Click: it chatters, clack clack.
   e('skull', 'clinic', 'bones', () => {
     const bone = '#efe8d6';
-    const b = m('skull').ball([0.17, 0.17, 0.2], [0, 0.13, -0.01], { color: bone }).box([0.1, 0.06, 0.09], [0, 0.04, 0.04], { color: bone, round: 0.5 });
-    b.pair((s) => b.ball([0.045, 0.045, 0.02], [s * 0.035, 0.12, 0.085], { color: 'black' }));
-    b.cone([0.025, 0.03, 0.01], [0, 0.08, 0.095], { color: 'black', rot: [180, 0, 0] });
-    return b.each(5, (i) => b.box([0.012, 0.016, 0.006], [-0.024 + i * 0.012, 0.05, 0.087], { color: 'white' })).done();
+    const b = m('skull')
+      .ball([0.16, 0.17, 0.2], [0, 0.15, -0.01], { color: bone })
+      .box([0.12, 0.05, 0.1], [0, 0.07, 0.04], { color: bone, round: 0.5 })
+      .box([0.1, 0.035, 0.09], [0, 0.03, 0.04], { color: bone, round: 0.5, name: 'jaw', pivot: [0, 0.06, -0.02] });
+    b.pair((s) => b.ball([0.045, 0.045, 0.02], [s * 0.035, 0.13, 0.085], { color: '#2a2726' }).ball([0.04, 0.03, 0.05], [s * 0.065, 0.1, 0.05], { color: bone }));
+    b.cone([0.026, 0.03, 0.012], [0, 0.093, 0.093], { color: '#2a2726', rot: [180, 0, 0] });
+    b.each(6, (i) => b.box([0.011, 0.016, 0.006], [-0.028 + i * 0.011, 0.055, 0.087], { color: 'white' }));
+    b.each(6, (i) => b.box([0.011, 0.014, 0.006], [-0.028 + i * 0.011, 0.043, 0.083], { color: 'white', parent: 'jaw' }));
+    return b.act({ click: [A.pose('jaw', { rot: [18, 0, 0], dur: 0.1, times: 4 }), A.say('Clack clack!', 1.2)] }).done();
   }),
-  e('skullcap', 'wardrobe', 'hats', () =>
-    m('skullcap')
-      .cyl([0.2, 0.05, 0.2], [0, 0.025, 0], { color: 'navy' })
-      .ball([0.2, 0.18, 0.2], [0, 0.05, 0], { color: 'navy' })
-      .torus([0.21, 0.21, 0.04], [0, 0.03, 0], { color: '#3a5a9a', rot: [90, 0, 0], tube: 0.18 })
-      .done(),
-  ),
+  // A knitted navy skullcap (beanie) with a ribbed, turned-up cuff, on a head form. Click: it is tugged snug.
+  e('skullcap', 'wardrobe', 'hats', () => {
+    const b = m('skullcap')
+      .cyl([0.14, 0.03, 0.14], [0, 0.015, 0], { color: '#9da3a8', edge: 'sharp' })
+      .cyl([0.08, 0.08, 0.08], [0, 0.07, 0], { color: '#e8e4dc' })
+      .ball([0.18, 0.22, 0.2], [0, 0.22, 0], { color: '#e8e4dc' })
+      .dome([0.205, 0.13, 0.22], [0, 0.305, -0.005], { color: '#2f4f8f', name: 'cap', pivot: [0, 0.25, 0] })
+      .torus([0.21, 0.22, 0.05], [0, 0.27, -0.005], { color: '#3a5a9a', rot: [90, 0, 0], tube: 0.2, parent: 'cap' });
+    b.each(8, (i) => b.stick(surf([0, 0.25, -0.005], [0.105, 0.04, 0.113], i * 45, 0), surf([0, 0.25, -0.005], [0.105, 0.04, 0.113], i * 45, 60), 0.006, '#26427a', { parent: 'cap', noInk: true }));
+    b.pair((s) => b.ball(0.018, [s * 0.035, 0.22, 0.095], { color: '#5c6166', noInk: true }));
+    return b.act({ click: [A.pose('cap', { move: [0, -0.012, 0], dur: 0.15, times: 2 }), A.say('Snug!', 1)] }).done();
+  }),
+  // A piece of tiled roof (1.8 m) with a skylight set into the slope: a white frame and a glazed sash hinged at
+  // the top. Click: the sash opens outward for fresh air; click again, it shuts.
   e('skylight', 'home', 'windows', () => {
-    const b = m('skylight').wedge([1.6, 0.9, 1.2], [0, 0.45, 0], { color: '#c0503a', apex: -0.5 });
-    const ang = (-Math.atan2(0.9, 1.6) * 180) / Math.PI;
-    b.box([0.6, 0.08, 0.6], [0.0 + 0.5 * 0.04, 0.45 + 0.87 * 0.04, 0], { color: 'white', rot: [0, 0, ang] });
-    return b.box([0.5, 0.06, 0.5], [0.0 + 0.5 * 0.08, 0.45 + 0.87 * 0.08, 0], { color: 'glass', rot: [0, 0, ang] }).done();
+    const b = m('skylight', { edge: 'sharp' }).wedge([1.8, 1.0, 1.4], [0, 0.5, 0], { color: '#c0503a', apex: -0.5 });
+    const ang = (-Math.atan2(1.0, 1.8) * 180) / Math.PI, sl = ang * D2R;
+    const along = (u: number, h: number): V => [-0.9 + Math.cos(-sl) * 0 + u * Math.cos(sl) - h * Math.sin(sl), 1.0 + u * Math.sin(sl) + h * Math.cos(sl), 0];
+    b.each(5, (i) => b.box([0.03, 0.02, 1.42], along(0.2 + i * 0.36, 0.01), { color: '#a0402a', rot: [0, 0, ang], noInk: true }));
+    b.box([0.66, 0.08, 0.66], along(1.0, 0.04), { color: 'white', rot: [0, 0, ang] });
+    const hinge = along(0.7, 0.09), mid = along(1.0, 0.09);
+    b.box([0.58, 0.05, 0.58], mid, { color: '#9fd0ea', rot: [0, 0, ang], name: 'sash', pivot: hinge, mover: { kind: 'swing', axis: 'z', amount: 35 } })
+      .box([0.6, 0.06, 0.04], along(1.0, 0.1), { color: 'white', rot: [0, 0, ang], parent: 'sash' });
+    return b.act({ click: [[A.operate('sash', 'open'), A.say('Creak!', 1)], [A.operate('sash', 'close'), A.say('Click.', 0.8)]] }).done();
   }),
+  // A glass skyscraper (built at 80 m, the most the town allows; the vocabulary's 3 m is a model): a stone podium
+  // with a glazed lobby, a tall tower with mullions and floor bands, a set-back upper tower, a crown and a spire
+  // with an aircraft beacon. Click: the windows light up floor by floor and the beacon blinks; click again, off.
   e('skyscraper', 'places', 'towers', () => {
-    const g = '#3f5f8a';
-    const b = m('skyscraper').box([1.0, 1.6, 1.0], [0, 0.8, 0], { color: g, round: 0 }).box([0.8, 1.0, 0.8], [0, 2.1, 0], { color: g, round: 0 }).box([0.55, 0.4, 0.55], [0, 2.8, 0], { color: g, round: 0 }).stick([0, 3.0, 0], [0, 3.5, 0], 0.03, 'silver').ball(0.05, [0, 3.5, 0], { color: 'red', glow: true });
-    b.each(5, (i) => b.box([1.01, 0.04, 1.01], [0, 0.3 + i * 0.28, 0], { color: '#a9cce8', noInk: true, round: 0 }));
-    b.each(3, (i) => b.box([0.81, 0.04, 0.81], [0, 1.8 + i * 0.28, 0], { color: '#a9cce8', noInk: true, round: 0 }));
-    return b.box([0.3, 0.3, 0.05], [0, 0.15, 0.51], { color: 'darkgray' }).box([1.1, 0.06, 1.1], [0, 1.62, 0], { color: 'steel', round: 0 }).done();
+    const g = '#3f5f8a', gl = '#a9cce8';
+    const b = m('skyscraper', { edge: 'sharp' })
+      .box([40, 0.3, 40], [0, 0.15, 0], { color: '#c9c6bd' })
+      .box([26, 8, 26], [0, 4.3, 0], { color: '#d4cfc2', round: 0.01 })
+      .box([16, 6, 0.3], [0, 3.3, 13.1], { color: '#9fd0ea' })
+      .box([18, 50, 18], [0, 33.3, 0], { color: g, round: 0 })
+      .box([12, 14, 12], [0, 65.3, 0], { color: g, round: 0 })
+      .box([8, 3, 8], [0, 73.8, 0], { color: '#c9ccd1', round: 0 })
+      .stick([0, 75.3, 0], [0, 79.4, 0], 0.4, '#c9ccd1')
+      .ball(0.8, [0, 79.6, 0], { color: '#ff3a2a', name: 'beacon', mover: { kind: 'light' } });
+    door(b, [0, 1.4, 13.28], 2.0, 2.5, '#9fd0ea', { glass: true, frame: '#5c6166' });
+    b.label('TOWER ONE', [8, 1.2], [0, 7.2, 13.05], { color: '#d4cfc2', depth: 0.1 });
+    b.each(8, (i) => b.box([18.06, 3.2, 18.06], [0, 10.6 + i * 6, 0], { color: gl, round: 0, name: `lights${i}`, mover: { kind: 'light' }, noInk: true }));
+    b.each(3, (i) => b.box([12.06, 3.2, 12.06], [0, 60.6 + i * 4.5, 0], { color: gl, round: 0, name: `lightsU${i}`, mover: { kind: 'light' }, noInk: true }));
+    b.pair((s) => b.each(5, (i) => b.box([0.25, 50, 0.25], [s * 9.05, 33.3, -6 + i * 3], { color: '#2f4570' }).box([0.25, 50, 0.25], [-6 + i * 3, 33.3, s * 9.05], { color: '#2f4570' })));
+    return b.act({ click: [[A.operate('lights', 'on'), A.operate('beacon', 'on'), A.say('Ding!', 1)], [A.operate('lights', 'off'), A.operate('beacon', 'off')]] }).done();
   }),
+  // A wooden sled (1 m): slatted deck on steam-bent runners that curl up at the front, cross braces, a steering
+  // bar and a pull rope. Click: it slides off a little way, whee!, and back.
   e('sled', 'sports', 'winter sports', () => {
-    const b = m('sled', { view: 'side' }).box([0.38, 0.085, 0.62], [0, 0.13, -0.03], { color: 'wood', round: 0.3 });
-    b.each(3, (i) => b.box([0.39, 0.012, 0.012], [0, 0.17, -0.2 + i * 0.16], { color: 'darkwood', noInk: true }));
+    const b = m('sled', { view: 'side' })
+      .box([0.4, 0.04, 0.72], [0, 0.17, -0.05], { color: '#b5814e', round: 0.3, edge: 'sharp' });
+    b.each(4, (i) => b.box([0.41, 0.012, 0.012], [0, 0.192, -0.32 + i * 0.18], { color: '#7a5230', noInk: true }));
     b.pair((s) => {
-      b.rod([s * 0.15, 0.015, -0.4], [s * 0.15, 0.015, 0.3], 0.025, 'red').rod([s * 0.15, 0.015, 0.3], [s * 0.15, 0.13, 0.42], 0.025, 'red');
-      b.stick([s * 0.15, 0.02, -0.2], [s * 0.15, 0.11, -0.2], 0.03, 'red').stick([s * 0.15, 0.02, 0.15], [s * 0.15, 0.11, 0.15], 0.03, 'red');
+      b.rod([s * 0.16, 0.02, -0.45], [s * 0.16, 0.02, 0.32], 0.025, '#d8312a').arc([0.3, 0.3, 0.025], [s * 0.16, 0.17, 0.32], { color: '#d8312a', rot: [0, 90, 0], arc: 120, tube: 0.1 });
+      b.stick([s * 0.16, 0.03, -0.25], [s * 0.16, 0.15, -0.25], 0.03, '#d8312a').stick([s * 0.16, 0.03, 0.1], [s * 0.16, 0.15, 0.1], 0.03, '#d8312a');
     });
-    b.box([0.38, 0.02, 0.06], [0, 0.14, 0.32], { color: 'darkwood' });
-    return b.rod([0.1, 0.13, 0.42], [0.0, 0.05, 0.6], 0.012, 'tan').rod([-0.1, 0.13, 0.42], [0.0, 0.05, 0.6], 0.012, 'tan').done();
+    b.box([0.42, 0.03, 0.07], [0, 0.2, 0.36], { color: '#7a5230', edge: 'sharp' });
+    b.rod([0.12, 0.2, 0.38], [0.0, 0.08, 0.62], 0.012, '#d9b98a').rod([-0.12, 0.2, 0.38], [0.0, 0.08, 0.62], 0.012, '#d9b98a');
+    return b
+      .socket('seat', [0, 0.2, -0.1], 'seat')
+      .act({ click: [A.move('self', { rel: 'left', of: 'self', dist: 'close' }, { speed: 'run', style: 'slide' }), A.say('Wheee!', 1), A.move('self', { rel: 'right', of: 'self', dist: 'close' }, { speed: 'walk', style: 'slide' })] })
+      .done();
   }),
 ];
 
-void face;
-void held;
-void wear;
-void who;

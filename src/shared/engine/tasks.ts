@@ -2,11 +2,11 @@ import type { Entity, Vec3 } from '../types';
 import type { AnimAction, EffectAction, MoveAction, OperateAction, PoseAction, ReattachAction, RemoveAction, ResolvedAction, ResolvedBuild, ResolvedDetach, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
 import type { Anchor, PartPose } from '../types';
 import { figureOfEntity } from './transform';
-import { findPart } from '../figure/pose';
+import { findPart, restFacing } from '../figure/pose';
 import { GESTURE_SECONDS, isGesture } from '../gestures';
 import { DEG, clamp, dir2, easeIn, easeInOut, easeOut, easeOutBack, lerp } from './math';
 import { footprintRadius, renderHeight, massClassFor } from './sizing';
-import { resolveOverlap, resolvePlace, stopAtEdge, supportAt, walkSurfaceAt } from './place';
+import { DIST_M, resolveOverlap, resolvePlace, stopAtEdge, supportAt, walkSurfaceAt } from './place';
 import { faceViewer, flipFor, lerpAngle, visibleYaw, yawAlong } from './facing';
 import { structureEntity } from '../structure/entity';
 import type { Channel, Script, Task } from './scheduler';
@@ -175,6 +175,15 @@ class MoveTask extends BaseTask {
     const chaseRels = new Set(['near', 'at', 'front', 'on', 'touch']);
     if (this.action.dest) {
       this.dest = [...this.action.dest];
+    } else if (target && target.id === e.id) {
+      // relative to itself (a dog dashing ahead, a car backing up): its own front, back and sides, worked out
+      // once at the start, not a target that runs away as it moves
+      const fig = figureOfEntity(e);
+      const turn = ({ behind: 180, left: 90, right: -90 } as Record<string, number>)[to.rel ?? 'front'] ?? 0;
+      const yaw = ((fig ? restFacing(e, fig) : (e.yaw ?? 0)) + turn) * DEG;
+      const gap = DIST_M[to.dist ?? 'near'] + footprintRadius(e) * 2;
+      const x = e.pos[0] + Math.sin(yaw) * gap, z = e.pos[2] + Math.cos(yaw) * gap;
+      this.dest = [x, this.engine.world.ground(x, z), z];
     } else if (target && chaseRels.has(to.rel)) {
       this.chase = target;
       this.attachOnArrive = to.rel === 'on';
@@ -726,7 +735,7 @@ export function poseTask(action: Pick<PoseAction, 'id' | 'part' | 'rot' | 'move'
   let to: PartPose = {};
   let part = action.part;
   // times: there and back again that many times (each taking dur), ending where it began
-  const times = action.times && action.times > 1 ? Math.round(action.times) : 0;
+  const times = action.times !== undefined ? Math.max(1, Math.round(action.times)) : 0;
   const dur = (action.dur ?? 0.4) * (times || 1);
   const lerp3 = (a: Vec3 | undefined, b: Vec3 | undefined, k: number): Vec3 => {
     const p = a ?? [0, 0, 0];
@@ -779,15 +788,26 @@ export function poseTask(action: Pick<PoseAction, 'id' | 'part' | 'rot' | 'move'
       engine.emit({ type: 'pose', id: action.id, part });
       return true;
     },
-    undefined,
+    () => {
+      // whole turns come back to rest (a wheel spun 360 degrees is where it started), so the next spin turns again
+      const e = engine.world.get(action.id);
+      const r = e?.pose?.[part]?.r;
+      if (!e || !r) return;
+      const wrap = (a: number) => {
+        const m = ((a % 360) + 360) % 360;
+        return m > 180 ? m - 360 : m;
+      };
+      const n: Vec3 = [wrap(r[0]), wrap(r[1]), wrap(r[2])];
+      if (n.some((v, i) => Math.abs(v - r[i]) > 1e-6)) write(e, { ...e.pose![part], r: n });
+    },
     action.delay ?? 0,
   );
 }
 
 /**
  * Where an attach puts a thing: the target's socket of that name, else a free one of that kind (the second slot
- * of a toaster when the first is full; "inside" also takes a slot), else the plain anchor (top, held, front,
- * inside) or the top.
+ * of a toaster when the first is full; "inside" also takes a slot, "held" a hand or a mouth), else the plain
+ * anchor (top, held, front, inside) or the top.
  */
 function anchorFor(engine: Engine, to: string, where: string | undefined): Anchor {
   const plain = !where || where === 'top' || where === 'held' || where === 'front' || where === 'inside';
@@ -798,7 +818,7 @@ function anchorFor(engine: Engine, to: string, where: string | undefined): Ancho
     const named = sockets.find((k) => k.name === where);
     if (named) return `@${named.name}`;
     const used = new Set(engine.world.children(to).map((c) => c.anchor));
-    const kinds = where === 'inside' ? ['inside', 'slot'] : [where];
+    const kinds = where === 'inside' ? ['inside', 'slot'] : where === 'held' ? ['hand', 'mouth'] : [where];
     const ofKind = sockets.filter((k) => kinds.includes(k.kind));
     const s = ofKind.find((k) => !used.has(`@${k.name}`)) ?? ofKind[0];
     if (s) return `@${s.name}`;

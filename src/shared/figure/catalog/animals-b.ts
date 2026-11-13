@@ -8,6 +8,9 @@ import { bug, fish, snake } from '../creatures';
 import { measure, solve } from '../math';
 import { col } from '../colors';
 import type { FigPart, Figure, Shape, SocketKind, Vec3 } from '../types';
+// the sculpted (lofted) four-legged and fish builders from animals-a, for the big hoofed animals, big cats and
+// sharks here, so they match their kin there (same joint names as the beast and fish kits)
+import { QK, QHORSE, limbsQ, hornsQ, maneQ, chest as chestQ, blazeQ, socksQ, onHead, FK, fSpots, fLine, sharkFace, type Q as QR, type QMark, type FIMark } from './animals-a';
 
 /* ----- local helpers: extra solids on kit figures ----- */
 
@@ -720,13 +723,14 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(A.anim('wobble'), sayP('!', 1))],
     );
   }),
+  // A male lion, 1.1 m at the shoulder (lofted, like the cheetah): a deep chest and tucked waist, heavy forelegs,
+  // a big dark mane framing the face and running down the neck, a tufted tail.
   e('lion', 'wild', 'savanna', () =>
-    act(feline('lion', { s: 1, color: '#d9a55a', belly: '#ecd3a0', snout: '#f0dcb4', tail: 'tuft', acc: [(p, d) => {
-      const [hl, hh, hw] = d.head;
-      add(p, 'head', 'ball', [hw * 2.3, hh * 2.25, hl * 1.35], [0, hh * 0.12, -hl * 0.2], '#8a4f24', { layer: -1 });
-      add(p, 'neck', 'ball', [0.42, 0.62, 0.46], [0, 0.04, 0.04], '#7a4420', { layer: -1 });
-      add(p, 'tailTuft', 'ball', [0.11, 0.16, 0.11], [0, 0, 0], '#5a3418');
-    }] }),
+    act(QK('lion', { c: '#d9a55a', H: 1.12, L: 1.45, D: 0.58, W: 0.46, tuck: 0.5, rump: 0.96, belly: '#ecd3a0', neck: { l: 0.3, w: 0.32, lean: 54, base: 0.4 }, head: { l: 0.34, w: 0.33, h: 0.3 }, muz: { l: 0.13, w: 0.19, h: 0.15, c: '#f0dcb4', drop: 0.22 }, nose: '#6a3a2a', eye: { k: 0.9, c: '#c08a2a' }, ear: { k: 'round', s: 0.08, in: '#3a2a20' }, leg: { w: 0.12, k: 1.2, paw: '#d9a55a' }, tail: { k: 'tuft', l: 0.95, w: 0.055, a: 140, tip: '#5a3418' } }, chestQ('#ecd3a0'), limbsQ(1.5), (f, d) => {
+      const { l, w, h } = d.q.head, n = d.q.neck;
+      f.ball([w * 2.2, h * 2.3, l * 1.15], [d.sk[0], d.sk[1] + h * 0.05, d.sk[2] - l * 0.28], { color: '#8a4f24', parent: 'head' })
+        .ball([n.w * 2.0, n.w * 2.4, n.w * 2.0], [0, (d.nb[1] + d.nt[1]) / 2 - n.w * 0.05, (d.nb[2] + d.nt[2]) / 2 - n.w * 0.15], { color: '#7a4420', parent: 'neck' });
+    }),
       Q.roar('ROOOAR!'),
       [...Q.sit(1.2), A.wait(0.4), ...Q.swish(4), sayP('Grr...', 1.5), Q.stand()],
       [...Q.lie(1.2), A.par(po('jaw', [30, 0, 0], 0.8), po('head', [-20, 0, 0], 0.8), sayP('*yawn*', 1.8)), A.wait(1), back('jaw', 'head'), Q.stand()],
@@ -738,8 +742,10 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(A.anim('spin'), sayP('Mew!', 1.2))],
     ),
   ),
+  // A lioness, 1 m at the shoulder (lofted): sleeker than the lion, no mane, a pale chest. She stalks low, ears
+  // twitching, and pounces; and she roars.
   e('lioness', 'wild', 'savanna', () =>
-    act(feline('lioness', { s: 0.92, color: '#d6a663', belly: '#efdcb4', snout: '#f2e2c4', tail: 'tuft' }),
+    act(QK('lioness', { c: '#d6a663', H: 1.0, L: 1.35, D: 0.52, W: 0.4, tuck: 0.5, rump: 0.96, belly: '#efdcb4', neck: { l: 0.3, w: 0.26, lean: 50, base: 0.34 }, head: { l: 0.3, w: 0.27, h: 0.25 }, muz: { l: 0.13, w: 0.16, h: 0.13, c: '#f2e2c4', drop: 0.22 }, nose: '#6a3a2a', eye: { k: 0.9, c: '#c08a2a' }, ear: { k: 'round', s: 0.075, in: '#3a2a20' }, leg: { w: 0.105, k: 1.15, paw: '#d6a663' }, tail: { k: 'tuft', l: 0.9, w: 0.05, a: 140, tip: '#5a3418' } }, chestQ('#efdcb4'), limbsQ(1.45)),
       [A.par(po('body', [4, 0, 0], 0.8, { move: [0, -0.16, 0] }), po('legFL', [-25, 0, 0], 0.8), po('legFR', [-25, 0, 0], 0.8), po('legBL', [-30, 0, 0], 0.8), po('legBR', [-30, 0, 0], 0.8), po('neck', [35, 0, 0], 0.8), po('head', [-25, 0, 0], 0.8)), ...Q.ears(4, 20), sayP('...', 1.2), back('body', 'legFL', 'legFR', 'legBL', 'legBR', 'neck', 'head'), A.anim('hop')],
       Q.roar('Rrrowrr!', 0.85),
     ),
@@ -956,8 +962,13 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(po('armL', [-20, 0, 0], 0.3), po('armR', [-20, 0, 0], 0.3)), A.wait(0.4), A.par(po('armL', [-75, 0, 0], 0.08), po('armR', [-75, 0, 0], 0.08), sayP('!', 1)), A.wait(0.3), back('armL', 'armR')],
     );
   }),
+  // A bay mare, 1.6 m at the withers (lofted, like the foal and the donkey): a long arched neck with a dark mane, a
+  // white blaze and two white socks, dark lower legs, a full dark tail. A rider can sit on her back.
   e('mare', 'farm', 'horses', () =>
-    act(sockOn(horse('mare', { s: 1.05, color: '#8b4a2b', mane: '#4a2614', acc: [blaze('#f4efe6'), (p) => { for (const l of ['legFL', 'legBL']) add(p, l, 'cyl', [0.15, 0.22, 0.15], [0, -1.02, 0], '#f4efe6', { noInk: true, layer: 3 }); }] }), 'body', 'back', 'seat', [0, 0.37, 0.05]),
+    act(QK('mare', { ...QHORSE, c: '#8b4a2b', belly: '#9a5634', leg: { ...QHORSE.leg, low: '#3a2010' }, tail: { ...QHORSE.tail, c: '#3a1e10' } }, maneQ('#3a1e10'), blazeQ('#f4efe6'), socksQ('#f4efe6', 0.2, 'FL,BL'), limbsQ(), (f, d) => {
+      const [, h, cy] = d.sec(0.62);
+      f.socket('back', [0, cy + h + 0.02, d.z(0.62)], 'seat', { part: 'body' });
+    }),
       [A.par(po('neck', [-18, 0, 0], 0.35), po('head', [-25, 0, 0], 0.35), po('jaw', [14, 0, 0], 0.35), sayP('Neigh-h-h!', 2)), ...osc([['head', [-25, 0, 12], [-25, 0, -12]]], 4, 0.14), back('neck', 'head', 'jaw'), ...Q.paw(4)],
       Q.graze('*snort*'),
     ),
@@ -1030,14 +1041,35 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(po('armR', [0, 0, -150], 0.35), po('head', [-15, 0, 0], 0.35), sayP('Ooh ooh! Ah ah!', 2)), A.par(A.anim('hop', 2), ...oscT([['tail', [0, 30, 0], [0, -20, 0]]], 4, 0.15)), back('armR', 'head')],
     );
   }),
-  e('moose', 'wild', 'forest', () =>
-    act(beast('moose', { color: '#4a3324', body: [1.9, 0.9, 0.7], legL: 1.05, legW: 0.13, legColor: '#8a7560', hoof: '#2a201a', hoofH: 0.1, neckL: 0.42, neckLean: 52, neckW: 0.36, head: [0.7, 0.4, 0.34], snout: { len: 0.36, h: 0.34, w: 0.3, color: '#3e2b1e', shape: 'box' }, nose: '#2a1e16', ears: 'side', earSize: 0.22, tail: 'stub', acc: [hump('#4a3324'), ani.beard('#3e2b1e'), palmAntlers('#c8b08a', 1.4), jaw({ len: 0.36, h: 0.34, w: 0.3 }, '#3e2b1e')] }),
+  // A bull moose, 1.9 m at the humped shoulder (lofted): a short heavy body high on long pale legs, a long head
+  // with an overhanging nose and a bell of skin under the throat, and broad flat palmate antlers with tines round
+  // their rims (bone, kept crisp).
+  e('moose', 'wild', 'forest', () => {
+    const add3 = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]], mul = (v: Vec3, k: number): Vec3 => [v[0] * k, v[1] * k, v[2] * k];
+    const palms: QMark = (f, d) => {
+      const { l, w, h } = d.q.head, sz = 0.75, c = '#c8b08a', tl = (28 * Math.PI) / 180;
+      f.pair((s) => {
+        const b = add3(d.sk, [s * w * 0.3, h * 0.36, -l * 0.16]), p = add3(b, [s * sz * 0.22, sz * 0.06, 0]);
+        const u: Vec3 = [s * Math.cos(tl), Math.sin(tl), 0], ctr = add3(p, mul(u, sz * 0.42));
+        f.rod(b, p, sz * 0.1, c, { parent: 'head', edge: 'sharp' })
+          .ball([sz * 0.85, sz * 0.08, sz * 0.6], ctr, { color: c, rot: [0, 0, s * 28], parent: 'head', edge: 'sharp' })
+          .rod(add3(p, [0, 0, sz * 0.05]), add3(p, [s * sz * 0.08, sz * 0.1, sz * 0.3]), sz * 0.06, c, { parent: 'head', edge: 'sharp' });
+        for (let i = 0; i < 5; i++) {
+          const a = tl + (25 + Math.abs(i - 2) * 8) * (Math.PI / 180), dir: Vec3 = [s * Math.cos(a), Math.sin(a), (i - 2) * 0.25];
+          const at = add3(add3(ctr, mul(u, sz * 0.36 - Math.abs(i - 2) * sz * 0.05)), [0, 0, (i - 2) * sz * 0.13]);
+          f.rod(at, add3(at, mul(dir, sz * 0.22)), sz * 0.06, c, { parent: 'head', edge: 'sharp' });
+        }
+      });
+    };
+    const bell: QMark = (f, d) => f.ball([0.06, 0.24, 0.08], add3(d.sk, [0, -d.q.head.h * 0.5 - 0.1, -d.q.head.l * 0.15]), { color: '#3e2b1e', parent: 'head' });
+    return act(QK('moose', { c: '#4a3324', H: 1.9, L: 1.95, D: 0.92, W: 0.72, tuck: 0.18, rump: 0.84, hump: 0.18, neck: { l: 0.5, w: 0.4, lean: 64, base: 0.6 }, head: { l: 0.6, w: 0.28, h: 0.32 }, muz: { l: 0.36, w: 0.26, h: 0.3, c: '#3e2b1e', drop: 0.3 }, nose: '#2a1e16', eye: { k: 0.8 }, ear: { k: 'long', s: 0.24, tilt: 40 }, leg: { w: 0.1, hoof: '#2a201a', c: '#4a3324', low: '#8a7560' }, tail: { k: 'stub', l: 0.1, w: 0.08, a: 130 } }, palms, bell, maneQ('#2e2018', 0.6), limbsQ(1.6, '#4a3324')),
       Q.howl('Hwaaaonk!', 1.8),
       [...Q.graze('Munch munch.', 4), ...Q.ears(4, 20)],
-    ),
-  ),
+    );
+  }),
+  // A moose calf, about 1.2 m at the shoulder: the moose's long legs and long nose, no antlers yet, a redder coat.
   e('moose calf', 'wild', 'forest', () =>
-    act(beast('moose calf', { color: '#8a5a3a', body: [0.95, 0.45, 0.36], legL: 0.68, legW: 0.075, legColor: '#a07a5a', hoof: '#2a201a', hoofH: 0.06, neckL: 0.28, neckLean: 42, neckW: 0.2, head: [0.4, 0.24, 0.21], snout: { len: 0.18, h: 0.19, w: 0.17, color: '#704630', shape: 'box' }, nose: '#2a1e16', ears: 'side', earSize: 0.19, tail: 'stub', acc: [jaw({ len: 0.18, h: 0.19, w: 0.17 }, '#704630')] }),
+    act(QK('moose calf', { c: '#8a5a3a', H: 1.15, L: 1.0, D: 0.46, W: 0.36, tuck: 0.25, rump: 0.9, hump: 0.05, neck: { l: 0.36, w: 0.2, lean: 48, base: 0.3 }, head: { l: 0.38, w: 0.18, h: 0.21 }, muz: { l: 0.2, w: 0.16, h: 0.18, c: '#704630', drop: 0.25 }, nose: '#2a1e16', eye: { k: 1.2 }, ear: { k: 'side', s: 0.17 }, leg: { w: 0.07, hoof: '#2a201a', low: '#a07a5a' }, tail: { k: 'stub', l: 0.07, w: 0.05, a: 130 } }, limbsQ(1.6)),
       [A.par(po('jaw', [18, 0, 0], 0.2), po('head', [-12, 0, 0], 0.2), sayP('Mwaa!', 1.4)), back('jaw', 'head'), A.anim('hop', 2)],
       [...Q.ears(6, 30), sayP('?', 1)],
     ),
@@ -1271,12 +1303,17 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(A.anim('hop'), sayP('Peep!', 1), ...oscT([['wingL', [0, 0, 60], [0, 0, 20]], ['wingR', [0, 0, -60], [0, 0, -20]]], 3, 0.12))],
     ),
   ),
+  // An ox, a big draught bullock 1.6 m at the shoulder (lofted like the bull and the buffalo): a deep barrel, a
+  // heavy neck with a dewlap, a pale muzzle, long pale horns curving up, and a wooden neck yoke with its bow (made
+  // things, so crisp) riding on the neck. It moos and swishes its tail, and paws the ground.
   e('ox', 'farm', 'cattle', () =>
-    act(beast('ox', { color: '#8a4e2a', body: [2.0, 1.0, 0.8], bodyShape: 'box', legL: 0.6, legW: 0.16, hoof: '#2a2018', hoofH: 0.1, neckL: 0.25, neckLean: 70, neckW: 0.45, head: [0.5, 0.42, 0.38], snout: { len: 0.2, h: 0.25, w: 0.3, color: '#e8c8b0' }, nose: '#5a4a40', ears: 'side', earSize: 0.2, tail: 'tuft', acc: [bullHorns('#efe6cf', 1.6), hump('#8a4e2a', 0.6, 0.3), jaw({ len: 0.2, h: 0.25, w: 0.3 }, '#e8c8b0'), (p, d) => {
-      const [L, H, W] = d.body;
-      add(p, 'body', 'box', [W * 1.7, 0.1, 0.14], [0, H * 0.62, L * 0.4], '#8a5a2a', { round: 0.5 });
-      for (const s of [1, -1]) add(p, 'body', 'torus', [0.3, 0.42, 0.04], [s * W * 0.32, H * 0.42, L * 0.42], '#6b4423', { tube: 0.2 });
-    }] }),
+    act(QK('ox', { c: '#8a4e2a', H: 1.6, L: 2.05, D: 0.95, W: 0.82, tuck: 0.04, rump: 0.97, hump: 0.07, belly: '#9a5e38', neck: { l: 0.36, w: 0.52, lean: 74, base: 0.74 }, head: { l: 0.5, w: 0.38, h: 0.4 }, muz: { l: 0.2, w: 0.3, h: 0.27, c: '#e8c8b0', drop: 0.26 }, nose: '#5a4a40', eye: { k: 0.8 }, ear: { k: 'side', s: 0.17, in: '#e8c8b0' }, leg: { w: 0.12, k: 1.15, hoof: '#2a2018' }, tail: { k: 'tuft', l: 0.85, w: 0.045, a: 168, tip: '#3a2414' } }, hornsQ('#efe6cf', 0.42, 'cow', 0.24), onHead('#7a4020', [0.9, 0.5, 0.6], [0, 0.4, -0.1], { ink: true }), limbsQ(1.5), (f, d) => {
+      const n = d.q.neck, nb = d.nb, r = (n.base ?? n.w) * 0.5, y = nb[1] + 0.03, z = nb[2] + 0.12;
+      f.ball([n.w * 0.34, n.w * 0.95, n.w * 0.9], [0, nb[1] - n.w * 0.3, nb[2] + n.w * 0.6], { color: '#8a4e2a', parent: 'neck' })
+        .box([d.q.W * 1.7, 0.11, 0.14], [0, y + r + 0.07, z], { color: '#8a5a2a', round: 0.3, parent: 'neck', edge: 'sharp' })
+        .arc([r * 2.3, r * 2.2, 0.05], [0, y + 0.02, z], { color: '#6b4423', arc: 230, tube: 0.1, rot: [0, 0, 180], parent: 'neck', edge: 'sharp' })
+        .pair((s) => f.cyl([0.05, 0.12, 0.05], [s * r * 1.12, y + r + 0.02, z], { color: '#6b4423', parent: 'neck', edge: 'sharp' }));
+    }),
       [A.par(po('head', [-15, 0, 0], 0.5), po('jaw', [22, 0, 0], 0.5), sayP('Moooooo!', 2.2)), A.wait(1.2), back('head', 'jaw'), ...Q.swish(4, -10, 30)],
       [...Q.paw(4), A.par(A.anim('shake'), sayP('*snort*', 1.2))],
     ),
@@ -1566,23 +1603,44 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(po('hips', R0, 0.25, { move: [0, -0.2, 0] }), sayP('!', 0.8)), A.wait(1.2), po('hips', R0, 0.6, { move: R0 }), ...osc([['head', [0, 30, 0], [0, -30, 0]]], 2, 0.3)],
     );
   }),
-  // A pteranodon, wings spread 2 m, swept-back crest and long toothless beak. It flaps and screeches.
+  // A pteranodon, real size: about 4.5 m across the wings, standing 1.8 m on short hind legs with its wings spread
+  // (leathery membranes from the long fourth finger down to the ankle, three small claws at each wrist), its head
+  // turned to show the long toothless beak and the swept-back red crest. It flaps and screeches. (The vocabulary's
+  // 0.5 m is too small for the animal.)
   e('pterodactyl', 'wild', 'prehistoric', () => {
+    const k = 0.92, K = (v: Vec3): Vec3 => [v[0] * k, v[1] * k, v[2] * k];
     const t = m('pterodactyl', { rig: 'bird' });
-    const b = '#7a7f6a', w = '#c9925a';
-    t.ball([0.17, 0.16, 0.34], [0, 0.5, 0], { color: b, name: 'body' })
-      .rod([0, 0.53, 0.12], [0, 0.6, 0.2], 0.08, b, { parent: 'body' })
-      .ball([0.12, 0.12, 0.16], [0, 0.62, 0.24], { color: b, name: 'head', parent: 'body', pivot: [0, 0.6, 0.2] })
-      .cone([0.06, 0.3, 0.05], [0, 0.605, 0.45], { color: '#d9c79a', rot: [92, 0, 0], parent: 'head' })
-      .cone([0.035, 0.24, 0.08], [0, 0.69, 0.12], { color: '#c0392b', rot: [-62, 0, 0], parent: 'head' })
-      .pair((s) => {
-        const wing = s > 0 ? 'wingL' : 'wingR';
-        t.ball(0.025, [s * 0.045, 0.64, 0.28], { color: '#141010', eye: true, parent: 'head' })
-          .rod([s * 0.05, 0.54, 0.08], [s * 0.68, 0.84, 0.03], 0.035, b, { name: wing, parent: 'body', pivot: [s * 0.05, 0.54, 0.08] })
-          .ball([0.7, 0.025, 0.3], [s * 0.38, 0.6, -0.02], { color: w, rot: [0, s * 8, s * 25], parent: wing })
-          .ball([0.45, 0.02, 0.14], [s * 0.86, 0.92, -0.04], { color: w, rot: [0, s * 20, s * 25], parent: wing })
-          .rod([s * 0.04, 0.45, -0.12], [s * 0.08, 0.38, -0.26], 0.025, b, { parent: 'body' });
-      });
+    const b = '#7a7f6a', bl = '#c8c4b0', w = '#c9925a';
+    // torso held half upright on short hind legs
+    t.ball(K([0.32, 0.56, 0.34]), K([0, 1.0, 0]), { color: b, rot: [-12, 0, 0], name: 'body' })
+      .ball(K([0.22, 0.4, 0.14]), K([0, 0.98, 0.1]), { color: bl, parent: 'body', noInk: true })
+      .rod(K([0, 1.2, 0.04]), K([0, 1.46, 0.1]), 0.11 * k, b, { parent: 'body' });
+    // head turned to show its profile: a long toothless beak one way, a swept crest the other
+    const hc = K([0, 1.52, 0.12]), dB: Vec3 = [-0.72, -0.12, 0.68], dC: Vec3 = [0.7, 0.4, -0.6];
+    const nB = Math.hypot(...dB), nC = Math.hypot(...dC);
+    const at = (d: Vec3, n: number, l: number): Vec3 => [hc[0] + (d[0] / n) * l * k, hc[1] + (d[1] / n) * l * k, hc[2] + (d[2] / n) * l * k];
+    t.ball(K([0.2, 0.19, 0.18]), hc, { color: b, name: 'head', parent: 'body', pivot: K([0, 1.44, 0.1]) })
+      .cone(K([0.12, 0.85, 0.1]), at(dB, nB, 0.5), { color: '#d9c79a', rot: aim(dB), parent: 'head', edge: 'sharp' })
+      .cone(K([0.09, 0.7, 0.07]), [at(dB, nB, 0.43)[0], at(dB, nB, 0.43)[1] - 0.035 * k, at(dB, nB, 0.43)[2]], { color: '#cbb888', rot: aim([dB[0], dB[1] - 0.08, dB[2]]), parent: 'head', edge: 'sharp' })
+      .cone(K([0.05, 0.62, 0.16]), at(dC, nC, 0.36), { color: '#c0392b', rot: aim(dC), parent: 'head', edge: 'sharp' })
+      .pair((s) => t.ball(K([0.04, 0.045, 0.04]), [hc[0] - 0.03 * k, hc[1] + 0.04 * k, hc[2] + s * 0.08 * k], { color: '#141010', eye: true, parent: 'head', noInk: true }));
+    t.pair((s) => {
+      const wing = s > 0 ? 'wingL' : 'wingR', sh = K([s * 0.13, 1.2, 0]), tip = K([s * 2.35, 1.95, -0.1]);
+      const S = Math.hypot(tip[0] - sh[0], tip[1] - sh[1]), a = Math.atan2(tip[1] - sh[1], Math.abs(tip[0] - sh[0])), C = 0.78 * k;
+      const wr: Vec3 = [sh[0] + (tip[0] - sh[0]) * 0.3, sh[1] + (tip[1] - sh[1]) * 0.3, sh[2] + (tip[2] - sh[2]) * 0.3];
+      const ly: Vec3 = [-s * Math.sin(a), Math.cos(a), 0], mid: Vec3 = [(sh[0] + tip[0]) / 2 - ly[0] * C * 0.5, (sh[1] + tip[1]) / 2 - ly[1] * C * 0.5, (sh[2] + tip[2]) / 2 - 0.03];
+      // the arm to the wrist, the long fourth finger to the tip, and the membrane stretched behind them, deep at the
+      // body (down to the ankle) and narrowing to the tip
+      t.rod(sh, wr, 0.075 * k, b, { name: wing, parent: 'body', pivot: sh })
+        .rod(wr, tip, 0.04 * k, b, { parent: wing })
+        .ball(K([0.08, 0.06, 0.08]), wr, { color: b, parent: wing })
+        .loft([0.07 * k, C, S], mid, [[0, 1, 0.92, 0.04], [0.22, 1, 1, 0], [0.45, 1, 0.72, 0.14], [0.7, 0.8, 0.44, 0.28], [0.9, 0.6, 0.2, 0.4], [1, 0.4, 0.05, 0.47]], { color: w, rot: [-90, s * (90 - (a * 180) / Math.PI), s * 90], parent: wing })
+        .each(3, (i) => t.cone(K([0.025, 0.1, 0.025]), [wr[0] + s * i * 0.015, wr[1] - 0.05 - i * 0.02, wr[2] + 0.04], { color: '#3a3428', rot: [150, 0, s * (10 + i * 15)], parent: wing, edge: 'sharp' }));
+      // short hind legs, feet flat on the ground
+      const hip = K([s * 0.1, 0.8, -0.04]), knee = K([s * 0.2, 0.45, 0.06]), ft = K([s * 0.22, 0.04, -0.02]);
+      t.rod(hip, knee, 0.07 * k, b, { parent: 'body' }).rod(knee, ft, 0.05 * k, b, { parent: 'body' })
+        .ball(K([0.09, 0.05, 0.16]), K([s * 0.22, 0.025, 0.04]), { color: '#5a5e4c', parent: 'body' });
+    });
     return act(t.done(),
       [A.par(A.anim('hop'), sayP('SKREEEE!', 1.6), ...oscT([['wingL', [0, 0, 30], [0, 0, -25]], ['wingR', [0, 0, -30], [0, 0, 25]]], 3, 0.25))],
       [A.par(po('head', [-25, 0, 0], 0.3), sayP('Kraa!', 1.2)), ...osc([['head', [0, 30, 0], [0, -30, 0]]], 2, 0.3), back('head')],
@@ -1777,13 +1835,13 @@ export const ENTRIES: CatalogEntry[] = [
       [po('head', [0, 35, 0], 0.4), A.wait(0.5), back('head'), A.anim('wobble')],
     ),
   ),
+  // An Atlantic salmon, 75 cm (lofted): a streamlined silver body, blue-grey back with small dark spots, a pink
+  // flush along the side as it runs upriver, a forked tail and the little adipose fin before it. It leaps.
   e('salmon', 'sea', 'river fish', () =>
-    act(fish('salmon', { length: 0.75, color: '#8a9aa8', belly: '#f2a08e', fin: '#7a8a96', shape: 'shark', extras: (p, { L, H, W }) => {
-      const d = p.list.find((x) => x.name === 'dorsal')!;
-      d.size = [L * 0.12, H * 0.32, L * 0.02];
-      for (let i = 0; i < 8; i++) add(p, 'body', 'ball', [W * 0.08, L * 0.015, L * 0.015], [(i % 2 ? 1 : -1) * W * 0.3, H * (0.3 - (i % 3) * 0.05), L * (0.2 - i * 0.05)], '#3a4450', { noInk: true, layer: 4 });
-      add(p, 'body', 'ball', [W * 0.04, H * 0.3, L * 0.5], [W * 0.0, -H * 0.05, 0], '#d87a6e', { noInk: true, layer: 2 });
-    } }),
+    act(FK('salmon', { L: 0.75, c: '#6a7c8a', belly: '#eceee8', fin: '#5a6a76', h: 0.22, w: 0.12, shape: 'torpedo', tail: 'fork', tl: 0.18, dorsal: 0.45, dz: 0.55, dl: 0.1, anal: 0.3, pec: 0.8, eye: 0.9, ez: 0.88 }, fLine('#e0948a', 0.25, 0.8, -0.02, 0.12), fSpots('#2a3440', 22, 0.012, { t0: 0.25, t1: 0.85, lo: 20, hi: 85 }), (f, d) => {
+      const [, h, cy] = d.sec(0.22);
+      f.ball([d.o.L * 0.008, h * 0.5, d.o.L * 0.04], [0, cy + h * 1.05, d.z(0.22)], { color: '#5a6a76', parent: 'body' });
+    }),
       F.leap('Splash!', 2),
       F.swish(8, 30),
     ),
@@ -2018,14 +2076,10 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(sayP('!', 1)), ...osc([['tail', [-20, 15, 0], [-20, -15, 0]], ['head', [-10, -10, 0], [-10, 10, 0]]], 6, 0.15)],
     );
   }),
-  // A great white shark, 3.6 m: grey back, white belly, gill slits, a jaw that drops open on rows of teeth.
+  // A shark, 3 m (lofted, like the great white and the hammerhead): a torpedo body, blue-grey above and white below,
+  // a tall swept dorsal fin, long pectoral fins, a tail with a long upper lobe, gill slits and a jaw full of teeth.
   e('shark', 'sea', 'sharks', () =>
-    act(fish('shark', { length: 3.6, color: '#7a8a9a', belly: '#f0f0f0', shape: 'shark', extras: (p, dd) => {
-      const { L, H, W } = dd;
-      for (const x of [-0.12, 0, 0.12]) coneP(p, 'body', [x * W, -H * 0.1, L * 0.37], [x * W, -H * 0.18, L * 0.372], W * 0.07, '#f8f6f0', { layer: 5 });
-      fishJaw(p, dd, '#f0f0f0', '#f8f6f0');
-      for (let i = 0; i < 4; i++) for (const s of [1, -1]) add(p, 'body', 'ball', [W * 0.03, H * 0.32, L * 0.01], [s * W * 0.43, -H * 0.02, L * (0.2 - i * 0.03)], '#4a5866', { noInk: true, layer: 4 });
-    } }),
+    act(FK('shark', { L: 3, c: '#6f8294', belly: '#f2f2ee', h: 0.2, w: 0.18, shape: 'shark', tail: 'shark', tl: 0.27, dorsal: 0.8, dz: 0.56, dl: 0.11, sw: 0.36, anal: 0.25, pec: 1.6, pz: 0.68, eye: 0.35, ez: 0.9, mouth: '#f2f2ee' }, sharkFace()),
       [A.par(po('jaw', [30, 0, 0], 0.5), sayP('CHOMP!', 1.4)), po('jaw', R0, 0.08), A.anim('shake')],
       [A.par(A.anim('wobble'), sayP('!', 0.8)), ...F.swish(8, 28)],
     ),
@@ -2327,21 +2381,22 @@ export const ENTRIES: CatalogEntry[] = [
     const curl = (k: number) => Array.from({ length: 5 }, (_, i) => po(`arm${i}`, [-k * Math.cos(i * 72 * D), 0, k * Math.sin(i * 72 * D)], 1));
     return act(t.done(), [A.par(...curl(25), sayP('!', 1)), A.wait(0.6), A.par(...curl(0))], [A.par(po('body', [0, 72, 0], 2.5))]);
   }),
-  // A grey riding horse, 1.6 m at the withers, saddled and bridled with a red saddle cloth: you can ride it.
+  // A grey riding horse, 1.7 m at the withers (lofted), saddled and bridled: a red saddle cloth, a leather saddle
+  // with stirrups on their straps, a noseband and browband. A rider sits in the saddle.
   e('steed', 'farm', 'horses', () =>
-    act(withSockets(horse('steed', { s: 1.12, color: '#ebe7df', mane: '#cfc8bc', acc: [(p, d) => {
-      const [L, H, W] = d.body;
-      add(p, 'body', 'ball', [W * 1.08, H * 0.82, L * 0.32], [0, H * 0.14, L * 0.06], '#b8282e', { layer: 3 });
-      add(p, 'body', 'ball', [W * 0.72, H * 0.3, L * 0.26], [0, H * 0.48, L * 0.06], '#6b3a1f', { layer: 4 });
-      add(p, 'body', 'ball', [W * 0.5, H * 0.18, L * 0.06], [0, H * 0.6, L * 0.17], '#6b3a1f', { layer: 4 });
-      for (const s of [1, -1]) {
-        rodP(p, 'body', [s * W * 0.5, H * 0.1, L * 0.08], [s * W * 0.52, -H * 0.55, L * 0.08], 0.025, '#6b3a1f', { layer: 4 });
-        add(p, 'body', 'torus', [0.1, 0.08, 0.02], [s * W * 0.52, -H * 0.6, L * 0.08], '#e2b23a', { srot: [0, 90, 0], layer: 4 });
-      }
-      const [hl, hh, hw] = d.head;
-      add(p, 'head', 'torus', [hw * 1.08, hh * 1.0, hl * 0.06], [0, -hh * 0.05, hl * 0.42], '#6b3a1f', { tube: 0.15, layer: 4 });
-      rodP(p, 'head', [hw * 0.5, -hh * 0.1, hl * 0.45], [hw * 0.6, -hh * 0.6, -hl * 0.3], 0.018, '#6b3a1f', { layer: 4 });
-    }] }), [{ name: 'saddle', at: [0, 1.62, 0.07], kind: 'seat', part: 'body' }]),
+    act(QK('steed', { ...QHORSE, c: '#ebe7df', H: 1.68, L: 1.78, D: 0.78, W: 0.62, belly: '#dedad2', neck: { l: 0.78, w: 0.35, lean: 34, base: 0.64 }, leg: { ...QHORSE.leg, w: 0.105, low: '#d8d2c8', hoof: '#4a4038' }, tail: { ...QHORSE.tail, c: '#d8d2c6', l: 0.95 } }, maneQ('#cfc8bc'), limbsQ(), (f, d) => {
+      const { W, L } = d.q, [w1, h1, cy1] = d.sec(0.6), top = cy1 + h1 * 1.24, z = d.z(0.6);
+      f.dome([w1 * 2.36, h1 * 1.58, L * 0.32], [0, cy1 + h1 * 0.5, z], { color: '#b8282e', parent: 'body', edge: 'sharp', round: 0.6 })
+        .ball([W * 0.62, 0.16, L * 0.24], [0, top + 0.05, z], { color: '#6b3a1f', parent: 'body' })
+        .ball([W * 0.4, 0.17, 0.09], [0, top + 0.11, z + L * 0.1], { color: '#6b3a1f', parent: 'body' })
+        .ball([W * 0.46, 0.13, 0.09], [0, top + 0.09, z - L * 0.11], { color: '#6b3a1f', parent: 'body' })
+        .pair((s) => f.stick([s * w1 * 1.1, top - 0.04, z], [s * w1 * 1.14, cy1 - h1 * 0.55, z], 0.025, '#4a2814', { parent: 'body' })
+          .torus([0.11, 0.09, 0.025], [s * w1 * 1.14, cy1 - h1 * 0.62, z], { color: '#d8b040', rot: [0, 90, 0], parent: 'body', edge: 'sharp' }))
+        .socket('saddle', [0, top + 0.12, z], 'seat', { part: 'body' });
+      const { l, w, h } = d.q.head, m = d.q.muz;
+      f.torus([m.w * 1.12, m.h * 1.08, 0.03], [d.mz[0], d.mz[1], d.mz[2] - m.l * 0.1], { color: '#4a2814', tube: 0.12, parent: 'head' })
+        .torus([w * 1.06, h * 0.95, 0.03], [d.sk[0], d.sk[1], d.sk[2] + l * 0.05], { color: '#4a2814', tube: 0.1, parent: 'head' });
+    }),
       Q.rear('NEIGH-H-H!', 1.9),
       [...Q.paw(4), A.par(A.anim('hop', 2), sayP('*snort*', 1.2))],
     ),
@@ -2788,28 +2843,40 @@ export const ENTRIES: CatalogEntry[] = [
       W.slap('Splash!'),
     ),
   ),
-  // A whale shark, 12 m: the biggest fish, dark grey-blue with white spots and stripes, a huge wide mouth that
-  // opens to filter plankton.
-  e('whale shark', 'sea', 'sharks', () =>
-    act(fish('whale shark', { length: 12, color: '#3a4a5a', belly: '#e8e8e8', shape: 'shark', extras: (p, dd) => {
-      const { L, H, W } = dd;
-      for (let i = 0; i < 28; i++) {
-        const s = i % 2 ? 1 : -1, d: Vec3 = [s, ((i >> 1) % 4) * 0.35 - 0.05, (((i * 0.37) % 1) - 0.5) * 1.6];
-        add(p, 'body', 'ball', [L * 0.018, L * 0.018, L * 0.018], surf([0, 0, 0], [W / 2, H / 2, L * 0.39], d, 0.98), '#f2f2ee', { noInk: true, layer: 4 });
-      }
-      for (const s of [1, -1]) for (let i = 0; i < 3; i++) add(p, 'body', 'ball', [W * 0.04, H * 0.06, L * 0.4], [s * W * (0.3 - i * 0.05), H * (0.15 + i * 0.1), -L * 0.05], '#c8ccd0', { noInk: true, layer: 3 });
-      fishJaw(p, dd, '#d8dadc', undefined, 1.5);
-    } }),
+  // A whale shark, 12 m (lofted): the biggest fish, a broad flat head with a wide straight mouth right at the front,
+  // dark blue-grey dotted with white spots, ridges along the back, a tall crescent tail. The mouth opens to filter
+  // plankton.
+  e('whale shark', 'sea', 'sharks', () => {
+    const head: FIMark = (f, d) => {
+      const [w, h, cy] = d.sec(0.93), L = d.o.L;
+      f.loft([w * 2.3, h * 1.5, d.Lb * 0.2], [0, cy + h * 0.02, d.z(0.92)], [[0, 0.85, 0.95, 0], [0.5, 1, 0.9, 0], [0.9, 0.95, 0.7, -0.05], [1, 0.75, 0.5, -0.08]], { color: d.o.c, boxy: 0.35, parent: 'body' })
+        .ball([w * 1.9, h * 0.12, L * 0.02], [0, cy - h * 0.25, d.z(1) + L * 0.008], { color: '#2a3036', parent: 'body', noInk: true });
+      for (const y of [0.55, 0.85]) f.pair((s) => f.ball([d.W * 0.06, d.H * 0.05, d.Lb * 0.62], [s * d.W * 0.34 * (y > 0.7 ? 0.6 : 1), d.y0 + d.H * y * 0.5, d.z(0.5)], { color: '#2e3a46', parent: 'body' }));
+      for (let i = 0; i < 5; i++) f.pair((s) => f.ball([d.W * 0.012, h * 0.7, d.Lb * 0.01], [s * d.sec(0.8 - i * 0.025)[0] * 0.98, d.sec(0.8 - i * 0.025)[2], d.z(0.8 - i * 0.025)], { color: '#2a323a', parent: 'body', noInk: true }));
+    };
+    return act(FK('whale shark', { L: 12, c: '#3e5266', belly: '#e8eae6', h: 0.17, w: 0.2, shape: 'shark', tail: 'moon', tl: 0.24, dorsal: 0.55, dz: 0.5, dl: 0.09, sw: 0.36, anal: 0.2, pec: 1.5, pz: 0.68, eye: 0.25, ez: 0.92, mouth: '#c8ccd0' }, fSpots('#eef0ea', 90, 0.1, { t0: 0.2, t1: 0.9, lo: -10, hi: 80, seed: 11 }), head),
       [A.spawn('food', 'plankton', { rel: 'front', of: 'self', dist: 'close' }), A.par(po('jaw', [28, 0, 0], 0.8)), A.remove('food', 'fade'), A.par(po('jaw', R0, 0.6), sayP('Gulp.', 1.2))],
       F.swish(6, 20),
-    ),
-  ),
-  e('wildebeest', 'wild', 'savanna', () =>
-    act(beast('wildebeest', { color: '#6e6a64', body: [1.6, 0.75, 0.6], legL: 0.7, legW: 0.09, hoof: '#2a2420', hoofH: 0.07, neckL: 0.3, neckLean: 55, neckW: 0.32, head: [0.5, 0.25, 0.22], headColor: '#3a3634', snout: { len: 0.22, h: 0.2, w: 0.2, color: '#2e2a28', shape: 'box' }, nose: '#1e1a18', ears: 'side', earSize: 0.12, tail: 'tuft', acc: [ani.mane('#1e1c1a'), ani.beard('#1e1c1a'), bullHorns('#3a3634', 0.9), hump('#6e6a64', 0.8, 0.28), ani.stripes('#5a5650', 5), jaw({ len: 0.22, h: 0.2, w: 0.2 }, '#2e2a28')] }),
+    );
+  }),
+  // A blue wildebeest (gnu), 1.35 m at the shoulder sloping down to the rump (lofted): a heavy front with a black
+  // mane and beard, a long broad dark face, cow-like horns curving out and up, dark stripes on the shoulders.
+  e('wildebeest', 'wild', 'savanna', () => {
+    const stripes: QMark = (f, d) => {
+      for (let i = 0; i < 6; i++) {
+        const t = 0.55 + (0.35 * i) / 5, [w, h, cy] = d.sec(t);
+        f.pair((s) => f.ball([w * 0.25, h * 1.4, d.q.L * 0.035], [s * w * 0.9, cy + h * 0.15, d.z(t)], { color: '#4e4a46', parent: 'body', noInk: true, rot: [0, 0, s * 8] }));
+      }
+    };
+    const beard: QMark = (f, d) => {
+      const n = d.q.neck, a = d.nt, b = d.nb;
+      f.rod([0, a[1] - n.w * 0.4, a[2] + n.w * 0.1], [0, (a[1] + b[1]) / 2 - n.w * 0.55, (a[2] + b[2]) / 2 + n.w * 0.35], 0.1, '#1e1c1a', { parent: 'neck' });
+    };
+    return act(QK('wildebeest', { c: '#6e6a64', H: 1.35, L: 1.45, D: 0.66, W: 0.5, tuck: 0.25, rump: 0.82, hump: 0.08, belly: '#5e5a54', neck: { l: 0.42, w: 0.28, lean: 52, base: 0.44 }, head: { l: 0.46, w: 0.2, h: 0.23, c: '#3a3634' }, muz: { l: 0.24, w: 0.21, h: 0.2, c: '#2e2a28', drop: 0.18 }, nose: '#1e1a18', eye: { k: 0.9 }, ear: { k: 'side', s: 0.12 }, leg: { w: 0.07, hoof: '#2a2420', low: '#4a4642' }, tail: { k: 'tuft', l: 0.7, w: 0.035, a: 165, tip: '#1e1c1a' } }, hornsQ('#3a3634', 0.3, 'cow', 0.26), maneQ('#1e1c1a', 1.2), beard, stripes, limbsQ(1.6)),
       [A.par(po('jaw', [18, 0, 0], 0.2), sayP('Gnu! Gnu!', 1.4)), back('jaw'), A.par(A.anim('hop'), po('legBL', [50, 0, 0], 0.25), po('legBR', [50, 0, 0], 0.25), po('body', [12, 0, 0], 0.25)), back('legBL', 'legBR', 'body')],
       Q.graze('*grunt*'),
-    ),
-  ),
+    );
+  }),
   // A grey wolf: thick grizzled coat with a darker saddle, pale cheeks and legs, amber eyes. It throws its head
   // back and howls; and it growls, ears flat.
   e('wolf', 'wild', 'forest', () =>

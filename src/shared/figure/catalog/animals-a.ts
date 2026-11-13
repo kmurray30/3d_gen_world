@@ -413,6 +413,27 @@ const tongueQ = (c: string, len: number): QMark => (f, d) => {
   const { l: ml, h: mh } = d.q.muz, a: Vec3 = [0, d.mz[1] - mh * 0.2, d.mz[2] + ml * 0.42];
   f.rod(a, add3(a, [0, -len * 0.2, len]), mh * 0.32, c, { name: 'tongue', parent: 'head', scale: 0 });
 };
+/** Muscled upper legs for long-legged animals (horses, giraffes, camels, cattle), so the legs are not sticks: a
+ *  forearm tapering from the chest to a knobbly knee in front, a gaskin from the stifle to the hock behind, k leg
+ *  widths thick at the top. Same frame and joints as q4's legs, so they swing with them. */
+const limbsQ = (k = 1.7, c?: string): QMark => (f, d) => {
+  const { H, D, W, L, leg } = d.q, lw = leg.w, uc = c ?? leg.c ?? d.q.c, low = leg.low ?? uc;
+  const footTop = leg.hoof ? lw * 1.25 : lw * 0.55, hockY = Math.max(lw * 1.6, (H - D) * 0.42 * (leg.hock ?? 1));
+  const cone = (a: Vec3, b: Vec3, t0: number, t1: number, col: string, parent: string) => {
+    const dv: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    f.cyl([t0, Math.hypot(dv[0], dv[1], dv[2]), t0 * 1.12], mul(add3(a, b), 0.5), { color: col, rot: aim(dv), taper: t1 / t0, parent });
+  };
+  f.pair((s) => {
+    const x = s * W * 0.3, sd = s > 0 ? 'L' : 'R', fz = L * 0.31, bz = -L * 0.32;
+    // front: the rod runs from (H - 0.95 D, fz) to (footTop, fz + 0.15 lw); the knee sits a little under halfway
+    const ky = footTop + (H - D * 0.95 - footTop) * 0.42, kz = fz + lw * 0.15 * 0.58;
+    cone([x, H - D * 0.78, fz - lw * 0.05], [x, ky + lw * 0.2, kz], lw * k, lw * 1.05, uc, 'legF' + sd);
+    f.ball([lw * 1.18, lw * 1.45, lw * 1.3], [x, ky, kz + lw * 0.06], { color: low, parent: 'legF' + sd });
+    // back: gaskin from the stifle down the rod to the hock
+    const stifle = Math.max(hockY + lw * 1.2, d.Hr - D * 1.02);
+    cone([x, stifle + lw * 0.5, bz + lw * 0.6], [x, hockY + lw * 0.35, bz - lw * 0.6], lw * k * 1.1, lw * 1.05, uc, 'legB' + sd);
+  });
+};
 /** Scale a recipe; young ones get a bigger head (kh) and shorter muzzle, longer or shorter legs (kl). */
 const grow = (q: Q, k: number, kh = 1, kl = 1): Q => ({
   ...q,
@@ -1352,6 +1373,11 @@ const caterpillar = (key: string, L: number, c1: string, c2: string, head: strin
   return f.done();
 };
 
+/** The sculpted four-legged and fish builders and their marks, shared with animals-b (horses, cattle, deer, big cats
+ *  and sharks there), so both chunks draw an animal of a kind the same way. */
+export { QK, grow, limbsQ, hornsQ, antlersQ, maneQ, chest, blazeQ, faceQ, socksQ, patch, back as backQ, onHead, spotsQ, ruffQ, QHORSE, type Q, type QD, type QMark };
+export { FK, fSpots, fLine, fBands, sharkFace, type FI, type FID, type FIMark };
+
 /* ----- the entries ------------------------------------------------------------------------------------------- */
 
 export const ENTRIES: CatalogEntry[] = [
@@ -1616,8 +1642,10 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(A.anim('spin'), say('Snort! Arf!', 1.4))],
       bark('Arf arf!')),
   ),
+  // A sauropod 22 m from nose to tail: hips 4.5 m up on pillar legs (a person comes to its knee), the neck raised
+  // 7 m to a tiny head, the tail held out level behind.
   e('brontosaurus', 'wild', 'dinosaurs', () =>
-    act(QK('brontosaurus', { c: '#7a8a6a', H: 4.5, L: 7, D: 3.0, W: 2.6, tuck: 0.05, rump: 1.06, belly: '#c8d0a8', neck: { l: 6.5, w: 0.6, lean: 50, base: 1.9 }, head: { l: 0.8, w: 0.45, h: 0.45 }, muz: { l: 0.35, w: 0.32, h: 0.25, drop: 0.15 }, eye: { k: 0.8 }, ear: { k: 'tiny', s: 0.04 }, leg: { w: 1.0, k: 1.2, hoof: '#5a6a4a', hock: 0.6 }, tail: { k: 'taper', l: 10, w: 1.7, a: 100 } }, spotsQ('#5e6e50', 18, 0.5, { lo: 20, hi: 85 })),
+    act(QK('brontosaurus', { c: '#7a8a6a', H: 4.2, L: 7.2, D: 2.3, W: 2.3, tuck: 0.05, rump: 1.08, belly: '#c8d0a8', neck: { l: 7.0, w: 0.55, lean: 44, base: 1.7 }, head: { l: 0.8, w: 0.45, h: 0.45 }, muz: { l: 0.35, w: 0.32, h: 0.25, drop: 0.15 }, eye: { k: 0.8 }, ear: { k: 'tiny', s: 0.04 }, leg: { w: 0.8, k: 1.25, hoof: '#5a6a4a', hock: 0.7 }, tail: { k: 'taper', l: 11, w: 1.5, a: 98 } }, spotsQ('#5e6e50', 18, 0.5, { lo: 20, hi: 85 }), limbsQ(1.3)),
       [A.par(ps('neck', [-14, 0, 0], 1), ps('head', [10, 0, 0], 1)), ps('jaw', [20, 0, 0], 0.3), ps('jaw', [0, 0, 0], 0.3), A.par(ps('jaw', [20, 0, 0], 0.3), say('Mmmrrrm...', 1.8)), ps('jaw', [0, 0, 0], 0.3), rest('neck', 'head')],
       [A.par(A.anim('shake'), A.effect('dust', { dur: 1.5 }), say('BOOM!', 1.4))]),
   ),
@@ -1668,12 +1696,14 @@ export const ENTRIES: CatalogEntry[] = [
   e('calico', 'pets', 'cats', () =>
     act(QK('calico', { c: '#f6f2ea', H: 0.25, L: 0.36, D: 0.12, W: 0.12, tuck: 0.45, neck: { l: 0.07, w: 0.07, lean: 42 }, head: { l: 0.085, w: 0.095, h: 0.08 }, muz: { l: 0.035, w: 0.05, h: 0.035, drop: 0.24 }, nose: '#e89a9a', eye: { k: 1.3, c: '#5a7a2a' }, ear: { k: 'prick', s: 0.05, in: '#f2b4bc' }, leg: { w: 0.027 }, tail: { k: 'long', l: 0.3, w: 0.024, a: 35, c: '#e0883a' } }, patch('#e0883a', 0.05, 0.35), back(BK, 0.4, 0.75), onHead('#e0883a', [0.55, 0.6, 0.7], [0.26, 0.3, -0.05]), onHead(BK, [0.5, 0.55, 0.6], [-0.26, 0.32, -0.05])), meow('Meow!'), stretch(), washPaw()),
   ),
+  // A dromedary, 1.85 m at the shoulder: one rounded hump rising to about 2.2 m mid-back, long slim legs with
+  // knobbly knees, a long neck dipping forward to a head held high, a droopy lip that spits.
   e('camel', 'wild', 'desert', () =>
-    act(QK('camel', { c: '#c8a068', H: 1.9, L: 1.6, D: 0.75, W: 0.62, tuck: 0.35, rump: 0.92, neck: { l: 0.95, w: 0.3, lean: 58, base: 0.5 }, head: { l: 0.42, w: 0.24, h: 0.24 }, muz: { l: 0.24, w: 0.17, h: 0.18, drop: 0.15 }, eye: { k: 0.9 }, ear: { k: 'tiny', s: 0.06 }, leg: { w: 0.11, paw: '#a8885a', hock: 1.1 }, tail: { k: 'tuft', l: 0.5, w: 0.04, a: 168, tip: '#8a6a40' } }, (f, d) => {
-      f.ball([d.q.W * 0.92, 0.6, d.q.L * 0.66], [0, d.q.H - 0.08, -d.q.L * 0.02], { color: '#c39565', parent: 'body' });
-      for (const z of [0.31, -0.32]) f.pair((s) => f.ball([0.13, 0.1, 0.12], [s * d.q.W * 0.3, (d.q.H - d.q.D) * 0.52, d.q.L * z], { color: '#b8905a', parent: (z > 0 ? 'legF' : 'legB') + (s > 0 ? 'L' : 'R') }));
+    act(QK('camel', { c: '#c8a068', H: 1.85, L: 1.6, D: 0.75, W: 0.62, tuck: 0.35, rump: 0.9, neck: { l: 0.85, w: 0.26, lean: 50, base: 0.48 }, head: { l: 0.42, w: 0.24, h: 0.24 }, muz: { l: 0.24, w: 0.17, h: 0.18, drop: 0.15 }, eye: { k: 0.9 }, ear: { k: 'tiny', s: 0.06 }, leg: { w: 0.1, paw: '#a8885a', hock: 1.1 }, tail: { k: 'tuft', l: 0.5, w: 0.04, a: 168, tip: '#8a6a40' } }, limbsQ(1.7), (f, d) => {
+      const [, h, cy] = d.sec(0.5), top = cy + h - 0.06 + 0.29;
+      f.ball([d.q.W * 0.72, 0.58, d.q.L * 0.44], [0, cy + h - 0.06, d.z(0.5)], { color: '#c39565', parent: 'body' });
       f.ball([d.q.muz.w * 1.1, d.q.muz.h * 0.5, d.q.muz.l * 0.6], add3(d.mz, [0, -d.q.muz.h * 0.25, d.q.muz.l * 0.25]), { color: '#b8905a', parent: 'jaw' });
-      f.socket('seat', [0, d.q.H + 0.28, -0.3], 'seat', { part: 'body', size: 0.6 });
+      f.socket('seat', [0, top + 0.02, d.z(0.5)], 'seat', { part: 'body', size: 0.6 });
     }),
       [ps('jaw', [8, 0, 0], 0.25), ps('jaw', [0, 0, 0], 0.25), A.par(ps('jaw', [8, 0, 0], 0.25), say('Grrumble...', 1.6)), ps('jaw', [0, 0, 0], 0.25)],
       [A.par(ps('neck', [-15, 0, 0], 0.3), ps('head', [-15, 0, 0], 0.3)), A.par(ps('jaw', [25, 0, 0], 0.15), A.effect('water_spray', { dur: 0.8 }), say('Ptooey!', 1.4)), A.wait(0.6), rest('neck', 'head', 'jaw')]),
@@ -1999,8 +2029,10 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(A.anim('hop', 2), say('Wheee!', 1.4))],
       [A.par(ps('head', [-10, 30, 0], 0.3), say('Chirp!', 1.2)), A.wait(0.6), rest('head')]),
   ),
+  // A young foal, 1 m at the withers: a short body and a slim neck on long legs (nearly a grown horse's), a big
+  // head and eyes, a short bristly mane and a short fluffy tail.
   e('foal', 'farm', 'horses', () =>
-    act(QK('foal', { ...grow(QHORSE, 0.62, 1.25, 1.25), c: '#9a6438' }, maneQ('#3a2618', 0.8), blazeQ(WH)), [A.par(A.anim('hop', 2), say('Neigh!', 1.4))], graze('Munch.')),
+    act(QK('foal', { c: '#9a6438', H: 1.02, L: 0.92, D: 0.4, W: 0.3, tuck: 0.3, belly: '#a8744a', neck: { l: 0.48, w: 0.17, lean: 36, base: 0.3 }, head: { l: 0.3, w: 0.17, h: 0.19 }, muz: { l: 0.19, w: 0.13, h: 0.14, drop: 0.2 }, eye: { k: 1.25 }, ear: { k: 'prick', s: 0.1 }, leg: { w: 0.062, hoof: '#3a2a20', low: '#6a4226' }, tail: { k: 'bushy', l: 0.34, w: 0.1, a: 150, c: '#3a2618' } }, maneQ('#3a2618', 0.7), blazeQ(WH), limbsQ(1.6)), [A.par(A.anim('hop', 2), say('Neigh!', 1.4))], graze('Munch.')),
   ),
   e('fox', 'wild', 'forest', () =>
     act(QK('fox', QFOX, ...foxMarks), [A.par(A.anim('hop'), say('Yip!', 1.2)), A.move('self', { rel: 'random' }, { speed: 'run', style: 'hop' })], speak('Ring-a-ding-ding!', 26, 1.8), sniff('Sniff...')),
@@ -2056,10 +2088,10 @@ export const ENTRIES: CatalogEntry[] = [
     actF(QK('german shepherd', { c: '#c8843a', H: 0.62, L: 0.7, D: 0.3, W: 0.26, tuck: 0.35, rump: 0.9, neck: { l: 0.2, w: 0.15, lean: 36 }, head: { l: 0.19, w: 0.15, h: 0.14 }, muz: { l: 0.13, w: 0.07, h: 0.075, c: BK, drop: 0.14 }, ear: { k: 'prick', s: 0.12, c: '#3a2a20' }, leg: { w: 0.055 }, tail: { k: 'bushy', l: 0.42, w: 0.09, a: 158, c: '#5a3a20' } }, back(BK, 0.12, 0.82), faceQ('#2a2018', 0.75)), (f) => [alert('Woof!'), [...bark('Woof! Woof!', false)], sitQ(f)]),
   ),
   e('giraffe', 'wild', 'savanna', () =>
-    act(QK('giraffe', QGIR, ...girMarks()), [A.par(ps('neck', [-8, 0, 0], 0.6), A.pose('tongue', { scale: 1, dur: 0.4 }), say('Munch munch.', 1.8)), A.wait(1), A.par(A.pose('tongue', { scale: 0, dur: 0.3 }), rest('neck'))], [A.par(ps('legFL', [0, 0, 18], 0.8), ps('legFR', [0, 0, -18], 0.8), ps('neck', [95, 0, 0], 1.2), ps('head', [30, 0, 0], 1.2)), A.par(A.effect('water_spray', { dur: 1 }), say('Slurp...', 1.4)), A.wait(0.8), rest('legFL', 'legFR', 'neck', 'head')]),
+    act(QK('giraffe', QGIR, ...girMarks(), limbsQ(1.9)), [A.par(ps('neck', [-8, 0, 0], 0.6), A.pose('tongue', { scale: 1, dur: 0.4 }), say('Munch munch.', 1.8)), A.wait(1), A.par(A.pose('tongue', { scale: 0, dur: 0.3 }), rest('neck'))], [A.par(ps('legFL', [0, 0, 18], 0.8), ps('legFR', [0, 0, -18], 0.8), ps('neck', [95, 0, 0], 1.2), ps('head', [30, 0, 0], 1.2)), A.par(A.effect('water_spray', { dur: 1 }), say('Slurp...', 1.4)), A.wait(0.8), rest('legFL', 'legFR', 'neck', 'head')]),
   ),
   e('giraffe calf', 'wild', 'savanna', () =>
-    act(QK('giraffe calf', { ...grow(QGIR, 0.38, 1.3, 1.1), neck: { l: 2.2 * 0.38, w: 0.3 * 0.38, lean: 22, base: 0.62 * 0.3 } }, ...girMarks(0.38)), [A.par(A.anim('hop'), say('Mmm!', 1.2))], graze('Munch.')),
+    act(QK('giraffe calf', { ...grow(QGIR, 0.38, 1.3, 1.1), neck: { l: 2.2 * 0.38, w: 0.3 * 0.38, lean: 22, base: 0.62 * 0.3 } }, ...girMarks(0.38), limbsQ(1.8)), [A.par(A.anim('hop'), say('Mmm!', 1.2))], graze('Munch.')),
   ),
   e('goat', 'farm', 'goats', () =>
     act(QK('goat', { c: '#f0ece4', H: 0.75, L: 0.78, D: 0.36, W: 0.3, tuck: 0.25, neck: { l: 0.25, w: 0.14, lean: 30 }, head: { l: 0.24, w: 0.14, h: 0.15 }, muz: { l: 0.12, w: 0.085, h: 0.09, c: '#e8d8d0', drop: 0.18 }, eye: { c: '#a87a2a' }, ear: { k: 'side', s: 0.13, in: '#e8c8c0' }, leg: { w: 0.05, hoof: '#4a4440' }, tail: { k: 'stub', l: 0.1, w: 0.05, a: 40 } }, hornsQ('#8a7a6a', 0.3, 'back', 0.22), (f, d) => f.cone([d.q.muz.w * 0.5, d.q.head.h * 0.6, d.q.muz.w * 0.4], add3(d.mz, [0, -d.q.muz.h * 0.75, -d.q.muz.l * 0.1]), { color: '#e0dcd4', rot: [180, 0, 0], parent: 'jaw' })),

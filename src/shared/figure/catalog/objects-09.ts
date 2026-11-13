@@ -617,16 +617,20 @@ export const ENTRIES: CatalogEntry[] = [
       })
       .done();
   }),
-  // A smartwatch on a shop display pillow: rounded case, screen (a light), crown, the strap around the pillow. Its
-  // screen shows your heart rate.
+  // A smartwatch on a shop display stand: a dark velvet pillow on a black base, the coral sport band looped round
+  // it, and the crisp silver squircle case at the front with its black glass, screen (a light), crown and side
+  // button. Its screen shows your heart rate.
   e('smart watch', 'tech', 'gadgets', () =>
     m('smart watch')
-      .box([0.1, 0.012, 0.07], [0, 0.006, 0], { color: '#3a3633', round: 0.4, edge: 'sharp' })
-      .box([0.08, 0.055, 0.055], [0, 0.04, 0], { color: '#d4d7da', round: 0.9 })
-      .torus([0.06, 0.06, 0.024], [0, 0.04, 0], { color: '#2a2726', rot: [0, 90, 0], tube: 0.1 })
-      .box([0.042, 0.05, 0.013], [0, 0.042, 0.032], { color: '#5c6166', round: 0.5, edge: 'sharp', name: 'case' })
-      .box([0.035, 0.042, 0.002], [0, 0.042, 0.0392], { color: '#3fe0c8', parent: 'case', name: 'screen', mover: { kind: 'light', on: false }, edge: 'sharp' })
-      .cyl([0.008, 0.006, 0.008], [0.024, 0.047, 0.032], { color: 'silver', rot: [0, 0, 90], parent: 'case', edge: 'sharp' })
+      .box([0.09, 0.012, 0.07], [0, 0.006, 0], { color: '#2a2726', round: 0.4, edge: 'sharp' })
+      .ball([0.05, 0.052, 0.046], [0, 0.04, -0.002], { color: '#3a3633' })
+      .torus([0.058, 0.064, 0.024], [0, 0.042, 0], { color: '#e8705a', rot: [0, 90, 0], tube: 0.12 })
+      .box([0.027, 0.012, 0.007], [0, 0.042, -0.031], { color: '#c85a48', round: 0.4 })
+      .box([0.04, 0.047, 0.012], [0, 0.043, 0.035], { color: '#c9ccd1', round: 0.55, edge: 'sharp', name: 'case' })
+      .box([0.036, 0.043, 0.002], [0, 0.043, 0.0415], { color: '#14181c', round: 0.5, parent: 'case', edge: 'sharp', noInk: true })
+      .box([0.03, 0.036, 0.001], [0, 0.043, 0.0428], { color: '#3fe0c8', round: 0.4, parent: 'case', name: 'screen', mover: { kind: 'light', on: false }, edge: 'sharp' })
+      .cyl([0.008, 0.006, 0.008], [0.0225, 0.05, 0.034], { color: 'silver', rot: [0, 0, 90], parent: 'case', edge: 'sharp' })
+      .box([0.003, 0.012, 0.005], [0.021, 0.034, 0.034], { color: 'silver', round: 0.4, parent: 'case', edge: 'sharp' })
       .act({
         click: [
           [A.operate('screen', 'on'), A.par(A.effect('hearts', { dur: 1.6 }), A.say('72 bpm', 1.8))],
@@ -1301,8 +1305,8 @@ export const ENTRIES: CatalogEntry[] = [
       .loft([4.2, 3.6, 22], [0, 3.4, 0.5], [[0, 0.62, 0.62, 0], [0.12, 0.92, 0.9, 0], [0.55, 1, 1, 0], [0.82, 0.8, 0.76, -0.04], [0.95, 0.42, 0.42, -0.1], [1, 0.12, 0.12, -0.12]], { color: hull, boxy: 0.35, name: 'hull', edge: 'soft' })
       .loft([4.25, 0.5, 18], [0, 3.6, 0.0], [[0, 1, 1], [0.7, 1, 1], [1, 0.5, 0.8]], { color: trim, boxy: 0.5, parent: 'hull', edge: 'soft' })
       .loft([1.9, 1.3, 4.2], [0, 4.85, 6.8], [[0, 0.5, 0.3], [0.35, 0.95, 1], [0.8, 0.85, 0.85], [1, 0.3, 0.2]], { color: '#3d5a73', cut: 'top', parent: 'hull' })
-      .wedge([0.25, 2.8, 5.0], [0, 6.2, -8.2], { color: hull, rot: [0, 0, 0], apex: -0.45, parent: 'hull' })
-      .box([0.3, 0.5, 2.0], [0, 7.4, -9.5], { color: trim, parent: 'hull' })
+      .wedge([5.0, 2.8, 0.25], [0, 6.2, -8.2], { color: hull, rot: [0, 90, 0], apex: 0.45, parent: 'hull' })
+      .box([0.3, 0.6, 0.9], [0, 7.3, -10.3], { color: trim, parent: 'hull' })
       .box([2.2, 0.15, 4.2], [0, 1.62, -4.0], { color: '#c9ccd1', name: 'ramp', pivot: [0, 1.62, -1.9], mover: { kind: 'swing', axis: 'x', amount: -24 }, round: 0.2 })
       .box([1.8, 0.04, 3.8], [0, 1.71, -4.0], { color: '#5c6166', parent: 'ramp', noInk: true })
       .label('STAR-1', [2.6, 0.7], [2.06, 3.2, 3.5], { color: hull, rot: [0, 90, 0], parent: 'hull', depth: 0.05 })
@@ -2007,7 +2011,7 @@ export const ENTRIES: CatalogEntry[] = [
       .wedge([d - 0.1, 2.1, 0.12], [0, h + 1.05, d / 2 - 0.05], { color: '#a3322a', rot: [0, 90, 0] })
       .box([w + 0.1, 0.15, d + 0.1], [0, 0.075, 0], { color: 'stone', round: 0.2 })
       .box([1.0, 1.0, 1.0], [0, h + 2.6, 0], { color: 'white', round: 0.05 })
-      .pyramid([1.4, 0.8, 1.4], [0, h + 3.5, 0], 4, { color: '#4a4744', rot: [0, 45, 0] })
+      .pyramid([1.3 * Math.SQRT2, 0.8, 1.3 * Math.SQRT2], [0, h + 3.5, 0], 4, { color: '#4a4744' })
       .stick([0, h + 3.8, 0], [0, h + 4.5, 0], 0.04, '#2a2726')
       .box([0.9, 0.06, 0.04], [0, h + 4.4, 0], { color: '#2a2726', name: 'vane', mover: { kind: 'spin', axis: 'y', amount: 90 } })
       .wedge([0.25, 0.3, 0.04], [0.42, h + 4.4, 0], { color: '#2a2726', rot: [0, 0, -90], parent: 'vane' })

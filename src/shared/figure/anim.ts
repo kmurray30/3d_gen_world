@@ -14,7 +14,7 @@ export interface Pose {
   j: Record<string, Vec3>;
   /** Joint position deltas in metres. */
   t?: Record<string, Vec3>;
-  /** Absolute size of a part's solid (not its children): grows a hidden flame. */
+  /** Absolute size of a part and what hangs off it (0 hides them): grows a hidden flame. */
   sc?: Record<string, number>;
   root: Vec3;
   rootRot: Vec3;

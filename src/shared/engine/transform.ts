@@ -1,14 +1,24 @@
 import type { Entity, Vec3 } from '../types';
 import { renderHeight } from './sizing';
 import { structureTopAt } from '../structure/collide';
-import { getFigure } from '../figure/items';
+import { figureFor } from '../figure/items';
 import { socketOffset } from '../figure/pose';
 import type { Figure } from '../figure/types';
 
 /** The code-drawn figure an entity shows as (null for buildings, forced sprites and words without one). */
+let figuresDrawn = true;
+/**
+ * The client says whether code-drawn models are shown. In the sprites Look things are pictures: a model's acts,
+ * part poses and sockets would not show, so the engine treats them as the drawings they are.
+ */
+export function setFiguresDrawn(on: boolean): void {
+  figuresDrawn = on;
+}
+
 export function figureOfEntity(e: Entity): Figure | null {
-  if (e.structure || e.look === 'sprite') return null;
-  return getFigure(e.word);
+  if (!figuresDrawn || e.structure || e.look === 'sprite') return null;
+  // the same lookup the client draws with (a "pony" is drawn as the horse, so it moves as the horse)
+  return figureFor(e.word);
 }
 
 export type EntityLookup = (id: string) => Entity | undefined;

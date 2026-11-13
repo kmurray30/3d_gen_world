@@ -2,7 +2,7 @@ import type { Entity, Vec3, World } from '../types';
 import { StepSchema, type Action, type ResolvedAction, type ResolvedBuild, type ResolvedSpawn, type ResolvedStep, type Step, type WordResolution } from '../schema';
 import { figureOfEntity } from './transform';
 import { getFigure } from '../figure/items';
-import { pieceFigure, restFacing } from '../figure/pose';
+import { findPart, pieceFigure, restFacing } from '../figure/pose';
 import { reactionFor } from '../figure/anim';
 import type { Figure } from '../figure/types';
 import { apply as applyM, solve as solveFigure } from '../figure/math';
@@ -62,6 +62,12 @@ export class Engine {
   private keySeq = 0;
   private idSeq = 0;
   private readonly pokeUntil = new Map<string, number>();
+  /** Things looking at someone for a while: who, what they faced before, and the listener that ends it. */
+  private readonly looks = new Map<string, { who: string; before: string | undefined; off: () => void }>();
+  /** Ids an act has promised to things it will spawn or take off (so two copies of it never share one). */
+  private readonly reserved = new Set<string>();
+  /** Each thing's running act script. */
+  private readonly actScripts = new Map<string, string>();
   /** How a drawing comes apart, when its rig is loaded (the client supplies it; pieces need it). */
   rigs: (file: string) => Rig | undefined = () => undefined;
   /** What a word spawned by an act looks like and how big it is. By default from its code-drawn figure; the
@@ -256,13 +262,24 @@ export class Engine {
   private operateFigure(e: Entity, part: string, to?: string): boolean {
     const fig = figureOfEntity(e);
     if (!fig) return false;
-    const want = part.toLowerCase().replace(/[^a-z0-9]+/g, '');
-    const stem = want.replace(/s$/, '');
     const all = fig.parts.filter((p) => p.mover);
-    let found = all.filter((p) => p.name.toLowerCase() === want);
-    if (!found.length) found = all.filter((p) => p.name.toLowerCase().startsWith(stem));
-    if (!found.length) found = all.filter((p) => p.mover!.kind === stem || (stem === 'propeller' || stem === 'fan' || stem === 'rotor' || stem === 'engine' || stem === 'motor' ? p.mover!.kind === 'spin' : stem === 'lamp' || stem === 'lights' ? p.mover!.kind === 'light' : false));
-    if (!found.length && (stem === 'all' || stem === 'it' || stem === 'everything')) found = all;
+    const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const match = (want: string) => {
+      const stem = want.replace(/s$/, '');
+      let f = all.filter((p) => norm(p.name) === want);
+      if (!f.length) f = all.filter((p) => norm(p.name).startsWith(stem));
+      if (!f.length) f = all.filter((p) => p.mover!.kind === stem || (stem === 'propeller' || stem === 'fan' || stem === 'rotor' || stem === 'engine' || stem === 'motor' ? p.mover!.kind === 'spin' : stem === 'lamp' || stem === 'light' ? p.mover!.kind === 'light' : false));
+      if (!f.length && (stem === 'all' || stem === 'it' || stem === 'everything')) f = all;
+      return f;
+    };
+    // "lever (in)" as the world line shows it, "front door", "the lid": the whole name, then each word, last first
+    const clean = part.toLowerCase().replace(/\(.*?\)/g, ' ').replace(/\b(the|a|an)\b/g, ' ').trim();
+    const tries = [norm(clean), ...clean.split(/[^a-z0-9]+/).filter((w) => w.length >= 2).reverse()].filter(Boolean);
+    let found: typeof all = [];
+    for (const want of tries) {
+      found = match(want);
+      if (found.length) break;
+    }
     if (!found.length) return false;
     const stateOf = (p: (typeof all)[number]) => (typeof e.state[`op_${p.name}`] === 'boolean' ? (e.state[`op_${p.name}`] as boolean) : !!p.mover!.on);
     const current = found.every(stateOf);
@@ -276,12 +293,18 @@ export class Engine {
     const steps: ResolvedAction[] = [];
     for (const p of found) {
       if (stateOf(p) === v) continue;
-      e.state[`op_${p.name}`] = v;
-      this.emit({ type: 'stateChange', id: e.id, key: `op_${p.name}`, value: v });
       const m = p.mover!;
       const ax = m.axis ?? (m.kind === 'slide' ? 'z' : m.kind === 'spin' ? 'z' : 'x');
       const vec = (k: number): Vec3 => [ax === 'x' ? k : 0, ax === 'y' ? k : 0, ax === 'z' ? k : 0];
       const amount = m.amount ?? (m.kind === 'swing' ? 100 : m.kind === 'spin' ? 720 : m.kind === 'slide' ? 0.3 : 0);
+      // a part that starts open (on: true) is open by default, with no pose of its own: give it one first, so
+      // closing it swings it shut instead of snapping
+      if (m.on && typeof e.state[`op_${p.name}`] !== 'boolean' && !e.pose?.[p.name]) {
+        const start = m.kind === 'swing' ? { r: vec(amount) } : m.kind === 'slide' ? { t: vec(amount) } : m.kind === 'spin' ? { w: vec(amount) } : null;
+        if (start) e.pose = { ...(e.pose ?? {}), [p.name]: start };
+      }
+      e.state[`op_${p.name}`] = v;
+      this.emit({ type: 'stateChange', id: e.id, key: `op_${p.name}`, value: v });
       if (m.kind === 'swing') steps.push({ op: 'pose', id: e.id, part: p.name, rot: vec(v ? amount : 0), dur: 0.5 });
       else if (m.kind === 'slide') steps.push({ op: 'pose', id: e.id, part: p.name, move: vec(v ? amount : 0), dur: 0.4 });
       else if (m.kind === 'spin') steps.push({ op: 'pose', id: e.id, part: p.name, spin: vec(v ? amount : 0), dur: 0 });
@@ -299,6 +322,9 @@ export class Engine {
     const fig = e ? figureOfEntity(e) : null;
     const cycle = fig?.act?.click;
     if (!e || !cycle?.length) return false;
+    // one act at a time: a click while it is still going (the toaster toasting) lets it finish
+    const going = this.actScripts.get(id);
+    if (going && this.scheduler.scripts.has(going)) return true;
     const n = typeof e.state.act_n === 'number' ? e.state.act_n : 0;
     e.state.act_n = (n + 1) % cycle.length;
     let steps = this.prepareAct(e, cycle[n % cycle.length]);
@@ -317,7 +343,9 @@ export class Engine {
       steps = steps.map(keep).filter((x): x is ResolvedStep => !!x);
       this.faceFor(id, 'player', 4.5, `act_face_${id}_${this.nextKey()}`);
     }
-    this.run(steps, `act_${id}_${this.nextKey()}`);
+    const sid = `act_${id}_${this.nextKey()}`;
+    this.actScripts.set(id, sid);
+    this.run(steps, sid);
     return true;
   }
 
@@ -358,6 +386,7 @@ export class Engine {
         const res = this.resolveWord(String(x.word));
         if (!res) return [];
         const id = this.uniqueId(`${e.id}_${String(x.ref)}`);
+        this.reserved.add(id);
         refs.set(String(x.ref), id);
         return [{ ...(x as object), at: place((x.at ?? { rel: 'near', of: 'self' }) as { of?: string }), ref: String(x.ref), id, res } as ResolvedAction];
       }
@@ -365,6 +394,7 @@ export class Engine {
         const owner = ids(String(x.id))[0];
         if (!owner) return [];
         const newId = this.uniqueId(`${owner}_${String(x.part)}`);
+        this.reserved.add(newId);
         if (typeof x.ref === 'string') refs.set(x.ref, newId);
         return [{ ...(x as object), id: owner, newId } as ResolvedAction];
       }
@@ -410,19 +440,29 @@ export class Engine {
   private faceFor(id: string, who: string, seconds: number, sid: string): void {
     const e = this.world.get(id);
     if (!e) return;
-    const before = e.facing;
+    // looking again while still looking keeps what it was doing before the first look
+    const prev = this.looks.get(id);
+    const before = prev ? prev.before : e.facing;
+    prev?.off();
     e.facing = who;
     this.run([{ op: 'wait', dur: seconds }], `${sid}_face`);
-    const until = this.time + seconds;
     const off = this.on((ev) => {
-      if (ev.type !== 'scriptDone' || ev.id !== `${sid}_face`) return;
-      const now = this.world.get(id);
-      if (now && now.facing === who && this.time >= until - 0.05) {
-        if (before) now.facing = before;
-        else delete now.facing;
-      }
-      off();
+      if (ev.type === 'scriptDone' && ev.id === `${sid}_face`) this.endLook(id);
     });
+    this.looks.set(id, { who, before, off });
+  }
+
+  /** A look is over (or cut short by an undo or a reset): back to how it stood. */
+  private endLook(id: string): void {
+    const l = this.looks.get(id);
+    if (!l) return;
+    l.off();
+    this.looks.delete(id);
+    const now = this.world.get(id);
+    if (now && now.facing === l.who) {
+      if (l.before) now.facing = l.before;
+      else delete now.facing;
+    }
   }
 
   /**
@@ -434,7 +474,10 @@ export class Engine {
     const e = this.world.get(id);
     if (e?.structure) return this.detachStructurePiece(e, e.structure, part, newId);
     const fig = e ? figureOfEntity(e) : null;
-    if (e && fig) return this.detachFigurePiece(e, fig, part, newId);
+    if (e && fig) {
+      const got = this.detachFigurePiece(e, fig, part, newId);
+      if (got) return got;
+    }
     if (!e?.sprite.file) return null;
     const rig = this.rigs(e.sprite.file);
     const piece = rig ? findPiece(rig, part) : undefined;
@@ -451,7 +494,7 @@ export class Engine {
     const heightM = Math.max(0.05, (y1 - y0) * tall);
     const sprite = { file: e.sprite.file, w: Math.max(1, Math.round((x1 - x0) * rig.w)), h: Math.max(1, Math.round((y1 - y0) * rig.h)), piece: piece.id };
     const pieceEntity: Entity = {
-      id: this.world.has(newId) ? this.uniqueId(newId) : newId,
+      id: this.reserved.delete(newId) && !this.world.has(newId) ? newId : this.world.has(newId) ? this.uniqueId(newId) : newId,
       word,
       label: word,
       sprite,
@@ -478,8 +521,11 @@ export class Engine {
 
   /** A code-drawn thing's piece (the slice of a yam, a cork, a hat) comes off as a figure of its own, where it was. */
   private detachFigurePiece(e: Entity, fig: Figure, part: string, newId: string): string | null {
-    const p = fig.parts.find((q) => q.name === part) ?? fig.parts.find((q) => q.name.toLowerCase().startsWith(part.toLowerCase()));
+    const p = findPart(fig, part);
     if (!p || e.state[`off_${p.name}`] === true || !p.parent) return null;
+    // a part of a piece that is already off came off with it
+    const byName = new Map(fig.parts.map((q) => [q.name, q]));
+    for (let a = p.parent ? byName.get(p.parent) : undefined; a; a = a.parent ? byName.get(a.parent) : undefined) if (e.state[`off_${a.name}`] === true) return null;
     const piece = pieceFigure(fig, p.name);
     if (!piece) return null;
     // the piece's origin in the owner's figure space, posed as the owner is now, then into the world
@@ -493,7 +539,7 @@ export class Engine {
     void applyM;
     const word = piece.fig.key;
     const pe: Entity = {
-      id: this.world.has(newId) ? this.uniqueId(newId) : newId,
+      id: this.reserved.delete(newId) && !this.world.has(newId) ? newId : this.world.has(newId) ? this.uniqueId(newId) : newId,
       word,
       label: p.name,
       sprite: { file: null, w: 1, h: 1 },
@@ -537,7 +583,7 @@ export class Engine {
     const yaw = e.yaw ?? 0;
     const at = this.world.worldPos(e);
     const off = rotateY([cx * e.scale, cy * e.scale, cz * e.scale], yaw * DEG);
-    const pe = structureEntity(this.world.has(newId) ? this.uniqueId(newId) : newId, name, piece, [at[0] + off[0], at[1] + off[1], at[2] + off[2]], yaw, this.time, name);
+    const pe = structureEntity(this.reserved.delete(newId) && !this.world.has(newId) ? newId : this.world.has(newId) ? this.uniqueId(newId) : newId, name, piece, [at[0] + off[0], at[1] + off[1], at[2] + off[2]], yaw, this.time, name);
     pe.scale = e.scale;
     pe.massClass = massClassFor('object', piece.bounds.h);
     pe.solid = Math.max(piece.bounds.w, piece.bounds.d) > 0.6;
@@ -557,10 +603,13 @@ export class Engine {
       const owner = piece;
       const rig = owner.sprite.file ? this.rigs(owner.sprite.file) : undefined;
       const words = part.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-      const want = rig ? findPiece(rig, part)?.id : owner.structure ? undefined : part;
-      piece = this.world
-        .list()
-        .find((x) => x.state.piece_of === owner.id && (want ? x.state.piece === want : !owner.structure || words.some((w) => w === x.state.piece || `${w}`.replace(/s$/, '') === x.state.piece)));
+      const fig = figureOfEntity(owner);
+      // a model's part goes by the name detach found for it ("hat" took off "hat_wizard_2")
+      const want = fig ? (findPart(fig, part)?.name ?? part) : rig ? findPiece(rig, part)?.id : owner.structure ? undefined : part;
+      const pieces = this.world.list().filter((x) => x.state.piece_of === owner.id);
+      piece =
+        pieces.find((x) => (want ? x.state.piece === want : !owner.structure || words.some((w) => w === x.state.piece || `${w}`.replace(/s$/, '') === x.state.piece))) ??
+        (fig || !rig ? pieces.find((x) => typeof x.state.piece === 'string' && words.some((w) => w.length >= 2 && (x.state.piece as string).toLowerCase().startsWith(w))) : undefined);
     }
     if (!piece || typeof piece.state.piece_of !== 'string') return false;
     const owner = this.world.get(piece.state.piece_of);
@@ -639,6 +688,9 @@ export class Engine {
 
   cancelAll(): void {
     this.scheduler.cancelAll();
+    for (const id of [...this.looks.keys()]) this.endLook(id);
+    this.reserved.clear();
+    this.actScripts.clear();
     for (const t of this.world.transient.values()) {
       t.ofs = [0, 0, 0];
       t.sq = 1;
@@ -646,11 +698,12 @@ export class Engine {
   }
 
   uniqueId(base: string): string {
-    if (!this.world.has(base)) return base;
+    const taken = (x: string) => this.world.has(x) || this.reserved.has(x);
+    if (!taken(base)) return base;
     const stem = base.replace(/_\d+$/, '');
     for (let n = 2; n < 10000; n++) {
       const cand = `${stem}_${n}`;
-      if (!this.world.has(cand)) return cand;
+      if (!taken(cand)) return cand;
     }
     return `${stem}_${++this.idSeq}`;
   }
@@ -659,7 +712,8 @@ export class Engine {
   spawn(action: ResolvedSpawn): Entity | null {
     const res = action.res;
     const scale = action.scale ?? 1;
-    const id = this.uniqueId(action.id);
+    // an act's spawn uses the id it reserved when it was prepared, so its later steps find it
+    const id = this.reserved.delete(action.id) && !this.world.has(action.id) ? action.id : this.uniqueId(action.id);
     const proto = { heightM: res.heightM, scale, sprite: res.sprite };
     const placement = resolvePlace(action.at, this.world, { id, radius: footprintRadius(proto), heightM: res.heightM * scale }, this.rng);
     const e: Entity = {
@@ -744,9 +798,17 @@ export class Engine {
     return out;
   }
 
-  /** Saveable snapshot. */
+  /** Saveable snapshot (a passing look at the player is not saved). */
   snapshot(): World {
-    return this.world.toWorld();
+    const w = this.world.toWorld();
+    if (this.looks.size)
+      for (const e of w.entities) {
+        const l = this.looks.get(e.id);
+        if (!l || e.facing !== l.who) continue;
+        if (l.before) e.facing = l.before;
+        else delete e.facing;
+      }
+    return w;
   }
 }
 

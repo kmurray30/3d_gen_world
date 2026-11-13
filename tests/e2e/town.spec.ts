@@ -48,10 +48,13 @@ test('start screen -> Everytown: every thing in its place, only nearby things dr
   });
   expect(before.kids.length).toBeGreaterThan(0);
   expect(await page.evaluate((id) => (window as any).__game.engine.poke(id), before.id)).toBe(true);
-  await page.waitForFunction((id) => {
+  // the act takes about five seconds of game time; step it here (a software renderer draws the town slowly)
+  const after = await page.evaluate((id) => {
     const g = (window as any).__game;
-    return g.engine.world.children(id).some((k: any) => /toast/.test(k.word));
-  }, before.id, { timeout: 30_000 });
+    for (let i = 0; i < 160; i++) g.engine.update(0.05);
+    return g.engine.world.children(id).map((k: any) => k.word);
+  }, before.id);
+  expect(after).toEqual(['toast', 'toast']);
   await page.waitForTimeout(1500);
   expect(puts).toEqual([]);
   if (!isMobile) expect(errors).toEqual([]);

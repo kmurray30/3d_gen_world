@@ -2008,24 +2008,47 @@ export const ENTRIES: CatalogEntry[] = [
       })
       .done();
   }),
-  // The crawlspace under a house: a concrete-block foundation wall below the siding, an air vent, a little access
-  // door; open it and two eyes blink in the dark.
+  // The crawlspace under a house, shown as a cutaway corner of the house (its 2.4 m ground-floor wall with a window
+  // above, so it reads; the crawlspace itself is the 0.8 m void): a concrete-block foundation wall with an air vent
+  // and a little access hatch at the front, and the right side cut open to show inside: floor joists overhead,
+  // brick piers, a water pipe and a drain on hangers, a vapour barrier on the dirt. Open the hatch and two eyes
+  // blink in the dark. (Taller than the vocabulary's 0.6 m because the house above is part of the picture.)
   e('crawlspace', 'places', 'rooms', () => {
+    const BL = '#9a958e', SD = '#d8c8a8', fz = 1.5;
     const b = m('crawlspace', { edge: 'sharp' })
-      .box([4, 0.04, 2.6], [0, 0.02, 0], { color: 'grass', edge: 'soft' })
-      .box([3.4, 0.7, 2.2], [0, 0.37, -0.1], { color: '#9a958e', round: 0.02 })
-      .box([3.5, 0.2, 2.3], [0, 0.82, -0.1], { color: 'wood' })
-      .box([3.4, 1.4, 2.2], [0, 1.62, -0.1], { color: '#d8c8a8', round: 0.02 })
-      .box([0.75, 0.48, 0.03], [-0.6, 0.38, 1.02], { color: '#14110e' })
-      .ball(0.03, [-0.72, 0.42, 1.04], { color: '#f2e45a', glow: true, name: 'eyeL', scale: 0 })
-      .ball(0.03, [-0.62, 0.42, 1.04], { color: '#f2e45a', glow: true, name: 'eyeR', scale: 0 })
-      .box([0.72, 0.46, 0.04], [-0.6, 0.38, 1.05], { color: '#7a7f85', round: 0.1, name: 'door', pivot: [-0.96, 0.38, 1.05], mover: { kind: 'swing', axis: 'y', amount: -100 } })
-      .box([0.08, 0.04, 0.03], [-0.32, 0.38, 1.08], { color: '#3a3633', parent: 'door' })
-      .box([0.4, 0.2, 0.03], [0.9, 0.45, 1.02], { color: '#555555' })
-      .stick([1.3, 0.3, 1.0], [1.3, 1.0, 1.0], 0.05, 'copper');
-    b.each(4, (i) => b.box([0.36, 0.012, 0.01], [0.9, 0.38 + i * 0.04, 1.04], { color: '#888888', noInk: true }));
-    b.each(4, (r) => b.box([3.4, 0.01, 0.01], [0, 0.18 + r * 0.17, 1.005], { color: '#8a857e', noInk: true }));
-    b.each(7, (i) => b.box([3.42, 0.025, 0.04], [0, 1.0 + i * 0.2, 1.01], { color: '#c8b898', noInk: true }));
+      .box([5.2, 0.04, 4.2], [0, 0.02, 0.2], { color: 'grass', edge: 'soft' })
+      .box([3.8, 0.03, 2.8], [0.1, 0.035, 0], { color: 'dirt', round: 0, edge: 'soft' })
+      .box([2.2, 0.012, 1.8], [0.4, 0.055, -0.2], { color: '#cfd6dc', round: 0, noInk: true })
+      // foundation walls: front, back and left (the right side is cut away)
+      .box([4.0, 0.8, 0.2], [0, 0.4, fz - 0.1], { color: BL, round: 0.02 })
+      .box([4.0, 0.8, 0.2], [0, 0.4, -fz + 0.1], { color: BL, round: 0.02 })
+      .box([0.2, 0.8, 3.0], [-1.9, 0.4, 0], { color: BL, round: 0.02 });
+    b.each(3, (r) => b.box([4.0, 0.012, 0.012], [0, 0.2 + r * 0.2, fz + 0.002], { color: '#7e7a74', noInk: true, round: 0 }));
+    // the floor overhead: joists spanning the house, the subfloor on them, a rim board along the cut
+    b.each(7, (i) => b.box([4.0, 0.22, 0.06], [0, 0.89, -1.2 + i * 0.4], { color: '#c89a5e', round: 0.05 }));
+    b.box([4.0, 0.05, 3.0], [0, 1.025, 0], { color: '#b5814e', round: 0 })
+      .box([4.0, 0.22, 0.06], [0, 0.89, fz - 0.23], { color: '#a8743e', round: 0.05 });
+    // brick piers, pipes on hangers
+    for (const x of [-0.4, 1.1]) b.box([0.34, 0.78, 0.34], [x, 0.41, 0], { color: '#a65a3c', round: 0.05 });
+    b.stick([-1.8, 0.66, 0.55], [2.0, 0.66, 0.55], 0.05, 'copper')
+      .stick([-1.8, 0.5, -0.65], [2.0, 0.5, -0.65], 0.11, '#e6e6de');
+    for (const x of [-1.0, 0.4, 1.6]) b.stick([x, 0.78, -0.65], [x, 0.56, -0.65], 0.02, '#5c6166').stick([x, 0.78, 0.55], [x, 0.69, 0.55], 0.02, '#5c6166');
+    // the access hatch (dark behind it, two eyes) and the vent grille in the front wall
+    b.box([0.75, 0.48, 0.03], [-0.6, 0.4, fz + 0.01], { color: '#14110e' })
+      .ball(0.03, [-0.72, 0.44, fz + 0.035], { color: '#f2e45a', glow: true, name: 'eyeL', scale: 0 })
+      .ball(0.03, [-0.62, 0.44, fz + 0.035], { color: '#f2e45a', glow: true, name: 'eyeR', scale: 0 })
+      .box([0.72, 0.46, 0.04], [-0.6, 0.4, fz + 0.04], { color: '#7a7f85', round: 0.1, name: 'door', pivot: [-0.96, 0.4, fz + 0.04], mover: { kind: 'swing', axis: 'y', amount: -100 } })
+      .box([0.08, 0.04, 0.03], [-0.32, 0.4, fz + 0.07], { color: '#3a3633', parent: 'door' })
+      .box([0.42, 0.22, 0.03], [0.9, 0.45, fz + 0.01], { color: '#555555' });
+    b.each(4, (i) => b.box([0.36, 0.012, 0.01], [0.9, 0.38 + i * 0.045, fz + 0.03], { color: '#888888', noInk: true }));
+    // the house's ground-floor wall above: siding, corner boards, a window, a trim board where it is cut off
+    b.box([4.0, 2.4, 3.0], [0, 2.25, 0], { color: SD, round: 0.01 })
+      .box([4.06, 0.12, 3.06], [0, 3.48, 0], { color: '#f2ece0', round: 0.1 })
+      .box([4.1, 0.1, 3.1], [0, 1.08, 0], { color: '#f2ece0', round: 0.1 });
+    b.each(11, (i) => b.box([4.02, 0.025, 0.03], [0, 1.25 + i * 0.2, fz + 0.005], { color: '#c8b898', noInk: true, round: 0 }));
+    for (const [x, z] of [[-1.97, fz - 0.03], [1.97, fz - 0.03], [1.97, -fz + 0.03]] as const) b.box([0.12, 2.4, 0.12], [x, 2.25, z], { color: '#f2ece0', round: 0.1 });
+    win(b, 0.5, 2.35, fz, 1.0, 1.2, '#f2ece0', { bars: true, glass: DARKWIN });
+    b.stick([1.4, 0.06, fz + 0.06], [1.4, 1.0, fz + 0.06], 0.05, 'copper').box([0.14, 0.1, 0.1], [1.4, 0.55, fz + 0.08], { color: '#9a6a3e', round: 0.3 });
     return b
       .act({
         click: [
@@ -2487,27 +2510,68 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [[A.detach('dagger', 'dagger'), A.say('Shing!', 1)], [A.reattach('dagger'), A.say('Thunk!', 1)]] })
       .done(),
   ),
-  // A small concrete dam across a stream (3 m wall, 10 m wide): water held back behind it, a walkway with railings,
-  // a sluice gate that winches up to let a gush through, rocks below.
+  // A concrete gravity dam (12 m high, 30 m crest) wedged into a rocky gorge: the reservoir behind it, a sloping
+  // downstream face, a crest road with parapets and lamp posts, a central spillway with two steel lift gates in a
+  // gantry (a hoist wheel winches them up and the water gushes down the chute between training walls), a
+  // powerhouse at the toe and the river running on. (The vocabulary's 1 m is a levee; a dam this size is the
+  // landmark, so the size warning stays.)
   e('dam', 'places', 'landmarks', () => {
+    const C = '#c9c6bd', C2 = '#b5b2aa', R = '#8a7d6c', H = 12, sl = 47.7;
     const b = m('dam', { edge: 'sharp' })
-      .box([12, 0.2, 9], [0, 0.1, 0], { color: '#7a8a5a', edge: 'soft' })
-      .box([10, 2.5, 4.5], [0, 1.35, -2.6], { color: 'water', edge: 'soft' })
-      .box([10, 2.8, 1.4], [0, 1.5, 0], { color: '#b5b5b0', round: 0.03 })
-      .box([10.4, 0.15, 1.8], [0, 2.97, 0], { color: '#9a9a96' })
-      .box([10, 0.15, 3.5], [0, 0.25, 2.5], { color: 'water', edge: 'soft' })
-      .box([1.4, 1.5, 0.25], [0, 0.95, 0.75], { color: '#3a3f45', name: 'gate', mover: { kind: 'slide', axis: 'y', amount: 1.0 } })
-      .box([1.8, 0.7, 0.15], [0, 3.35, 0.6], { color: '#555b62' })
-      .cyl([0.5, 0.3, 0.5], [0, 3.62, 0.75], { color: '#c0392b', rot: [90, 0, 0], name: 'wheel', mover: { kind: 'spin', axis: 'z', amount: 300 } })
-      .box([1.2, 0.5, 0.7], [0, 0.35, 1.6], { color: 'white', name: 'gush', scale: 0, edge: 'soft' });
-    b.pair((s) => {
-      b.stick([-5, 3.05, s * 0.85], [5, 3.05, s * 0.85], 0.06, 'silver').stick([-5, 3.85, s * 0.85], [5, 3.85, s * 0.85], 0.05, 'silver');
-      b.each(6, (i) => b.stick([-5 + i * 2, 3.05, s * 0.85], [-5 + i * 2, 3.88, s * 0.85], 0.05, 'silver'));
-      b.ball([2.4, 2.8, 3], [s * 5.8, 1.4, 0], { color: 'rock', edge: 'soft' });
-      b.ball([0.8, 0.5, 0.7], [s * 2.5, 0.35, 2.6], { color: 'rock', edge: 'soft' });
+      .box([44, 0.1, 44], [0, 0.05, 1.5], { color: '#7a8a5a', edge: 'soft' })
+      .box([34, 8.6, 18], [0, 4.3, -11.5], { color: 'water', round: 0.02, edge: 'soft' })
+      .box([10, 0.12, 14], [0, 0.16, 16.5], { color: 'water', round: 0.1, edge: 'soft' });
+    // the dam: crest blocks either side of the spillway, the spillway sill and its centre pier, the sloping face
+    b.pair((s) => void b.box([11, H, 4], [s * 9.5, H / 2, -0.5], { color: C, round: 0.02 }));
+    b.box([8, 9, 4], [0, 4.5, -0.5], { color: C2, round: 0.02 })
+      .box([0.8, H, 4], [0, H / 2, -0.5], { color: C, round: 0.02 })
+      .wedge([8, 8.8, 30], [0, 4.4, 5.5], { color: C, rot: [0, 90, 0], apex: 0.5 });
+    for (const y of [3, 6]) b.box([30, 0.06, 0.06], [0, y, 9.5 - (y / 8.8) * 8 + 0.03], { color: C2, noInk: true });
+    // the chute between training walls, and the gush that runs down it when the gates lift
+    b.pair((s) => void b.box([0.4, 1.2, 11.9], [s * 4.2, 4.8, 5.94], { color: C2, rot: [sl, 0, 0], round: 0.05 }));
+    b.box([7.4, 0.3, 11.9], [0, 4.5, 5.61], { color: 'white', rot: [sl, 0, 0], name: 'gush', scale: 0, edge: 'soft' });
+    // the crest road: asphalt, parapets, a bridge over the spillway, lamp posts
+    b.box([30, 0.06, 2.7], [0, H + 0.03, -0.45], { color: '#4a4a4a', round: 0, noInk: true })
+      .box([8, 0.4, 3.1], [0, H - 0.2, -0.05], { color: C, round: 0.05 });
+    for (const z of [-2.35, 1.35]) b.box([30, 0.9, 0.3], [0, H + 0.45, z], { color: C2, round: 0.1 });
+    [-12, -6, 6, 12].forEach((x, i) => {
+      b.stick([x, H + 0.9, 1.35], [x, H + 3.4, 1.35], 0.1, '#5c6166').box([0.36, 0.32, 0.36], [x, H + 3.55, 1.35], { color: '#fff3c0', glow: true, round: 0.2, name: `lamp${i}`, mover: { kind: 'light', on: false } });
     });
+    // two lift gates in their slots upstream of the bridge, a steel gantry over them and the hoist wheel
+    b.pair((s) => {
+      b.box([3.5, 2.4, 0.3], [s * 2.2, 10.2, -2.0], { color: '#4a5560', round: 0.05, name: s > 0 ? 'gateL' : 'gateR', mover: { kind: 'slide', axis: 'y', amount: 2.4 } });
+      b.box([3.5, 0.08, 0.34], [s * 2.2, 10.6, -2.0], { color: '#3a424a', parent: s > 0 ? 'gateL' : 'gateR', noInk: true });
+      b.box([0.3, 3.6, 0.3], [s * 4.2, H + 1.8, -2.0], { color: '#c0392b', round: 0.1 });
+      b.box([1.2, 0.7, 0.9], [s * 2.2, H + 3.85, -2.0], { color: '#5c6166', round: 0.1 });
+    });
+    b.box([0.3, 3.6, 0.3], [0, H + 1.8, -2.0], { color: '#c0392b', round: 0.1 })
+      .box([8.8, 0.4, 0.4], [0, H + 3.4, -2.0], { color: '#c0392b', round: 0.1 })
+      .cyl([0.9, 0.16, 0.9], [0, H + 2.4, -1.75], { color: '#f6d24a', rot: [90, 0, 0], name: 'wheel', mover: { kind: 'spin', axis: 'z', amount: 300 } })
+      .box([0.1, 0.8, 0.06], [0, H + 2.4, -1.65], { color: '#3a3633', parent: 'wheel' });
+    // the gorge: terraced rock either side, boulders by the river
+    // (high beside the reservoir, stepping down toward the front so the dam face stays in view)
+    b.pair((s) => {
+      b.box([8, 14, 22], [s * 19, 7, -9], { color: R, round: 0.2, edge: 'soft' })
+        .box([6, 2.5, 14], [s * 19.5, 14.6, -12], { color: '#7a6e60', round: 0.4, edge: 'soft' })
+        .box([8, 7, 9], [s * 19, 3.5, 6.5], { color: R, round: 0.3, edge: 'soft' })
+        .ball([7, 4, 9], [s * 19.5, 7.2, 14], { color: '#7a6e60', edge: 'soft' })
+        .ball([3, 2, 3], [s * 14.8, 0.9, 12 + s], { color: '#7a6e60', edge: 'soft' });
+    });
+    b.ball([1.6, 1.0, 1.4], [6.2, 0.45, 14], { color: 'rock', edge: 'soft' }).ball([1.1, 0.7, 1.0], [5.6, 0.3, 19], { color: 'rock', edge: 'soft' });
+    // the powerhouse at the toe, left of the river
+    b.box([9, 5.5, 6], [-10, 2.75, 12.5], { color: '#d8d4ca', round: 0.02 })
+      .box([9.3, 0.35, 6.3], [-10, 5.65, 12.5], { color: '#6b6f75', round: 0.1 })
+      .box([2.6, 3.2, 0.06], [-10, 1.6, 15.53], { color: '#8f99a3', round: 0.02 })
+      .label('POWER HOUSE', [4.2, 0.5], [-10, 4.6, 15.53], { color: '#2f4f8f', depth: 0.04 });
+    b.each(5, (i) => b.box([2.6, 0.03, 0.03], [-10, 0.4 + i * 0.6, 15.57], { color: '#6b7078', noInk: true }));
+    for (const x of [-13.2, -6.8]) win(b, x, 2.8, 15.5, 1.4, 2.6, '#8f99a3', { bars: true, glass: DARKWIN });
     return b
-      .act({ click: [A.par(A.operate('wheel', 'on'), A.operate('gate', 'up')), A.operate('wheel', 'off'), A.par(A.pose('gush', { scale: 1, dur: 0.3 }), A.effect('water_spray', { dur: 2.5 }), A.say('Whoooosh!', 2)), A.wait(2), A.par(A.pose('gush', { scale: 0, dur: 0.3 }), A.operate('gate', 'down'))] })
+      .act({
+        click: [
+          [A.par(A.operate('wheel', 'on'), A.operate('gate', 'up')), A.operate('wheel', 'off'), A.par(A.pose('gush', { scale: 1, dur: 0.3 }), A.effect('water_spray', { dur: 2.5 }), A.say('Whoooosh!', 2)), A.wait(2), A.par(A.pose('gush', { scale: 0, dur: 0.3 }), A.operate('gate', 'down'))],
+          [A.operate('lamp', 'on'), A.say('Hummmm...', 1.5), A.wait(2), A.operate('lamp', 'off')],
+        ],
+      })
       .done();
   }),
   // A light-up dance floor, 4 m square: a grid of glowing coloured tiles in a chrome edge; they flash in turn.
@@ -3718,22 +3782,50 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [A.anim('hop'), A.say('Thunk!', 1)] })
       .done(),
   ),
-  // An arched stone doorway set in a wall, keystone and voussoirs round the top, steps up to it; someone comes
-  // through it and waves hello.
+  // An arched stone doorway in a 4.2 m stretch of brick wall: a 1.1 m x 2.2 m opening (people walk through it
+  // upright) with quoined stone jambs, imposts, a ring of nine voussoirs with a proud keystone, a glazed fanlight in
+  // the arch, a plank door with strap hinges that swings inward, a stone sill and step, coping on the wall and a
+  // lantern either side. The lanterns light, the door opens and someone comes through and waves hello.
   e('doorway', 'places', 'rooms', () => {
-    const b = m('doorway', { edge: 'sharp' })
-      .box([0.95, 3.2, 0.4], [-1.0, 1.6, 0], { color: '#c8b89a' })
-      .box([0.95, 3.2, 0.4], [1.0, 1.6, 0], { color: '#c8b89a' })
-      .box([1.1, 0.6, 0.4], [0, 2.9, 0], { color: '#c8b89a' })
-      .box([1.4, 0.15, 0.8], [0, 0.075, 0.3], { color: 'stone' })
-      .box([1.6, 0.15, 0.5], [0, 0.0, 0.85], { color: '#a8a39a' });
-    for (let i = 0; i <= 6; i++) {
-      const a = (i * Math.PI) / 6;
-      b.box([0.16, 0.28, 0.44], [Math.cos(a) * 0.62, 2.05 + Math.sin(a) * 0.55, 0], { color: i === 3 ? '#b8a88a' : '#a8987a', rot: [0, 0, (a * 180) / Math.PI - 90] });
+    const BR = '#a65a3c', ST = '#d9ccae', ST2 = '#cbbd9c', yS = 2.5, r0 = 0.55, r1 = 0.87;
+    const b = m('doorway', { edge: 'sharp' });
+    // brick wall either side and over the arch (its spandrels filled round the voussoirs), stone plinth and coping
+    b.pair((s) => {
+      b.box([1.23, 4.0, 0.4], [s * 1.485, 2.0, 0], { color: BR, round: 0.02 })
+        .box([0.42, 0.37, 0.38], [s * 0.66, 3.185, 0], { color: BR, round: 0 })
+        .box([0.17, 0.5, 0.38], [s * 0.785, 2.75, 0], { color: BR, round: 0 });
+      b.each(9, (i) => b.box([1.2, 0.02, 0.02], [s * 1.485, 0.6 + i * 0.38, 0.205], { color: '#c9b9a6', noInk: true, round: 0 }));
+    });
+    b.box([1.8, 0.7, 0.4], [0, 3.65, 0], { color: BR, round: 0 })
+      .box([4.3, 0.3, 0.46], [0, 0.15, 0], { color: ST2, round: 0.05 })
+      .box([4.36, 0.15, 0.52], [0, 4.075, 0], { color: ST, round: 0.1 })
+      .box([2.2, 0.15, 0.5], [0, 0.075, 0.45], { color: ST2, round: 0.1 });
+    // quoined jambs, imposts, voussoirs and keystone
+    b.pair((s) => {
+      b.each(5, (i) => b.box([i % 2 ? 0.4 : 0.32, 0.43, 0.46], [s * (r0 + (i % 2 ? 0.2 : 0.16)), 0.52 + i * 0.44, 0], { color: i % 2 ? ST2 : ST, round: 0.05 }));
+      b.box([0.5, 0.12, 0.5], [s * 0.74, yS + 0.02, 0], { color: ST, round: 0.1 });
+    });
+    for (let i = 0; i < 9; i++) {
+      const a = ((i + 0.5) * Math.PI) / 9, key = i === 4, rr = key ? r1 + 0.1 : r1, mid = (r0 + rr) / 2;
+      b.box([key ? 0.3 : 0.27, rr - r0, key ? 0.52 : 0.46], [Math.cos(a) * mid, yS + Math.sin(a) * mid, 0], { color: key ? ST : i % 2 ? ST2 : ST, rot: [0, 0, (a * 180) / Math.PI - 90], round: 0.05 });
     }
-    b.pair((s) => b.box([0.12, 2.05, 0.44], [s * 0.6, 1.025, 0], { color: '#a8987a' }));
+    // the fanlight in the arch head, and the plank door that swings in on its hinges
+    b.dome([1.1, r0, 0.05], [0, yS + r0 / 2, 0], { color: '#9fc4d8' });
+    for (const a of [45, 90, 135]) b.stick([0, yS, 0.03], [Math.cos((a * Math.PI) / 180) * r0, yS + Math.sin((a * Math.PI) / 180) * r0, 0.03], 0.03, '#3a3633');
+    b.box([1.1, 2.2, 0.07], [0, 0.3 + 1.1, 0], { color: '#6b4226', round: 0.04, name: 'door', pivot: [-r0, 1.4, 0], mover: { kind: 'swing', axis: 'y', amount: 95 } });
+    b.each(4, (i) => b.box([0.015, 2.16, 0.02], [-0.33 + i * 0.22, 1.4, 0.04], { color: '#4a2c18', parent: 'door', noInk: true, round: 0 }));
+    for (const y of [0.75, 2.05]) b.box([0.6, 0.06, 0.02], [-0.22, y, 0.045], { color: '#1e1e1e', parent: 'door', round: 0.3 });
+    b.torus([0.11, 0.11, 0.025], [0.36, 1.0, 0.05], { color: 'iron', parent: 'door' });
+    // a lantern on a bracket either side
+    b.pair((s) => {
+      const x = s * 1.35, n = s > 0 ? 'lampL' : 'lampR';
+      b.stick([x, 2.62, 0.2], [x, 2.62, 0.46], 0.04, '#1e1e1e')
+        .box([0.22, 0.34, 0.22], [x, 2.36, 0.46], { color: '#1e1e1e', round: 0.1 })
+        .box([0.15, 0.24, 0.24], [x, 2.36, 0.46], { color: '#fff1b8', glow: true, name: n, mover: { kind: 'light', on: false } })
+        .pyramid([0.34, 0.14, 0.34], [x, 2.6, 0.46], 4, { color: '#1e1e1e' });
+    });
     return b
-      .act({ click: [A.spawn('p', 'man', { rel: 'behind', of: 'self', dist: 'close' }), A.move('p', { rel: 'front', of: 'self', dist: 'close' }, { speed: 'walk' }), A.par(A.anim('wave', 1, 'p'), A.say('Hello!', 1.5, 'p')), A.remove('p', 'fade')] })
+      .act({ click: [A.par(A.operate('lamp', 'on'), A.operate('door', 'open')), A.spawn('p', 'man', { rel: 'behind', of: 'self', dist: 'close' }), A.move('p', { rel: 'front', of: 'self', dist: 'close' }, { speed: 'walk' }), A.par(A.anim('wave', 1, 'p'), A.say('Hello!', 1.5, 'p')), A.operate('door', 'close'), A.remove('p', 'fade'), A.operate('lamp', 'off')] })
       .done();
   }),
   // A four-storey brick dormitory: rows of windows (some lit), stone banding, a canopy over glass doors, a bike
@@ -3844,25 +3936,50 @@ export const ENTRIES: CatalogEntry[] = [
     b.each(8, (i) => b.ball(0.006, [0.04 + (i % 3) * 0.02, 0.025 + Math.floor(i / 3) * 0.025 + (i % 2) * 0.008, 0.05], { color: 'black', noInk: true, parent: 'half' }));
     return b.act({ click: [[A.detach('half', 'half'), A.say('Juicy!', 1)], [A.reattach('half')]] }).done();
   }),
-  // A sink drain: a slab of white basin with a chrome drain flange and its rubber plug on a ball chain, the tailpiece
-  // and P-trap bend below. Pull the plug and it gurgles away.
-  e('drain', 'home', 'bathroom', () =>
-    m('drain', { edge: 'sharp' })
-      .box([0.36, 0.02, 0.24], [0, 0.01, 0], { color: '#8d8a86', round: 0.3 })
-      .box([0.4, 0.05, 0.3], [0, 0.32, 0], { color: 'white', round: 0.4, name: 'basin' })
-      .cyl([0.07, 0.012, 0.07], [0, 0.35, 0], { color: 'silver' })
-      .box([0.05, 0.004, 0.006], [0, 0.357, 0], { color: '#3a3633' })
-      .cyl([0.055, 0.016, 0.055], [0, 0.364, 0], { color: '#3a3633', name: 'plug', parent: 'basin', piece: true })
-      .torus([0.018, 0.018, 0.004], [0, 0.378, 0], { color: 'silver', parent: 'plug' })
-      .rod([0.0, 0.372, 0], [0.13, 0.348, 0.07], 0.004, 'silver', { parent: 'plug' })
-      .stick([0, 0.3, 0], [0, 0.17, 0], 0.036, '#e8e8e8')
-      .rod([0, 0.17, 0], [0.03, 0.11, 0], 0.036, '#e8e8e8')
-      .rod([0.03, 0.11, 0], [0.07, 0.13, 0], 0.036, '#e8e8e8')
-      .rod([0.07, 0.13, 0], [0.08, 0.19, 0], 0.036, '#e8e8e8')
-      .rod([0.08, 0.19, 0], [0.18, 0.19, 0], 0.036, '#e8e8e8')
-      .act({ click: [[A.detach('plug', 'plug'), A.effect('water_spray', { dur: 1.5 }), A.say('Glug glug gurgle!', 1.8)], [A.reattach('plug'), A.say('Plip.', 1)]] })
-      .done(),
-  ),
+  // A bathroom basin drain at real size with its plumbing on show (1.1 m with the wall; the vocabulary's 0.15 m is the
+  // drain fitting alone, which cannot read without its basin and trap): a white basin hung on a tiled wall section at
+  // 0.84 m, water standing in it over the chrome drain flange and its rubber plug on a ball chain, a pillar tap, and
+  // under it the chrome tailpiece, the P-trap U and the trap arm running back into the wall. Pull the plug and the
+  // water swirls away; put it back and it refills.
+  e('drain', 'home', 'bathroom', () => {
+    const plan: Array<[number, number, number, number]> = [[0, 0.75, 0.8, 0], [0.15, 0.97, 0.97, 0], [0.5, 1, 1, 0], [0.85, 0.97, 0.97, 0], [1, 0.75, 0.8, 0]];
+    const C = 'silver';
+    const b = m('drain', { edge: 'sharp' })
+      .box([0.7, 0.012, 0.5], [0, 0.006, 0.02], { color: '#9aa3a8', round: 0.3 })
+      .box([0.7, 1.088, 0.06], [0, 0.556, -0.25], { color: '#e6eef0', round: 0.05 });
+    for (const y of [0.212, 0.412, 0.612, 0.812, 1.012]) b.box([0.7, 0.005, 0.004], [0, y, -0.219], { color: '#b8c2c6', round: 0, noInk: true });
+    for (const x of [-0.2, 0, 0.2]) b.box([0.005, 1.088, 0.004], [x, 0.556, -0.219], { color: '#b8c2c6', round: 0, noInk: true });
+    // the basin on its two brackets: a white bowl, its pale inside, the standing water and the drain in it
+    b.pair((s) => b.box([0.025, 0.1, 0.16], [s * 0.15, 0.66, -0.14], { color: '#c8cdd0', round: 0.2 }));
+    b.loft([0.5, 0.36, 0.4], [0, 0.84, -0.025], plan, { color: 'white', boxy: 0.4, cut: 'bottom', name: 'basin' })
+      .loft([0.42, 0.28, 0.31], [0, 0.8415, -0.01], plan, { color: '#b9c9d1', boxy: 0.4, cut: 'bottom' })
+      .loft([0.38, 0.014, 0.27], [0, 0.845, -0.01], plan, { color: '#8fcbe6', boxy: 0.4, name: 'water' })
+      .torus([0.065, 0.065, 0.008], [0, 0.853, -0.01], { color: C, rot: [90, 0, 0], tube: 0.22 })
+      .cyl([0.048, 0.012, 0.048], [0, 0.856, -0.01], { color: '#2a2c30', name: 'plug', parent: 'basin', piece: true })
+      .torus([0.02, 0.02, 0.004], [0, 0.869, -0.01], { color: C, parent: 'plug' })
+      .rod([0, 0.876, -0.01], [0.06, 0.855, -0.12], 0.004, C, { parent: 'plug', noInk: true })
+      .rod([0.06, 0.855, -0.12], [0.06, 0.862, -0.19], 0.004, C, { parent: 'plug', noInk: true })
+      // the pillar tap on the back deck
+      .stick([0, 0.84, -0.195], [0, 0.94, -0.195], 0.034, C)
+      .rod([0, 0.935, -0.195], [0, 0.925, -0.11], 0.026, C)
+      .box([0.08, 0.014, 0.016], [0, 0.952, -0.195], { color: C, round: 0.5 })
+      .ball(0.022, [0, 0.965, -0.195], { color: 'white' })
+      // tailpiece, slip nut, the P-trap U and the trap arm into the wall
+      .stick([0, 0.67, -0.01], [0, 0.5, -0.01], 0.034, C)
+      .cyl([0.046, 0.018, 0.046], [0, 0.56, -0.01], { color: C })
+      .arc([0.11, 0.11, 0.034], [0, 0.5, -0.048], { color: C, rot: [0, 90, 180], tube: 0.31 })
+      .stick([0, 0.5, -0.086], [0, 0.55, -0.086], 0.034, C)
+      .rod([0, 0.55, -0.086], [0, 0.55, -0.23], 0.034, C)
+      .cyl([0.075, 0.01, 0.075], [0, 0.55, -0.217], { color: C, rot: [90, 0, 0] });
+    return b
+      .act({
+        click: [
+          [A.detach('plug', 'plug'), A.par(A.pose('water', { scale: 0.05, dur: 1.6 }), A.effect('water_spray', { dur: 1.5 }), A.say('Glug glug gurgle!', 1.8))],
+          [A.reattach('plug'), A.par(A.pose('water', { scale: 1, dur: 1.2 }), A.say('Plip.', 1))],
+        ],
+      })
+      .done();
+  }),
   // A castle gatehouse with a drawbridge over the moat: stone gate piers and lintel with battlements, two round
   // towers with pointed roofs and flags, an iron portcullis in the arch, a plank bridge on chains that winches up.
   e('drawbridge', 'places', 'castles', () => {

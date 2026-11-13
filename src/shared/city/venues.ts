@@ -343,7 +343,12 @@ function indoorPlan(key: string, place: PlaceId, items: TownItem[], decals: Deca
   const aisle = 1.7;
   const packed = pack(mods, inner - 1.2, aisle);
   const W = Math.max(inner, packed.w + 1.6);
-  const front = 3.4; // entrance, counter and staff
+  // the counter keeps to its half of the room (a wider one would poke through the wall); staff stand in rows
+  // behind it, and each extra row of staff makes the room deeper
+  const cwMax = Math.max(3, W / 2 - 1);
+  const perRow = Math.max(2, Math.floor((cwMax - 0.6) / 1.0));
+  const staffRows = Math.max(1, Math.ceil(staff.length / perRow));
+  const front = 3.4 + (staffRows - 1) * 1.1; // entrance, counter and staff
   const wallRow = wallItems.length ? 0.6 : 0;
   const D = Math.max(8, packed.d + front + 1.4 + wallRow);
   const tallest = Math.max(2.4, ...items.map((it) => it.h + (it.spot === 'pedestal' ? 1 : it.spot === 'table' || it.spot === 'case' ? 1 : 0)));
@@ -366,10 +371,10 @@ function indoorPlan(key: string, place: PlaceId, items: TownItem[], decals: Deca
     layRows(extra, D / 2 - front - extra.d - 0.3, aisle, b, placed, surfaces);
   }
   // the counter by the door with the staff behind it, facing the door
-  const cw = Math.min(W - 2, Math.max(3, staff.length * 1.1 + 1));
+  const cw = Math.min(cwMax, Math.max(3, Math.min(staff.length, perRow) * 1.0 + 1));
   b.box(-W / 4, 0, D / 2 - 2.4, cw, 1.0, 0.7, 'plank', trim);
   staff.forEach((it, k) => {
-    const row = Math.floor(k / 6), col = k % 6;
+    const row = Math.floor(k / perRow), col = k % perRow;
     placed.push({ item: it, x: -W / 4 - cw / 2 + 0.6 + col * 1.0, y: 0, z: D / 2 - 3.2 - row * 1.1, yaw: 0 });
   });
   const floorH = Math.max(3.2, tallest + 0.9);
@@ -410,7 +415,9 @@ function lotPlan(key: string, place: PlaceId, items: TownItem[], decals: Decals)
   const packed = pack(mods, inner - 2, aisle);
   const W = Math.max(inner, packed.w + 3);
   const staff = by('person');
-  const front = 5 + (staff.length ? 1.5 : 0);
+  // staff stand inside the fence, left of the gate, as many to a row as fit
+  const lotRow = Math.max(1, Math.floor((W / 2 - 5 / 2 - 2.6) / 1.1));
+  const front = 5 + (staff.length ? 1.5 + (Math.ceil(staff.length / lotRow) - 1) * 1.2 : 0);
   const D = Math.max(12, packed.d + front + 3);
   const b = new Parts(decals);
   frame(b, W, D);
@@ -432,7 +439,7 @@ function lotPlan(key: string, place: PlaceId, items: TownItem[], decals: Decals)
   b.box(0, 3.6, D / 2, gate + 0.6, 0.7, 0.18, 'plank', '#f2e6cf');
   b.sign(def.title.toUpperCase().slice(0, 28), 0, 3.71, D / 2 + 0.1, 0.48, 0, '#fff3c4');
   b.sign(def.title.toUpperCase().slice(0, 28), 0, 3.71, D / 2 - 0.1, 0.48, 180, '#fff3c4');
-  staff.forEach((it, k) => placed.push({ item: it, x: -gate / 2 - 2 - (k % 6) * 1.1, y: 0, z: D / 2 - 2.5 - Math.floor(k / 6) * 1.2, yaw: 0 }));
+  staff.forEach((it, k) => placed.push({ item: it, x: -gate / 2 - 2 - (k % lotRow) * 1.1, y: 0, z: D / 2 - 2.5 - Math.floor(k / lotRow) * 1.2, yaw: 0 }));
   return { key, place, title: def.title, w: W, d: D, shell: null, fittings: b.finish('fittings', { venue: key }), placed, surfaces, afloat: water };
 }
 

@@ -678,17 +678,31 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [A.par(A.set({ tilt: 5 }), A.pose('bubble', { move: [0.016, 0, 0], dur: 0.5 })), A.wait(0.6), A.par(A.set({ tilt: 0 }), A.pose('bubble', { move: [0, 0, 0], dur: 0.6 })), A.say('Ding!', 1)] })
       .done(),
   ),
-  // A steel crowbar stood on its chisel end: the hooked, split claw at the top. It heaves and creaks.
+  // A crowbar at work (a 90 cm bar, as you would find it on a site): the red steel bar rests on a wooden block
+  // as its fulcrum, its bent chisel toe tucked under a heavy stone and its gooseneck claw up at the handle end.
+  // Push the handle down and the stone tips up.
   e('lever', 'workshop', 'hand tools', () => {
-    const b = m('lever', { edge: S }), c = '#c8322a';
-    b.box([0.03, 0.012, 0.03], [0, 0.006, 0], { color: 'iron', rot: [0, 0, 12] })
-      .rod([0, 0.012, 0], [0, 0.62, 0], 0.03, c)
-      .rod([0, 0.62, 0], [0.025, 0.68, 0], 0.03, c)
-      .rod([0.025, 0.68, 0], [0.07, 0.7, 0], 0.03, c)
-      .rod([0.07, 0.7, 0], [0.105, 0.675, 0], 0.028, c)
-      .rod([0.105, 0.675, 0.006], [0.115, 0.635, 0.006], 0.012, 'iron')
-      .rod([0.105, 0.675, -0.006], [0.115, 0.635, -0.006], 0.012, 'iron');
-    return b.act({ click: [A.set({ tilt: -18, dur: 0.5 }), A.say('Creeeak!', 1.2), A.set({ tilt: 0, dur: 0.4 })] }).done();
+    const b = m('lever', { edge: S }), c = '#c8322a', F0: V = [0.17, 0.088, 0];
+    b.box([0.1, 0.08, 0.14], [0.17, 0.04, 0], { color: 'wood', round: 0.15 })
+      .box([0.4, 0.24, 0.32], [0.45, 0.12, 0], { color: 'stone', round: 0.6, edge: F, name: 'stone', pivot: [0.65, 0, 0] })
+      .ball([0.2, 0.08, 0.18], [0.5, 0.22, 0.03], { color: '#9a9a92', parent: 'stone', edge: F })
+      .rod([0.27, 0.04, 0], [-0.38, 0.357, 0], 0.03, c, { name: 'lever', pivot: F0, mover: { kind: 'swing', axis: 'z', amount: 11 } })
+      .rod([0.27, 0.04, 0], [0.335, 0.016, 0], 0.028, c, { parent: 'lever' })
+      .rod([-0.38, 0.357, 0], [-0.425, 0.402, 0], 0.03, c, { parent: 'lever' })
+      .rod([-0.425, 0.402, 0], [-0.46, 0.394, 0], 0.028, c, { parent: 'lever' })
+      .rod([-0.46, 0.394, 0], [-0.472, 0.362, 0], 0.026, c, { parent: 'lever' })
+      .pair((s) => b.rod([-0.472, 0.362, s * 0.006], [-0.468, 0.335, s * 0.007], 0.012, 'iron', { parent: 'lever' }))
+      .box([0.014, 0.014, 0.03], [0.34, 0.013, 0], { color: 'iron', parent: 'lever' });
+    return b
+      .act({
+        click: [
+          A.par(A.pose('lever', { rot: [0, 0, 11], dur: 0.6 }), A.pose('stone', { rot: [0, 0, -6], dur: 0.6 }), A.say('Heave!', 1.2)),
+          A.wait(0.8),
+          A.par(A.pose('lever', { rot: [0, 0, 0], dur: 0.3 }), A.pose('stone', { rot: [0, 0, 0], dur: 0.3 })),
+          A.par(A.effect('dust', { dur: 0.6 }), A.say('Thud.', 0.8)),
+        ],
+      })
+      .done();
   }),
   // A grand public library: a stone hall 16 m wide on a podium of steps, a portico of six columns under a
   // pediment, tall arched windows, double doors that open, and lamps either side. "Shhh!"
@@ -983,21 +997,31 @@ export const ENTRIES: CatalogEntry[] = [
       ],
     }).done();
   }),
-  // A lightning rod on the ridge of a roof: the copper spike on its finial, the cable down the roof and wall to
-  // its earth stake; clicked, lightning strikes it harmlessly.
+  // A lightning rod on the ridge of a real garden shed (walls 2.1 m, so a person fits through its door): the
+  // copper spike with an old-fashioned blue glass ball on its finial, and the copper strip running along the
+  // ridge, down the gable end and the corner of the wall to its earth stake. Clicked, lightning strikes it
+  // harmlessly.
   e('lightning rod', 'workshop', 'building parts', () => {
-    const b = m('lightning rod', { edge: S });
-    b.box([1.6, 0.8, 1.2], [0, 0.4, 0], { color: '#e6d8bc' });
-    gable(b, 1.6, 1.2, 0.8, 0.55, '#a3322a', { ridgeX: true, eave: 0.15 });
-    b.cyl([0.12, 0.08, 0.12], [0, 1.39, 0], { color: 'copper' })
-      .ball(0.1, [0, 1.48, 0], { color: 'copper' })
-      .stick([0, 1.5, 0], [0, 2.35, 0], 0.03, 'copper')
-      .cone([0.06, 0.15, 0.06], [0, 2.42, 0], { color: 'copper' })
-      .rod([0.03, 1.4, 0.02], [0.62, 1.0, 0.45], 0.016, 'copper')
-      .rod([0.62, 1.0, 0.45], [0.82, 0.82, 0.62], 0.016, 'copper')
-      .rod([0.82, 0.82, 0.62], [0.82, 0.02, 0.62], 0.016, 'copper')
-      .cyl([0.06, 0.1, 0.06], [0.82, 0.03, 0.66], { color: '#5c6166' });
-    const bolt: V[] = [[0.0, 2.5, 0], [0.18, 2.9, 0], [-0.08, 3.1, 0], [0.12, 3.5, 0]];
+    const b = m('lightning rod', { edge: S }), wall = '#e6d8bc', trim = 'white';
+    b.box([2.1, 0.1, 1.7], [0, 0.05, 0], { color: '#9da3a8', round: 0.1 })
+      .box([2.0, 2.1, 1.6], [0, 1.15, 0], { color: wall, round: 0.02 });
+    b.each(6, (i) => b.box([2.02, 0.025, 0.02], [0, 0.45 + i * 0.3, 0.805], { color: '#d6c6a6', noInk: true }));
+    b.pair((s) => b.box([0.08, 2.1, 0.08], [s * 0.99, 1.15, 0.79], { color: trim }).box([0.08, 2.1, 0.08], [s * 0.99, 1.15, -0.79], { color: trim }));
+    gable(b, 2.0, 1.6, 2.2, 0.7, '#a3322a', { ridgeX: true, eave: 0.15 });
+    door(b, [-0.4, 0.1, 0.8], 0.8, 1.85, { color: '#5a7a5a', frame: trim });
+    win(b, [0.5, 1.5, 0.8], 0.6, 0.5, { frame: trim });
+    b.cyl([0.12, 0.06, 0.12], [0, 2.93, 0], { color: 'copper' })
+      .ball(0.08, [0, 3.0, 0], { color: 'copper' })
+      .stick([0, 3.02, 0], [0, 3.9, 0], 0.03, 'copper')
+      .ball(0.1, [0, 3.35, 0], { color: '#4f8fd0' })
+      .cone([0.06, 0.15, 0.06], [0, 3.97, 0], { color: 'copper' })
+      .rod([0.05, 2.93, 0], [1.16, 2.92, 0], 0.016, 'copper')
+      .rod([1.16, 2.92, 0], [1.16, 2.27, 0], 0.016, 'copper')
+      .rod([1.16, 2.27, 0], [1.02, 2.15, 0], 0.016, 'copper')
+      .rod([1.02, 2.15, 0], [1.02, 0.12, 0], 0.016, 'copper')
+      .box([0.05, 0.08, 0.05], [1.03, 0.5, 0], { color: '#8a5a35' })
+      .cyl([0.06, 0.13, 0.06], [1.04, 0.065, 0], { color: '#5c6166' });
+    const bolt: V[] = [[0.0, 4.05, 0], [0.25, 4.6, 0], [-0.1, 4.9, 0], [0.2, 5.5, 0]];
     for (let i = 0; i < bolt.length - 1; i++) b.rod(bolt[i], bolt[i + 1], 0.06, '#fff6a0', { glow: true, name: `bolt${i}`, scale: 0, noInk: true });
     const flash = (k: number) => A.par(A.pose('bolt0', { scale: k, dur: 0.05 }), A.pose('bolt1', { scale: k, dur: 0.05 }), A.pose('bolt2', { scale: k, dur: 0.05 }));
     return b.act({ click: [flash(1), A.par(A.effect('sparkle', { dur: 1 }), A.say('KRAKOOM!', 1.5), A.anim('shake')), A.wait(0.3), flash(0)] }).done();
@@ -2290,23 +2314,29 @@ export const ENTRIES: CatalogEntry[] = [
       .label('ml', [0.016, 0.01], [0.018, 0.105, 0.057], { color: '#bfe3f2', depth: 0.001 });
     return b.act({ click: [A.set({ tilt: -35, dur: 0.5 }), A.par(A.effect('water_spray', { dur: 1 }), A.say('Glug glug', 1)), A.set({ tilt: 0, dur: 0.5 })] }).done();
   }),
-  // A cast-iron mincer clamped to the edge of a wooden table: the hopper, the screw barrel, the cutting plate and
-  // the crank; turn it and a sausage of mince comes out.
+  // A cast-iron hand mincer (31 cm) on its weighted foot, real size: the round hopper with meat in it on top of
+  // the screw barrel, the polished ring nut and cutting plate at the outlet, the crank with a wooden handle at
+  // the back, and a bowl of mince under the outlet. Turn it and a sausage of mince comes out.
   e('meat grinder', 'kitchen', 'appliances', () => {
-    const b = m('meat grinder', { edge: S });
-    b.box([0.4, 0.04, 0.3], [0, 0.18, 0], { color: 'wood', round: 0.2 })
-      .pair((s) => b.box([0.04, 0.18, 0.04], [s * 0.17, 0.08, 0.12], { color: 'wood' }).box([0.04, 0.18, 0.04], [s * 0.17, 0.08, -0.12], { color: 'wood' }))
-      .box([0.05, 0.08, 0.06], [0, 0.17, 0.0], { color: '#55595e' })
-      .stick([0, 0.12, 0], [0, 0.14, 0], 0.03, '#55595e')
-      .box([0.05, 0.08, 0.05], [0, 0.24, 0], { color: '#55595e' })
-      .cyl([0.08, 0.2, 0.08], [0.0, 0.3, 0], { color: '#55595e', rot: [0, 0, 90] })
-      .cyl([0.1, 0.1, 0.1], [0, 0.38, 0], { color: '#55595e', taper: 1.6 })
-      .cyl([0.09, 0.02, 0.09], [-0.11, 0.3, 0], { color: '#8f99a3', rot: [0, 0, 90] })
-      .cyl([0.06, 0.015, 0.06], [-0.125, 0.3, 0], { color: '#5c6166', rot: [0, 0, 90] })
-      .stick([0.1, 0.3, 0], [0.13, 0.3, 0], 0.02, '#8f99a3')
-      .box([0.02, 0.14, 0.02], [0.135, 0.36, 0], { color: '#8f99a3', name: 'crank', pivot: [0.135, 0.3, 0] })
-      .capsule([0.026, 0.06, 0.026], [0.16, 0.42, 0], { color: 'wood', rot: [0, 0, 90], parent: 'crank' })
-      .cyl([0.1, 0.03, 0.1], [-0.18, 0.215, 0], { color: 'white', taper: 1.3 });
+    const b = m('meat grinder', { edge: S }), iron = '#55595e', steel = '#8f99a3';
+    b.box([0.18, 0.022, 0.12], [0.015, 0.011, 0], { color: iron, round: 0.45 })
+      .cyl([0.06, 0.11, 0.05], [0.01, 0.075, 0], { color: iron, taper: 0.7, edge: F })
+      .cyl([0.072, 0.17, 0.072], [0, 0.16, 0], { color: iron, rot: [0, 0, 90], name: 'barrel' })
+      .cyl([0.08, 0.018, 0.08], [0.082, 0.16, 0], { color: iron, rot: [0, 0, 90] })
+      .cyl([0.094, 0.03, 0.094], [-0.098, 0.16, 0], { color: steel, rot: [0, 0, 90], round: 0.3 })
+      .cyl([0.07, 0.006, 0.07], [-0.116, 0.16, 0], { color: '#3a3f44', rot: [0, 0, 90] })
+      .ball([0.006, 0.05, 0.05], [-0.12, 0.16, 0], { color: '#d9746a', noInk: true, edge: F })
+      .cyl([0.05, 0.04, 0.05], [0, 0.215, 0], { color: iron })
+      .cyl([0.085, 0.06, 0.085], [0, 0.262, 0], { color: iron, taper: 1.45 })
+      .torus([0.126, 0.126, 0.01], [0, 0.292, 0], { color: iron, rot: [90, 0, 0], tube: 0.12 })
+      .ball([0.1, 0.03, 0.1], [0, 0.288, 0], { color: '#c85a5a', edge: F })
+      .cyl([0.02, 0.03, 0.02], [0.105, 0.16, 0], { color: steel, rot: [0, 0, 90] })
+      .box([0.012, 0.135, 0.024], [0.122, 0.21, 0], { color: steel, round: 0.4, name: 'crank', pivot: [0.122, 0.16, 0] })
+      .cyl([0.02, 0.012, 0.02], [0.122, 0.16, 0], { color: steel, rot: [0, 0, 90], segs: 6, parent: 'crank' })
+      .capsule([0.026, 0.075, 0.026], [0.165, 0.265, 0], { color: 'wood', rot: [0, 0, 90], parent: 'crank', edge: F })
+      .cyl([0.12, 0.05, 0.12], [-0.165, 0.025, 0.01], { color: 'white', taper: 1.35, round: 0.3 })
+      .ball([0.12, 0.035, 0.12], [-0.165, 0.05, 0.01], { color: '#d9746a', edge: F });
+    b.pair((s) => b.box([0.012, 0.03, 0.016], [-0.098, 0.16 + s * 0.05, 0], { color: steel }).box([0.012, 0.016, 0.03], [-0.098, 0.16, s * 0.05], { color: steel }));
     return b.act({ click: [A.pose('crank', { rot: [-720, 0, 0], dur: 2 }), A.spawn('s', 'sausage', { rel: 'front', of: 'self', dist: 'close' }), A.say('Crunch crunch', 1.2), A.pose('crank', { rot: [0, 0, 0], dur: 0 }), A.wait(1.5), A.remove('s', 'pop')] }).done();
   }),
   // A walk-in cold room 3 m long: insulated steel panels, a thick door on heavy hinges with a lever latch and a
@@ -3113,17 +3143,19 @@ export const ENTRIES: CatalogEntry[] = [
     });
     return b.act({ click: [[A.operate('lantern', 'on'), A.effect('sparkle', { dur: 1.5 }), A.operate('door', 'open'), A.wait(2), A.operate('door', 'close')], [A.operate('lantern', 'off')]] }).done();
   }),
-  // A mosquito net over a single bed: the fine white mesh falls from a ring on the ceiling hook down round the
-  // bed; a mosquito bumps into it and gives up.
+  // A mosquito net over a single bed (1 x 2 m, mattress top at 0.53): the wooden bed on its legs with a
+  // headboard and a blue blanket, and the fine white net falling from a ring on the ceiling hook, flaring out in
+  // soft drapes to tuck in round the mattress; a mosquito bumps into it and gives up.
   e('mosquito net', 'home', 'bedroom', () => {
     const b = m('mosquito net');
-    b.box([1.0, 0.3, 2.0], [0, 0.25, 0], { color: '#8a5a35', edge: S })
-      .box([0.95, 0.15, 1.95], [0, 0.47, 0], { color: 'white', round: 0.4 })
-      .box([0.6, 0.1, 0.35], [0, 0.58, -0.75], { color: 'white', round: 0.6 })
-      .box([0.94, 0.06, 1.2], [0, 0.56, 0.3], { color: '#8fb8e0', round: 0.4 })
+    b.box([1.0, 0.25, 2.0], [0, 0.225, 0], { color: '#8a5a35', edge: S, round: 0.1 })
+      .pair((s) => b.box([0.07, 0.12, 0.07], [s * 0.45, 0.06, 0.95], { color: '#6b4226', edge: S }).box([0.07, 0.12, 0.07], [s * 0.45, 0.06, -0.95], { color: '#6b4226', edge: S }))
+      .box([1.04, 0.85, 0.05], [0, 0.525, -1.0], { color: '#8a5a35', edge: S, round: 0.15 })
+      .box([0.95, 0.18, 1.95], [0, 0.44, 0], { color: 'white', round: 0.4 })
+      .box([0.99, 0.12, 1.3], [0, 0.49, 0.3], { color: '#8fb8e0', round: 0.4 })
       .stick([0, 2.4, 0], [0, 2.25, 0], 0.02, '#9da3a8', { edge: S })
       .torus([0.5, 0.5, 0.02], [0, 2.22, 0], { color: '#d4d7da', rot: [90, 0, 0], tube: 0.04, edge: S, name: 'net', pivot: [0, 2.3, 0] })
-      .cyl([1.5, 1.95, 2.4], [0, 1.22, 0], { color: '#f2f6f8', taper: 0.32, rot: [180, 0, 0], parent: 'net', noInk: true, segs: 16 });
+      .loft([1.08, 2.08, 1.72], [0, 1.36, 0], [[0, 1, 1, 0], [0.1, 0.97, 0.98, 0], [0.45, 0.66, 0.5, 0], [0.82, 0.48, 0.27, 0], [1, 0.44, 0.23, 0]], { color: '#f2f6f8', rot: [-90, 0, 0], boxy: 0.45, parent: 'net' });
     return b.act({ click: [A.spawn('mz', 'mosquito', { rel: 'front', of: 'self', dist: 'close' }), A.say('Bzzzz!', 1.2, 'mz'), A.pose('net', { rot: [0, 0, 4], dur: 0.3 }), A.pose('net', { rot: [0, 0, -3], dur: 0.3 }), A.pose('net', { rot: [0, 0, 0], dur: 0.3 }), A.move('mz', { rel: 'away', of: 'self', dist: 'far' }, { speed: 'fly', style: 'fly' }), A.remove('mz', 'fade')] }).done();
   }),
   // An aerosol of insect repellent: a green can with a crossed-out mosquito on the label and a white cap that
@@ -3631,18 +3663,32 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [A.operate('file', 'up'), A.operate('file', 'down'), A.operate('file', 'up'), A.operate('file', 'down'), A.say('Scritch scritch', 1.2)] })
       .done(),
   ),
-  // A pneumatic nail gun: the yellow body with its grip and trigger, the nose, the magazine of nails and the
-  // air hose; it fires with a thwack.
+  // A pneumatic framing nailer (46 cm) pressed nose-down on a plank: the yellow cylinder housing with its black
+  // cap and exhaust, the steel drive nose and safety tip, the rubber-gripped handle with a red trigger, the long
+  // angled magazine of nails braced back to the handle, and the air hose from the brass fitting. Each THWACK
+  // sinks a nail in the plank.
   e('nail gun', 'workshop', 'power tools', () => {
-    const b = m('nail gun', { edge: S, view: 'side' });
-    b.box([0.07, 0.15, 0.24], [0, 0.22, 0.02], { color: '#f6c82a', round: 0.4, name: 'gun', pivot: [0, 0.1, 0] })
-      .cyl([0.08, 0.06, 0.08], [0, 0.31, 0.02], { color: '#3a3633', parent: 'gun' })
-      .box([0.04, 0.1, 0.06], [0, 0.1, 0.12], { color: '#3a3633', parent: 'gun' })
-      .box([0.04, 0.14, 0.05], [0, 0.13, -0.06], { color: '#2a2726', rot: [20, 0, 0], round: 0.4, parent: 'gun' })
-      .box([0.012, 0.03, 0.02], [0, 0.17, -0.01], { color: '#e0473b', parent: 'gun' })
-      .box([0.03, 0.04, 0.22], [0, 0.06, 0.03], { color: '#5c6166', rot: [-12, 0, 0] })
-      .rod([0, 0.06, -0.1], [0, 0.01, -0.3], 0.02, '#e0473b');
-    return b.act({ click: [A.par(A.pose('gun', { rot: [-6, 0, 0], dur: 0.06 }), A.say('THWACK!', 0.8)), A.pose('gun', { rot: [0, 0, 0], dur: 0.2 }), A.par(A.pose('gun', { rot: [-6, 0, 0], dur: 0.06 }), A.say('THWACK!', 0.8)), A.pose('gun', { rot: [0, 0, 0], dur: 0.2 })] }).done();
+    const b = m('nail gun', { edge: S, view: 'side' }), y0 = 0.03, yel = '#f6c82a';
+    const P = (y: number, z: number): V => [0, y0 + y, z];
+    b.box([0.16, 0.03, 0.6], [0, 0.015, 0.05], { color: 'lightwood', round: 0.1 })
+      .cyl([0.09, 0.15, 0.085], P(0.25, 0.13), { color: yel, round: 0.3, name: 'gun', pivot: P(0, 0.165) })
+      .cyl([0.096, 0.035, 0.09], P(0.34, 0.13), { color: '#2a2726', parent: 'gun' })
+      .box([0.05, 0.02, 0.05], P(0.365, 0.12), { color: '#3a3633', rot: [0, 30, 0], parent: 'gun' })
+      .box([0.034, 0.12, 0.045], P(0.12, 0.155), { color: '#5c6166', parent: 'gun' })
+      .box([0.028, 0.05, 0.03], P(0.04, 0.165), { color: '#c9ccd1', parent: 'gun' })
+      .cyl([0.024, 0.012, 0.024], [0.021, y0 + 0.13, 0.155], { color: '#e0473b', rot: [0, 0, 90], parent: 'gun' })
+      .box([0.042, 0.05, 0.25], P(0.285, -0.04), { color: yel, rot: [-8, 0, 0], round: 0.4, parent: 'gun' })
+      .box([0.047, 0.055, 0.12], P(0.276, -0.09), { color: '#2a2726', rot: [-8, 0, 0], round: 0.45, parent: 'gun', edge: F })
+      .box([0.012, 0.04, 0.018], P(0.235, 0.06), { color: '#e0473b', rot: [12, 0, 0], round: 0.4, parent: 'gun' })
+      .box([0.03, 0.055, 0.35], P(0.13, -0.035), { color: '#3a3f44', rot: [20, 0, 0], round: 0.2, parent: 'gun' })
+      .box([0.012, 0.012, 0.3], P(0.158, -0.025), { color: '#c9ccd1', rot: [20, 0, 0], parent: 'gun', noInk: true })
+      .box([0.035, 0.08, 0.035], P(0.23, -0.185), { color: '#3a3f44', parent: 'gun' })
+      .cyl([0.016, 0.035, 0.016], P(0.265, -0.19), { color: 'brass', rot: [90, 0, 0], parent: 'gun' })
+      .rod(P(0.265, -0.205), [0, 0.02, -0.3], 0.018, '#e0473b', { edge: F })
+      .rod([0, 0.02, -0.3], [0.05, 0.011, -0.45], 0.018, '#e0473b', { edge: F });
+    b.each(2, (i) => b.cyl([0.012, 0.003, 0.012], [0, 0.031, 0.23 + i * 0.05], { color: '#9da3a8', name: `nail${i + 1}`, scale: 0 }));
+    const shot = (n: string) => [A.par(A.pose('gun', { rot: [-6, 0, 0], dur: 0.06 }), A.pose(n, { scale: 1, dur: 0.06 }), A.say('THWACK!', 0.8)), A.pose('gun', { rot: [0, 0, 0], dur: 0.25 })];
+    return b.act({ click: [A.par(A.pose('nail1', { scale: 0, dur: 0 }), A.pose('nail2', { scale: 0, dur: 0 })), ...shot('nail1'), ...shot('nail2')] }).done();
   }),
   // A bottle of nail varnish: a glossy faceted pink bottle and a tall black cap with its brush, which comes off.
   e('nail polish', 'wardrobe', 'makeup', () =>
@@ -4145,15 +4191,23 @@ export const ENTRIES: CatalogEntry[] = [
       .cyl([0.017, 0.015, 0.017], [0, 0.08, 0], { color: '#5c6166', parent: 'nut' });
     return b.act({ click: [[A.par(A.operate('nut', 'down'), A.pose('nut', { rot: [0, 720, 0], dur: 0.4 })), A.say('Whirr', 0.8)], [A.par(A.operate('nut', 'up'), A.pose('nut', { rot: [0, 0, 0], dur: 0.4 }))]] }).done();
   }),
-  // A cast-metal lever nutcracker: two hinged arms with ridged jaws near the hinge and a walnut between them;
-  // squeeze, crack.
+  // A chrome lever nutcracker (19 cm) stood on its handles: two arms on a riveted hinge, each bowing out round a
+  // toothed jaw that holds a walnut, then running down into a red rubber grip; squeeze, crack.
   e('nutcracker (kitchen)', 'kitchen', 'utensils', () => {
-    const b = m('nutcracker (kitchen)', { edge: S });
-    b.cyl([0.02, 0.014, 0.02], [0, 0.18, 0], { color: '#5c6166', rot: [90, 0, 0] })
-      .box([0.016, 0.18, 0.012], [0.025, 0.09, 0], { color: '#c9ccd1', rot: [0, 0, -8], round: 0.4, name: 'armL', pivot: [0, 0.18, 0] })
-      .box([0.016, 0.18, 0.012], [-0.025, 0.09, 0], { color: '#c9ccd1', rot: [0, 0, 8], round: 0.4, name: 'armR', pivot: [0, 0.18, 0] })
-      .ball(0.03, [0, 0.135, 0], { color: '#a87a4a', name: 'walnut', edge: F });
-    return b.act({ click: [A.par(A.pose('armL', { rot: [0, 0, 6], dur: 0.3 }), A.pose('armR', { rot: [0, 0, -6], dur: 0.3 })), A.par(A.pose('walnut', { scale: 0.75, dur: 0.1 }), A.say('CRACK!', 1), A.effect('dust', { dur: 0.6 })), A.par(A.pose('armL', { rot: [0, 0, 0], dur: 0.3 }), A.pose('armR', { rot: [0, 0, 0], dur: 0.3 }), A.pose('walnut', { scale: 1, dur: 0.3 }))] }).done();
+    const b = m('nutcracker (kitchen)', { edge: S }), H: V = [0, 0.19, 0], chrome = '#c9ccd1';
+    b.pair((s) => {
+      const arm = `arm${s > 0 ? 'L' : 'R'}`;
+      b.rod([s * 0.004, 0.19, 0], [s * 0.021, 0.168, 0], 0.012, chrome, { name: arm, pivot: H })
+        .rod([s * 0.021, 0.168, 0], [s * 0.025, 0.122, 0], 0.013, chrome, { parent: arm })
+        .rod([s * 0.025, 0.122, 0], [s * 0.048, 0.012, 0], 0.012, chrome, { parent: arm })
+        .rod([s * 0.035, 0.078, 0], [s * 0.047, 0.016, 0], 0.017, '#c8322a', { parent: arm, edge: F })
+        .each(3, (i) => b.box([0.005, 0.004, 0.012], [s * 0.0165, 0.134 + i * 0.011, 0], { color: '#9da3a8', parent: arm }));
+    });
+    b.cyl([0.017, 0.022, 0.017], H, { color: '#8f99a3', rot: [90, 0, 0] })
+      .cyl([0.008, 0.026, 0.008], H, { color: '#5c6166', rot: [90, 0, 0] })
+      .ball([0.031, 0.029, 0.029], [0, 0.145, 0], { color: '#a87a4a', name: 'walnut', edge: F })
+      .ball([0.004, 0.03, 0.031], [0, 0.145, 0], { color: '#7a5230', parent: 'walnut', noInk: true, edge: F });
+    return b.act({ click: [A.par(A.pose('armL', { rot: [0, 0, -5], dur: 0.3 }), A.pose('armR', { rot: [0, 0, 5], dur: 0.3 })), A.par(A.pose('walnut', { scale: 0.75, dur: 0.1 }), A.say('CRACK!', 1), A.effect('dust', { dur: 0.6 })), A.par(A.pose('armL', { rot: [0, 0, 0], dur: 0.3 }), A.pose('armR', { rot: [0, 0, 0], dur: 0.3 }), A.pose('walnut', { scale: 1, dur: 0.3 }))] }).done();
   }),
   // A wooden nutcracker soldier 40 cm tall: tall black busby with a gold plume, painted face and white beard, red
   // tunic with gold buttons and belt, black boots on a stand; his jaw drops and snaps shut.
@@ -4240,12 +4294,22 @@ export const ENTRIES: CatalogEntry[] = [
   // Cleopatra's Needle, an Egyptian obelisk 21 m tall in its real proportions: a single shaft of pink granite
   // carved with hieroglyphs, a gilded pyramidion on top and a stepped plinth; the sun glints off its cap.
   e('obelisk', 'places', 'landmarks', () => {
-    const b = m('obelisk', { edge: S }), g = '#c8a090';
+    // (a 4-sided prism's faces already face front with no turn: its size is the corner-to-corner width, so a
+    // 2.4 m square shaft is 2.4 * sqrt 2 across; the glyphs sit on the tapering front and right faces)
+    const b = m('obelisk', { edge: S }), g = '#c8a090', half = 1.2, tp = 0.62, y0 = 2.7, L = 17.6;
+    const face = (y: number) => half * (1 - (1 - tp) * ((y - y0) / L));
     b.each(3, (i) => b.box([6 - i * 1.0, 0.5, 6 - i * 1.0], [0, 0.25 + i * 0.5, 0], { color: '#b8b2a4' }))
-      .box([2.8, 1.2, 2.8], [0, 2.1, 0], { color: '#a8a296' })
-      .cyl([2.4, 17.6, 2.4], [0, 11.5, 0], { color: g, segs: 4, taper: 0.62, rot: [0, 45, 0] })
-      .pyramid([1.5, 1.4, 1.5], [0, 21.0, 0], 4, { color: '#e2b23a', rot: [0, 45, 0], name: 'cap' });
-    for (let i = 0; i < 9; i++) for (const c of [-1, 0, 1]) b.box([0.2, 0.3, 0.04], [c * 0.42 * (1 - i * 0.035), 4.5 + i * 1.7, 0.85 - i * 0.033], { color: '#9a7060', noInk: true });
+      .box([3.4, 1.2, 3.4], [0, 2.1, 0], { color: '#a8a296' })
+      .box([3.6, 0.15, 3.6], [0, 2.62, 0], { color: '#b8b2a4' })
+      .cyl([2 * half * Math.SQRT2, L, 2 * half * Math.SQRT2], [0, y0 + L / 2, 0], { color: g, segs: 4, taper: tp })
+      .pyramid([2 * half * tp * Math.SQRT2, 1.4, 2 * half * tp * Math.SQRT2], [0, y0 + L + 0.7, 0], 4, { color: '#e2b23a', name: 'cap' });
+    for (let i = 0; i < 9; i++) {
+      const y = 4.5 + i * 1.7, f = face(y), k = f / half;
+      for (const c of [-1, 0, 1]) {
+        b.box([0.26, 0.36, 0.03], [c * 0.55 * k, y, f - 0.008], { color: '#9a7060', noInk: true, round: 0.1 });
+        b.box([0.03, 0.36, 0.26], [f - 0.008, y, c * 0.55 * k], { color: '#9a7060', noInk: true, round: 0.1 });
+      }
+    }
     return b.act({ click: [A.par(A.effect('sparkle', { dur: 1.5 }), A.pose('cap', { scale: 1.1, dur: 0.3 })), A.pose('cap', { scale: 1, dur: 0.3 })] }).done();
   }),
   // An oboe standing on its peg: the black grenadilla body in three joints, silver keys and rings, the flared

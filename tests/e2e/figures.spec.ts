@@ -45,7 +45,11 @@ test('start screen -> visuals demo: figures in every style, clicks make them rea
   expect(reacting).toBeTruthy();
 
   // the Look setting turns things with a figure into paper or 3D everywhere (gallery pieces keep their own look)
+  // (new visitors start in the cel look: every word has a sculpted model)
   if (!isMobile) {
+    await expect(page.locator('button[data-view=look] .v')).toHaveText('cel');
+    await page.click('button[data-view=look]');
+    await expect(page.locator('button[data-view=look] .v')).toHaveText('sprites');
     await page.click('button[data-view=look]');
     await expect(page.locator('button[data-view=look] .v')).toHaveText('paper');
     await page.click('button[data-view=look]');
@@ -55,8 +59,6 @@ test('start screen -> visuals demo: figures in every style, clicks make them rea
     expect(await page.evaluate(() => (window as any).__game.scene.look)).toBe('toon');
     await page.click('button[data-view=look]');
     await expect(page.locator('button[data-view=look] .v')).toHaveText('cel');
-    await page.click('button[data-view=look]');
-    await expect(page.locator('button[data-view=look] .v')).toHaveText('sprites');
   }
 
   // a second visit from the start screen reopens the same demo world

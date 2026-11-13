@@ -225,5 +225,6 @@ export class WorldModel {
 }
 
 export function cloneEntity(e: Entity): Entity {
-  return { ...e, pos: [...e.pos], sprite: { ...e.sprite }, state: { ...e.state }, effects: [...e.effects] };
+  // part poses change in place as they tween, so a snapshot (undo, save) gets its own copy
+  return { ...e, pos: [...e.pos], sprite: { ...e.sprite }, state: { ...e.state }, effects: [...e.effects], ...(e.pose ? { pose: structuredClone(e.pose) } : {}) };
 }

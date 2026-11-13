@@ -144,6 +144,11 @@ function evict(): void {
       g.dispose();
       geoCache.delete(k);
     }
+    const pc = pieceCache.get(k);
+    if (pc) {
+      for (const x of [pc.solid, pc.line, pc.glow]) x?.dispose();
+      pieceCache.delete(k);
+    }
   }
 }
 
@@ -190,7 +195,9 @@ function outlineMaterial(width: number): THREE.MeshBasicMaterial {
   const uWidth = { value: width };
   chainShaderHook(mat, 'cel-outline', (shader) => {
     shader.uniforms.uOutline = uWidth;
-    shader.vertexShader = 'uniform float uOutline;\n' + shader.vertexShader.replace('#include <skinning_vertex>', '#include <skinning_vertex>\ntransformed += normalize(objectNormal) * uOutline;');
+    // the skinned normal keeps its bone's scale (bind normals are unit length), so a hidden piece's outline
+    // shrinks away with it instead of leaving an ink dot
+    shader.vertexShader = 'uniform float uOutline;\n' + shader.vertexShader.replace('#include <skinning_vertex>', '#include <skinning_vertex>\ntransformed += objectNormal * uOutline;');
   });
   return tinted(mat);
 }
@@ -280,10 +287,18 @@ function mergePieces(list: PieceGeo[], bones: THREE.Bone[], outline: boolean): T
   const n = use.reduce((k, x) => k + x.geo.attributes.position.count, 0);
   const position = new Float32Array(n * 3), normal = new Float32Array(n * 3), color = new Float32Array(n * 3);
   const skinIndex = new Uint16Array(n * 4), skinWeight = new Float32Array(n * 4);
+  // pieces keep their triangles: an indexed piece (a ball, a capsule) brings its index, offset; a creased one
+  // (already a triangle list) gets one counting up
+  const ni = use.reduce((k, x) => k + (x.geo.index ? x.geo.index.count : x.geo.attributes.position.count), 0);
+  const index = n > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+  let io = 0;
   const v = new THREE.Vector3();
   const nm = new THREE.Matrix3();
   let o = 0;
   for (const x of use) {
+    const idx = x.geo.index;
+    if (idx) for (let i = 0; i < idx.count; i++) index[io++] = o + idx.getX(i);
+    else for (let i = 0; i < x.geo.attributes.position.count; i++) index[io++] = o + i;
     const m = bones[x.bone].matrixWorld;
     nm.getNormalMatrix(m);
     const pos = x.geo.attributes.position;
@@ -305,9 +320,22 @@ function mergePieces(list: PieceGeo[], bones: THREE.Bone[], outline: boolean): T
   g.setAttribute('color', new THREE.BufferAttribute(color, 3));
   g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndex, 4));
   g.setAttribute('skinWeight', new THREE.BufferAttribute(skinWeight, 4));
+  g.setIndex(new THREE.BufferAttribute(index, 1));
   g.computeBoundingSphere();
   return g;
 }
+
+/** The merged pieces of a figure (they depend only on the figure), shared by every copy and evicted with its skin. */
+interface MergedPieces {
+  solid: THREE.BufferGeometry | null;
+  line: THREE.BufferGeometry | null;
+  glow: THREE.BufferGeometry | null;
+}
+const pieceCache = new Map<string, MergedPieces>();
+
+/** What a click hits: an invisible box round the figure (cheap to test, and it takes in an opened door). */
+const PICK_GEO = new THREE.BoxGeometry(1, 1, 1);
+const PICK_MAT = new THREE.MeshBasicMaterial({ visible: false });
 
 export class CelFigure {
   /** Figure space: feet at 0, +z is the front. */
@@ -326,6 +354,8 @@ export class CelFigure {
   /** Ink and tiny details: a few pixels when the figure is far away, but each still costs a draw call. */
   private readonly nearOnly: THREE.Object3D[] = [];
   private far = false;
+  private readonly skeletons: THREE.Skeleton[] = [];
+  private readonly pick: THREE.Mesh;
 
   constructor(
     readonly fig: Figure,
@@ -361,15 +391,24 @@ export class CelFigure {
     this.mats.push(skinMat, lineMat);
     const skin = new THREE.SkinnedMesh(geo, skinMat);
     const line = new THREE.SkinnedMesh(geo, lineMat);
+    // a fixed sphere round the whole figure (with room for its moving parts) so off-screen figures are culled
+    const reach = Math.hypot(H / 2, Math.max(fig.halfW, fig.halfD)) * 1.35 + ink;
+    const sphere = new THREE.Sphere(new THREE.Vector3(0, H / 2, 0), reach);
     for (const m of [skin, line]) {
-      m.frustumCulled = false;
+      m.boundingSphere = sphere.clone();
       this.group.add(m);
     }
+    this.pick = new THREE.Mesh(PICK_GEO, PICK_MAT);
+    this.pick.scale.set(Math.max(0.05, fig.halfW * 2), Math.max(0.05, H), Math.max(0.05, fig.halfD * 2));
+    this.pick.position.y = H / 2;
+    this.pick.userData.entityId = entityId;
+    this.group.add(this.pick);
     skin.userData.entityId = entityId;
     this.solids.push(skin);
     this.nearOnly.push(line);
     this.group.updateMatrixWorld(true);
     const skeleton = new THREE.Skeleton(s.bones.map((n) => bones.get(n)!));
+    this.skeletons.push(skeleton);
     skin.bind(skeleton);
     line.bind(skeleton);
 
@@ -377,6 +416,7 @@ export class CelFigure {
     // one rigidly skinned mesh with its outline (crisp creased normals on sharp parts), glowing ones into an unlit
     // one; each rides a piece bone of its own, so pieces move, hide and blink by their bones
     const separate = new Set(s.separate);
+    const cached = pieceCache.get(fig.key);
     const plain: PieceGeo[] = [];
     const glow: PieceGeo[] = [];
     const pieceBones: THREE.Bone[] = [];
@@ -402,16 +442,21 @@ export class CelFigure {
         continue;
       }
       if (!separate.has(p.name)) continue;
-      const sharp = (p.edge ?? fig.edge) === 'sharp';
-      const built = smoothGeometry(p);
-      let g = built.geo;
-      g.scale(...built.scale);
-      if (sharp) {
-        const c = toCreasedNormals(g, CREASE);
-        if (c !== g) g.dispose();
-        g = c;
-      }
-      if ((p.role === 'label' && p.text) || p.mover?.kind === 'light') {
+      const own = (p.role === 'label' && p.text) || p.mover?.kind === 'light';
+      // merged pieces another copy of this figure already built need only their bones here
+      const geoOf = (): THREE.BufferGeometry => {
+        const built = smoothGeometry(p);
+        let g = built.geo;
+        g.scale(...built.scale);
+        if ((p.edge ?? fig.edge) === 'sharp') {
+          const c = toCreasedNormals(g, CREASE);
+          if (c !== g) g.dispose();
+          g = c;
+        }
+        return g;
+      };
+      if (own) {
+        const g = geoOf();
         // printed cards and switchable lights keep a mesh of their own (a texture; a material that changes)
         const holder = new THREE.Object3D();
         if (p.off) holder.position.set(...p.off);
@@ -439,20 +484,28 @@ export class CelFigure {
       if (p.off) pb.position.set(...p.off);
       if (p.srot) pb.rotation.set(p.srot[0] * DEG, p.srot[1] * DEG, p.srot[2] * DEG, 'XYZ');
       j.bone.add(pb);
-      const entry: PieceGeo = { geo: g, bone: pieceBones.length, color: new THREE.Color(p.color), ink: !p.noInk && p.role !== 'glow' && p.role !== 'eye' };
+      if (!cached) {
+        const entry: PieceGeo = { geo: geoOf(), bone: pieceBones.length, color: new THREE.Color(p.color), ink: !p.noInk && p.role !== 'glow' && p.role !== 'eye' };
+        (p.role === 'glow' ? glow : plain).push(entry);
+      }
       pieceBones.push(pb);
       if (p.role === 'eye') this.eyes.push(pb);
-      (p.role === 'glow' ? glow : plain).push(entry);
     }
     if (pieceBones.length) {
       this.group.updateMatrixWorld(true);
       const skeleton = new THREE.Skeleton(pieceBones);
+      this.skeletons.push(skeleton);
+      let merged = cached;
+      if (!merged) {
+        merged = { solid: mergePieces(plain, pieceBones, false), line: mergePieces(plain, pieceBones, true), glow: mergePieces(glow, pieceBones, false) };
+        for (const x of [...plain, ...glow]) x.geo.dispose();
+        pieceCache.set(fig.key, merged);
+      }
       const add = (geo: THREE.BufferGeometry | null, mat: THREE.Material, kind: 'solid' | 'line') => {
         if (!geo) return;
-        this.geos.push(geo);
         this.mats.push(mat);
         const mesh = new THREE.SkinnedMesh(geo, mat);
-        mesh.frustumCulled = false;
+        mesh.boundingSphere = sphere.clone();
         this.group.add(mesh);
         mesh.bind(skeleton);
         if (kind === 'solid') {
@@ -460,15 +513,14 @@ export class CelFigure {
           this.solids.push(mesh);
         } else this.nearOnly.push(mesh);
       };
-      add(mergePieces(plain, pieceBones, false), celMaterial('#ffffff', true), 'solid');
-      add(mergePieces(plain, pieceBones, true), outlineMaterial(ink), 'line');
-      add(mergePieces(glow, pieceBones, false), tinted(new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true }), true), 'solid');
-      for (const x of [...plain, ...glow]) x.geo.dispose();
+      add(merged.solid, celMaterial('#ffffff', true), 'solid');
+      add(merged.line, outlineMaterial(ink), 'line');
+      add(merged.glow, tinted(new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true }), true), 'solid');
     }
   }
 
   get pickables(): THREE.Object3D[] {
-    return this.solids;
+    return [this.pick];
   }
 
   /** Far away: drop the outline, the face, ink shells and tiny details (fewer draw calls where nobody can see them). */
@@ -522,6 +574,7 @@ export class CelFigure {
   dispose(): void {
     for (const m of this.mats) m.dispose();
     for (const g of this.geos) g.dispose();
+    for (const k of this.skeletons) k.dispose();
     if (this.key) release(this.key);
   }
 }

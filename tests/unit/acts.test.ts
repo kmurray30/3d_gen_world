@@ -129,6 +129,16 @@ describe('acts, movers, sockets and pieces', () => {
     expect(e.world.get('f')!.pose).toBeUndefined();
   });
 
+  it('a move relative to itself goes by its own front and ends (it does not chase itself)', () => {
+    const e = world(thing('d', 'toaster', [0, 0, 0], 90));
+    e.run([{ op: 'move', id: 'd', to: { rel: 'front', of: 'd', dist: 'near' } } as never]);
+    run(e, 4);
+    const p = e.world.get('d')!.pos;
+    expect(p[0]).toBeGreaterThan(1.5); // yaw 90: its front is +x
+    expect(Math.abs(p[2])).toBeLessThan(0.2);
+    expect(e.scheduler.busy).toBe(false);
+  });
+
   it('attach puts a thing into a socket by its name or its kind', () => {
     const e = world(thing('t', 'toaster', [0, 0, 0]), thing('b', 'slice of bread', [1, 0, 0]));
     e.run([{ op: 'attach', id: 'b', to: 't', where: 'slot' }]);

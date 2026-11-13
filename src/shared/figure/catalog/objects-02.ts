@@ -2168,11 +2168,17 @@ export const ENTRIES: CatalogEntry[] = [
   // fin, landing gear in side fairings and a cockpit glazed all round.
   e('cargo plane', 'garage', 'aircraft', () => {
     const G = '#8a9099';
+    // the tall fin: a loft stood upright with level root and tip chords sliding back with height, so it sits flush
+    // on the upswept tail and its leading edge sweeps back
+    const vfin = (root: V, h: number, chord: number, tip: number, thick: number, sweep: number, color: string) => {
+      const zf = root[2] + chord / 2, sw = h * Math.tan(sweep * RAD);
+      const zb = Math.min(root[2] - chord / 2, zf - sw - tip), D = zf - zb, zc = (zf + zb) / 2;
+      return b.loft([thick, D, h], [root[0], root[1] + h / 2, zc], [[0, 1, chord / D, (zc - root[2]) / D], [1, 0.55, tip / D, (zc - (zf - sw - tip / 2)) / D]], { color, boxy: 0.75, rot: [-90, 0, 0], edge: 'sharp' });
+    };
     const b = m('cargo plane', { view: 'side' })
       .loft([4.4, 4.6, 29], [0, 3.3, 0], [[0, 0.25, 0.3, 0.32], [0.14, 0.72, 0.72, 0.15], [0.3, 1, 1, 0], [0.84, 1, 1, 0], [0.95, 0.86, 0.84, -0.04], [1, 0.42, 0.42, -0.08]], { color: G, boxy: 0.35, name: 'fuselage' })
       .loft([2.8, 0.9, 2.6], [0, 4.85, 12.4], [[0, 0.6, 0.3, -0.2], [0.5, 1, 1, 0], [1, 0.6, 0.4, -0.25]], { color: '#1e2633', boxy: 0.5, edge: 'sharp' })
       .box([40, 0.45, 4.2], [0, 5.62, 1.6], { color: G, round: 0.3, edge: 'sharp' })
-      .box([0.45, 6.2, 4.4], [0, 8.4, -12.3], { color: G, rot: [-18, 0, 0], round: 0.3, edge: 'sharp' })
       .box([14, 0.3, 3.0], [0, 5.9, -12.9], { color: G, round: 0.3, edge: 'sharp' })
       .label('USAF 4021', [3.5, 0.5], [2.25, 3.6, -4], { color: 'white', rot: [0, 90, 0], depth: 0.02 })
       .box([3.0, 0.15, 4.35], [0, 2.15, -10.5], { color: '#6b7076', rot: [-23, 0, 0], round: 0.2, edge: 'sharp', name: 'ramp', pivot: [0, 1.3, -8.5], mover: { kind: 'swing', axis: 'x', amount: -42 } });
@@ -2187,6 +2193,7 @@ export const ENTRIES: CatalogEntry[] = [
       for (const z of [-0.9, 0.9]) b.cyl([1.1, 0.4, 1.1], [s * 2.25, 0.55, z], { color: 'rubber', rot: [0, 0, 90], edge: 'soft', name: `wheel${s > 0 ? 'L' : 'R'}${z > 0 ? 'f' : 'b'}` });
       b.each(3, (i) => sidePane(b, s, 2.15, 4.0, 4 + i * 1.5, 0.35, 0.35));
     });
+    vfin([0, 5.4, -11.5], 6.6, 5.6, 3.0, 0.45, 20, G);
     b.stick([0, 1.1, 11.2], [0, 0.45, 11.2], 0.2, 'silver');
     axle(b, 0.25, 0.4, 11.2, 0.8, 0.25, 'wheelN');
     return b
@@ -2424,14 +2431,24 @@ export const ENTRIES: CatalogEntry[] = [
       })
       .done();
   }),
-  // An orange stoneware casserole with handles and a bubbling cheesy top.
+  // A glazed stoneware casserole dish (30 x 20 cm) fresh from the oven on a cork trivet: a crisp dish with a rolled
+  // lip and lug handles, a soft golden cheesy top with browned patches and bubbles, and a serving spoon dug in. It
+  // steams and bubbles.
   e('casserole', 'kitchen', 'cookware', () => {
-    const b = m('casserole')
-      .box([0.32, 0.08, 0.22], [0, 0.04, 0], { color: 'orange', round: 0.6 })
-      .box([0.3, 0.02, 0.2], [0, 0.078, 0], { color: 'cheese', round: 0.6 });
-    for (const [x, z] of [[-0.08, 0.03], [0.05, -0.04], [0.09, 0.05], [-0.03, -0.05]]) b.ball([0.04, 0.008, 0.03], [x, 0.088, z], { color: '#c98a2e', noInk: true });
-    b.pair((s) => b.box([0.05, 0.02, 0.1], [s * 0.18, 0.07, 0], { color: 'orange', round: 0.5 }));
-    return b.act({ click: [A.par(A.effect('steam', { dur: 2 }), A.say('Blub, blub, blub...', 2), A.anim('bounce', 2))] }).done();
+    const glaze = '#cf5528';
+    const b = m('casserole', { edge: 'sharp' })
+      .box([0.34, 0.012, 0.24], [0, 0.006, 0], { color: 'tan', round: 0.3 })
+      .box([0.3, 0.06, 0.2], [0, 0.042, 0], { color: glaze, round: 0.35 })
+      .box([0.316, 0.012, 0.216], [0, 0.068, 0], { color: glaze, round: 0.6 })
+      .box([0.282, 0.022, 0.182], [0, 0.072, 0], { color: '#eab54f', round: 0.9, edge: 'soft' });
+    b.pair((s) => b.box([0.036, 0.014, 0.12], [s * 0.168, 0.066, 0], { color: glaze, round: 0.7 }));
+    for (const [x, z, w] of [[-0.09, 0.04, 0.05], [0.04, -0.05, 0.06], [0.1, 0.045, 0.04], [-0.04, -0.03, 0.035], [-0.11, -0.05, 0.03]]) b.ball([w, 0.008, w * 0.7], [x, 0.0815, z], { color: '#b5702c', noInk: true, edge: 'soft' });
+    [[-0.02, 0.05], [0.07, -0.01], [-0.08, -0.01]].forEach(([x, z], i) => b.ball([0.022, 0.012, 0.022], [x, 0.083, z], { color: '#f6d77e', name: `bub${i + 1}`, edge: 'soft' }));
+    // the serving spoon, its bowl sunk in the top and the handle over the front corner
+    b.ball([0.05, 0.012, 0.065], [0.06, 0.082, 0.03], { color: 'silver', rot: [0, 35, 0] })
+      .rod([0.075, 0.084, 0.055], [0.19, 0.125, 0.15], 0.012, 'silver');
+    const pop = (n: number, d: number, k: number) => A.pose(`bub${n}`, { scale: k, dur: d, times: 3 });
+    return b.act({ click: [A.par(A.effect('steam', { dur: 2 }), A.say('Blub, blub, blub...', 2), pop(1, 0.3, 1.8), pop(2, 0.22, 1.6), pop(3, 0.36, 2))] }).done();
   }),
   // An audio cassette: its two reels turn when it plays.
   e('cassette', 'music', 'audio gear', () => {
@@ -2466,7 +2483,7 @@ export const ENTRIES: CatalogEntry[] = [
     const b = m('castle', { edge: 'sharp' })
       .box([40, 0.2, 40], [0, 0.1, 0], { color: 'grass', round: 0.02 })
       .box([12, 22, 12], [0, 11, -4], { color: D, round: 0.01 })
-      .pyramid([13, 6, 13], [0, 25, -4], 4, { color: '#2f4f8f', rot: [0, 45, 0] })
+      .pyramid([13 * Math.SQRT2, 6, 13 * Math.SQRT2], [0, 25, -4], 4, { color: '#2f4f8f' })
       .stick([0, 28, -4], [0, 32, -4], 0.15, 'darkgray')
       .wedge([2.4, 1.5, 0.05], [1.2, 31.2, -4], { color: '#c0362c', rot: [0, 0, -90] });
     b.pair((s) => {
@@ -2544,26 +2561,50 @@ export const ENTRIES: CatalogEntry[] = [
     b.ball(0.036, [0.025, 0.25, 0], { color: 'white', parent: 'tail' });
     return b.act({ click: [A.pose('tail', { rot: [0, 0, 25], dur: 0.3 }), A.pose('tail', { rot: [0, 0, -25], dur: 0.4 }), A.pose('tail', { rot: [0, 0, 15], dur: 0.35 }), A.pose('tail', { rot: [0, 0, 0], dur: 0.3 })] }).done();
   }),
-  // A 12 m cruising catamaran: two slim hulls (lofts), a bridgedeck cabin with wraparound windows, a trampoline net
-  // between the bows, a 15 m mast with a mainsail on a swinging boom and a jib.
+  // A 12 m cruising catamaran (6.9 m beam, mast 16.5 m above the water): two slim moulded hulls (bottom-cut lofts
+  // that lift at the bow and the transom) with a dark strip of hull windows, a bridgedeck between them, a
+  // crisp deck saloon with wraparound windows and a hardtop that runs back over the cockpit (a person stands under
+  // it), the helm wheel, a dark trampoline net between the bows on a crossbeam, and a deck-stepped mast with
+  // shrouds and forestay, a triangular mainsail on a boom that swings and a jib. Wedges here are [base along the
+  // boat, height, thickness] turned edge-on (rot y 90), so the sails are real triangles.
   e('catamaran', 'garage', 'boats', () => {
-    const hull: Array<[number, number, number, number]> = [[0, 0.8, 1, 0.05], [0.15, 1, 1, 0], [0.7, 1, 1, 0], [0.92, 0.6, 1, 0.05], [1, 0.08, 0.9, 0.12]];
+    const hull: Array<[number, number, number, number]> = [[0, 0.86, 0.76, 0], [0.06, 0.97, 0.92, 0], [0.62, 1, 1, 0], [0.86, 0.8, 0.9, 0], [0.97, 0.3, 0.76, 0], [1, 0.1, 0.7, 0]];
     const b = m('catamaran', { view: 'side' });
     b.pair((s) => {
-      b.loft([1.3, 1.8, 12], [s * 2.6, 0.9, 0], hull, { color: 'white', boxy: 0.5, name: `hull${s > 0 ? 'L' : 'R'}` });
-      b.box([1.32, 0.12, 10], [s * 2.6, 0.55, -0.5], { color: '#2f6fb0', round: 0, noInk: true });
-      b.each(3, (i) => sidePane(b, s, 3.25, 1.35, -3 + i * 1.6, 0.18, 0.7));
+      const hn = `hull${s > 0 ? 'L' : 'R'}`;
+      b.loft([1.4, 3.2, 11.8], [s * 2.75, 1.6, 0], hull, { color: 'white', cut: 'bottom', boxy: 0.55, name: hn, edge: 'soft' });
+      // the long dark strip of hull windows along the straight middle of each hull
+      b.box([1.43, 0.26, 5.6], [s * 2.75, 1.08, -1.4], { color: '#2f3d52', round: 0.3, edge: 'sharp', noInk: true });
+      // hardtop posts at the back of the cockpit, shrouds out to the hulls
+      b.stick([s * 2.7, 1.55, -5.0], [s * 2.7, 3.42, -5.0], 0.09, 'silver');
+      b.stick([s * 0.06, 16.3, 1.2], [s * 3.3, 1.6, 0.9], 0.025, '#5c6166');
     });
-    b.box([6.4, 0.35, 6.5], [0, 1.85, -2.2], { color: 'white', round: 0.3, edge: 'sharp' })
-      .box([4.6, 1.1, 4.2], [0, 2.55, -1.8], { color: 'white', round: 0.4 })
-      .box([4.64, 0.45, 3.6], [0, 2.65, -1.7], { color: '#2f3d52', round: 0.4, edge: 'sharp' })
-      .box([4.0, 0.06, 4.0], [0, 1.72, 3.2], { color: '#2a2726', round: 0, edge: 'sharp' })
-      .stick([0, 2.0, 0.6], [0, 15.5, 0.6], 0.2, 'silver')
-      .stick([0, 3.4, 0.6], [0, 3.4, -5.2], 0.13, 'silver', { name: 'boom', pivot: [0, 3.4, 0.6], mover: { kind: 'swing', axis: 'y', amount: 30 } })
-      .wedge([0.05, 11.8, 5.6], [0, 9.3, -2.2], { color: 'white', rot: [0, 90, 0], apex: -0.5, parent: 'boom', edge: 'sharp' })
-      .wedge([0.04, 11.5, 4.6], [0, 8.6, 3.0], { color: '#d8ecf8', rot: [0, 90, 0], apex: 0.5, edge: 'sharp' })
-      .stick([0, 15.4, 0.6], [0, 2.0, 5.6], 0.03, 'darkgray')
-      .socket('deck', [0, 2.05, -3.8], 'top', { size: 2 });
+    // bridgedeck, saloon, hardtop
+    b.box([6.8, 0.4, 7.4], [0, 1.35, -1.6], { color: 'white', round: 0.1, edge: 'sharp' })
+      .box([5.6, 1.85, 4.2], [0, 2.47, -0.1], { color: 'white', round: 0.08, edge: 'sharp' })
+      .box([5.64, 0.72, 3.7], [0, 2.82, -0.1], { color: '#2f3d52', round: 0.1, edge: 'sharp' })
+      .box([5.1, 0.72, 0.06], [0, 2.8, 2.02], { color: '#2f3d52', rot: [-12, 0, 0], round: 0.1, edge: 'sharp' })
+      .box([1.7, 1.75, 0.06], [0.9, 2.45, -2.22], { color: '#3d5a73', round: 0.1, edge: 'sharp' })
+      .box([5.7, 0.16, 7.2], [0, 3.48, -1.55], { color: 'white', round: 0.3, edge: 'sharp' })
+      // cockpit: bench across the back, table, helm wheel on its pedestal
+      .box([4.6, 0.45, 0.6], [0, 1.78, -4.85], { color: 'white', round: 0.3, edge: 'sharp' })
+      .box([4.6, 0.12, 0.62], [0, 2.06, -4.85], { color: '#c9a36a', round: 0.3, edge: 'sharp' })
+      .box([1.4, 0.06, 0.9], [0, 2.3, -3.6], { color: '#c9a36a', round: 0.3, edge: 'sharp' })
+      .stick([0, 1.55, -3.6], [0, 2.28, -3.6], 0.1, 'silver')
+      .box([0.35, 1.0, 0.35], [-2.5, 2.05, -2.7], { color: 'white', round: 0.3, edge: 'sharp' })
+      .torus([0.7, 0.7, 0.05], [-2.5, 2.75, -2.95], { color: 'silver', rot: [-15, 0, 0], tube: 0.1, edge: 'sharp' })
+      // trampoline between the bows, front crossbeam
+      .box([4.1, 0.04, 3.4], [0, 1.5, 3.95], { color: '#2a2726', round: 0, edge: 'sharp', noInk: true })
+      .box([5.6, 0.2, 0.28], [0, 1.5, 5.55], { color: '#c9ccd1', round: 0.3, edge: 'sharp' })
+      // mast on the saloon roof, boom, sails, forestay
+      .stick([0, 3.55, 1.2], [0, 16.5, 1.2], 0.22, 'silver')
+      .stick([0, 4.3, 1.2], [0, 4.3, -5.0], 0.14, 'silver', { name: 'boom', pivot: [0, 4.3, 1.2], mover: { kind: 'swing', axis: 'y', amount: 30 } })
+      .wedge([6.1, 11.8, 0.05], [0, 10.3, -1.85], { color: 'white', rot: [0, 90, 0], apex: -0.5, parent: 'boom', edge: 'sharp' })
+      .box([0.07, 0.06, 6.0], [0, 4.38, -1.85], { color: '#1f3b66', parent: 'boom', edge: 'sharp' })
+      .wedge([4.3, 11.2, 0.04], [0, 7.45, 3.55], { color: '#d8ecf8', rot: [0, 90, 0], apex: 0.45, edge: 'sharp' })
+      .stick([0, 16.3, 1.2], [0, 1.6, 5.55], 0.03, '#5c6166')
+      .socket('deck', [0, 1.6, -3.0], 'top', { size: 2 })
+      .socket('helm', [-2.0, 1.95, -3.4], 'seat');
     return b.act({ click: [[A.operate('boom', 'out'), A.par(A.effect('water_spray', { dur: 1.5 }), A.anim('wobble'))], [A.operate('boom', 'in')]] }).done();
   }),
   // A siege catapult at real size: a wheeled timber frame, an A-frame with a padded crossbar, a twisted-rope
@@ -3028,26 +3069,50 @@ export const ENTRIES: CatalogEntry[] = [
     path(b, [[0.02, 0.006, 0], [0.06, 0.004, 0.025], [0.1, 0.004, -0.01], [0.13, 0.004, 0.03]], 0.006, 'white');
     return b.act({ click: [[A.operate('led', 'on'), A.say('Bzzt... charging!', 1.5)], [A.operate('led', 'off')]] }).done();
   }),
-  // A Roman war chariot at real size: a D-shaped car with a high curved front, two big spoked wheels on an axle,
-  // and the pole and yoke for the horses. The wheels spin in a cloud of dust.
+  // A Roman racing chariot at real size: a light D-shaped car whose floor is 0.7 m up (a 1.7 m driver stands in it
+  // and the curved front comes to his waist), a red-painted breastwork in one curved sheet with a gilded rim and a
+  // gold medallion, low side panels sloping down to the open back with gilded handrails, two 0.95 m eight-spoked
+  // wheels on an iron axle under the back of the car with linchpins, and the draught pole curving forward and up to
+  // the yoke with its two neck saddles for the horses. Wood and metal, so crisp edges. The wheels spin in a cloud of
+  // dust.
   e('chariot', 'garage', 'horse-drawn', () => {
-    const b = m('chariot', { view: 'side' })
-      .box([1.3, 0.08, 0.8], [0, 0.72, -0.1], { color: 'wood', edge: 'sharp' })
-      .cyl([1.3, 0.08, 0.7], [0, 0.72, 0.3], { color: 'wood', edge: 'sharp' })
-      .arc([1.36, 1.0, 0.5], [0, 0.74, 0.2], { color: '#e2b23a', rot: [-90, 0, 0], arc: 180, tube: 0.07 })
-      .box([1.3, 0.6, 0.06], [0, 1.03, 0.62], { color: '#e2b23a', round: 0.3, edge: 'sharp' })
-      .box([1.22, 0.5, 0.04], [0, 1.03, 0.6], { color: '#a3322a', round: 0.3, edge: 'sharp' })
-      .star(0.3, [0, 1.05, 0.66], { color: '#e2b23a' })
-      .torus([1.36, 0.6, 0.06], [0, 1.33, 0.32], { color: '#e2b23a', rot: [90, 0, 0], tube: 0.3, arc: 180 })
-      .rod([0, 0.75, 0.45], [0, 1.05, 2.6], 0.1, 'wood')
-      .stick([-0.65, 1.05, 2.5], [0.65, 1.05, 2.5], 0.08, 'wood')
-      .stick([-0.85, 0.5, -0.1], [0.85, 0.5, -0.1], 0.08, 'iron')
-      .socket('car', [0, 0.78, 0], 'top', { size: 0.9 });
+    const red = '#a3322a', gold = '#e2b23a', fy = 0.7, fz = 0.05, R = 0.56, wall = 0.82;
+    const b = m('chariot', { view: 'side', edge: 'sharp' })
+      // D-shaped floor: a box at the back and a half disc at the front, on two runners
+      .box([2 * R, 0.07, 0.5], [0, fy - 0.035, fz - 0.25], { color: 'wood', round: 0.2 })
+      .cyl([2 * R, 0.07, 1.1], [0, fy - 0.035, fz], { color: 'wood' })
+      .box([0.08, 0.1, 1.1], [0.35, fy - 0.12, 0.05], { color: 'darkwood', round: 0.2 })
+      .box([0.08, 0.1, 1.1], [-0.35, fy - 0.12, 0.05], { color: 'darkwood', round: 0.2 })
+      // the breastwork: one curved sheet round the front, a gilded rim along its top, a medallion
+      .arc([2 * R + 0.06, 2 * R + 0.06, wall], [0, fy + wall / 2, fz], { color: red, rot: [90, 0, 0], arc: 180, tube: 0.07 })
+      .arc([2 * R + 0.1, 2 * R + 0.1, 0.07], [0, fy + wall, fz], { color: gold, rot: [90, 0, 0], arc: 180, tube: 0.1 })
+      .arc([2 * R + 0.1, 2 * R + 0.1, 0.05], [0, fy + 0.05, fz], { color: gold, rot: [90, 0, 0], arc: 180, tube: 0.08 })
+      .cyl([0.34, 0.04, 0.34], [0, fy + 0.45, fz + R + 0.03], { color: gold, rot: [90, 0, 0] })
+      .star(0.2, [0, fy + 0.45, fz + R + 0.06], { color: '#f6d77a' })
+      // iron axle under the back of the car, the pole curving up to the yoke
+      .stick([-0.92, 0.47, -0.2], [0.92, 0.47, -0.2], 0.07, 'iron')
+      .rod([0, fy - 0.14, 0.4], [0, 0.72, 1.4], 0.11, 'darkwood')
+      .rod([0, 0.72, 1.4], [0, 1.1, 2.4], 0.1, 'darkwood')
+      .rod([0, 1.1, 2.4], [0, 1.22, 2.75], 0.09, 'darkwood')
+      .stick([-0.75, 1.24, 2.7], [0.75, 1.24, 2.7], 0.09, 'darkwood')
+      .socket('car', [0, fy + 0.02, -0.12], 'top', { size: 0.8 });
     b.pair((s) => {
-      b.wedge([0.9, 0.55, 0.05], [s * 0.64, 0.98, 0.08], { color: '#e2b23a', rot: [0, 90, 0], apex: -0.5, edge: 'sharp' });
-      spoked(b, s * 0.78, 0.5, -0.1, 1.0, 'darkwood', 8, `wheel${s > 0 ? 'L' : 'R'}`);
+      // low side panel from the end of the breastwork back to the open rear, a gilded handrail along its top edge
+      b.wedge([0.5, wall, 0.03], [s * R, fy + wall / 2, fz - 0.25], { color: red, rot: [0, 90, 0], apex: -0.5 });
+      b.rod([s * R, fy + wall, fz], [s * R, fy + 0.2, fz - 0.5], 0.045, gold);
+      b.stick([s * R, fy, fz - 0.5], [s * R, fy + 0.2, fz - 0.5], 0.04, gold);
+      // wheel with an iron tyre, linchpin through the hub
+      spoked(b, s * 0.82, 0.47, -0.2, 0.95, 'darkwood', 8, `wheel${s > 0 ? 'L' : 'R'}`);
+      b.torus([0.97, 0.97, 0.06], [s * 0.82, 0.47, -0.2], { color: 'iron', rot: [0, 90, 0], tube: 0.05, parent: `wheel${s > 0 ? 'L' : 'R'}` });
+      b.stick([s * 0.93, 0.36, -0.2], [s * 0.93, 0.58, -0.2], 0.035, 'iron');
+      // neck saddles hanging under the yoke
+      b.arc([0.36, 0.3, 0.07], [s * 0.42, 1.1, 2.7], { color: 'darkwood', arc: 180, tube: 0.2 });
     });
-    return b.act({ click: [A.par(A.pose('wheelL', { rot: [720, 0, 0], dur: 1.6 }), A.pose('wheelR', { rot: [720, 0, 0], dur: 1.6 }), A.effect('dust', { dur: 1.6 }), A.say('Rumble, rumble!', 1.6)), A.par(A.pose('wheelL', { rot: [0, 0, 0], dur: 0.01 }), A.pose('wheelR', { rot: [0, 0, 0], dur: 0.01 }))] }).done();
+    return b
+      .act({
+        click: [A.par(A.pose('wheelL', { rot: [720, 0, 0], dur: 1.6 }), A.pose('wheelR', { rot: [720, 0, 0], dur: 1.6 }), A.effect('dust', { dur: 1.6 }), A.say('Rumble, rumble!', 1.6)), A.par(A.pose('wheelL', { rot: [0, 0, 0], dur: 0.01 }), A.pose('wheelR', { rot: [0, 0, 0], dur: 0.01 }))],
+      })
+      .done();
   }),
   // A gold heart charm on a few links of chain; it dangles and glints.
   e('charm', 'wardrobe', 'jewellery', () => {
@@ -3549,7 +3614,7 @@ export const ENTRIES: CatalogEntry[] = [
       .wedge([7.8, 4.5, 14.6], [0, 8.25, -3], { color: '#8a3a2e' })
       .box([4.2, 12, 4.2], [0, 6, 6], { color: '#f2efe6', round: 0.01 })
       .box([4.4, 0.3, 4.4], [0, 12.15, 6], { color: '#8a3a2e' })
-      .pyramid([4.6, 8, 4.6], [0, 16.3, 6], 4, { color: '#8a3a2e', rot: [0, 45, 0] })
+      .pyramid([4.3 * Math.SQRT2, 8, 4.3 * Math.SQRT2], [0, 16.3, 6], 4, { color: '#8a3a2e' })
       .stick([0, 20.2, 6], [0, 21.8, 6], 0.15, 'gold')
       .stick([-0.45, 21.2, 6], [0.45, 21.2, 6], 0.15, 'gold')
       .box([2.0, 2.4, 4.3], [0, 10.4, 6], { color: '#3a3330' })
@@ -3671,20 +3736,40 @@ export const ENTRIES: CatalogEntry[] = [
     for (const x of [-0.025, 0.025]) b.each(4, (i) => b.box([0.035, 0.022, 0.01], [x, 0.03 + i * 0.03, 0.03], { color: 'black', round: 0.2 }).box([0.008, 0.012, 0.012], [x + (i % 2 ? 0.008 : -0.008), 0.03 + i * 0.03, 0.037], { color: 'white', ...(x > 0 && i === 2 ? { name: 'lever', pivot: [x, 0.09, 0.032] as V } : {}) }));
     return b.act({ click: [[A.par(A.pose('lever', { rot: [0, 0, 180], dur: 0.15 }), A.effect('sparkle', { dur: 0.6 }), A.say('Click! Trip!', 1))], [A.pose('lever', { rot: [0, 0, 0], dur: 0.2 }), A.say('Click.', 0.8)]] }).done();
   }),
-  // A yellow circular saw: a toothed blade under a guard, a motor, a base plate and a handle; the blade spins.
+  // A corded 18 cm circular saw resting on the plank it is cutting, pointing forward along its pencil line: a steel
+  // shoe, the toothed blade sunk through it into the wood under the half-round blade guard, the yellow motor sticking
+  // out on the left with its black end cap, a closed D-handle with a red trigger on top and a front knob. The blade
+  // spins up and the saw runs forward along the line in a spray of sawdust.
   e('circular saw', 'workshop', 'power tools', () => {
+    const Y = '#f2b705', P = { parent: 'saw' };
     const b = m('circular saw', { edge: 'sharp' })
-      .cyl([0.18, 0.004, 0.18], [0.0, 0.09, 0.04], { color: 'silver', rot: [90, 0, 0], name: 'blade', mover: { kind: 'spin', axis: 'y', amount: 1500 } })
-      .ball([0.22, 0.13, 0.06], [0.0, 0.15, -0.005], { color: 'yellow', edge: 'soft' })
-      .cyl([0.12, 0.11, 0.12], [0.0, 0.11, -0.04], { color: 'yellow', rot: [90, 0, 0] })
-      .box([0.28, 0.012, 0.14], [0, 0.06, 0.0], { color: 'silver' })
-      .cyl([0.03, 0.01, 0.03], [0, 0.09, 0.044], { color: 'darkgray', rot: [90, 0, 0], parent: 'blade' });
-    b.each(12, (i) => {
-      const a = (i / 12) * Math.PI * 2;
-      b.cone([0.012, 0.012, 0.004], [Math.cos(a) * 0.092, 0.09 + Math.sin(a) * 0.092, 0.04], { color: 'silver', rot: [0, 0, (a * 180) / Math.PI - 90], parent: 'blade' });
+      .box([0.24, 0.035, 0.62], [0, 0.0175, 0.04], { color: 'lightwood', round: 0.08 })
+      .box([0.004, 0.002, 0.2], [-0.045, 0.0355, 0.26], { color: '#4a4a4a', round: 0, noInk: true })
+      .box([0.17, 0.008, 0.3], [0, 0.039, 0], { color: 'silver', round: 0.15, name: 'saw' })
+      // the blade (axis along x), its teeth and arbor nut, under the guard
+      .cyl([0.184, 0.003, 0.184], [-0.045, 0.095, 0.02], { color: 'silver', rot: [0, 0, 90], name: 'blade', mover: { kind: 'spin', axis: 'y', amount: 1500 }, ...P })
+      .cyl([0.03, 0.008, 0.03], [-0.05, 0.095, 0.02], { color: '#3a3d42', rot: [0, 0, 90], parent: 'blade' });
+    b.each(16, (i) => {
+      const a = (i / 16) * Math.PI * 2;
+      b.cone([0.004, 0.012, 0.012], [-0.045, 0.095 + Math.sin(a) * 0.092, 0.02 + Math.cos(a) * 0.092], { color: 'silver', rot: [-(a * 180) / Math.PI, 0, 0], parent: 'blade', noInk: true });
     });
-    path(b, arc(-0.03, 0.2, 0.08, 0.07, 0, 180, 5, -0.02), 0.03, 'black');
-    return b.act({ click: [A.operate('blade', 'on'), A.par(A.effect('dust', { dur: 1.5 }), A.say('Bzzzzzzz!', 1.5)), A.wait(1), A.operate('blade', 'off')] }).done();
+    b.arc([0.24, 0.24, 0.06], [-0.043, 0.095, 0.02], { color: '#4a4e54', rot: [0, 90, 0], tube: 0.92, ...P })
+      .box([0.025, 0.03, 0.045], [-0.042, 0.175, -0.075], { color: '#3a3d42', rot: [-40, 0, 0], round: 0.3, ...P })
+      // body, motor and its end cap
+      .box([0.06, 0.09, 0.11], [-0.003, 0.11, 0.0], { color: Y, round: 0.4, ...P })
+      .cyl([0.088, 0.1, 0.088], [0.045, 0.11, -0.01], { color: Y, rot: [0, 0, 90], ...P })
+      .cyl([0.09, 0.022, 0.09], [0.1, 0.11, -0.01], { color: '#2a2c30', rot: [0, 0, 90], ...P })
+      // the D-handle with its trigger, the rear foot and the front knob
+      .rod([0, 0.15, 0.0], [0, 0.225, -0.045], 0.03, Y, P)
+      .rod([0, 0.225, -0.045], [0, 0.22, -0.135], 0.032, '#2a2c30', P)
+      .rod([0, 0.22, -0.135], [0, 0.075, -0.12], 0.03, Y, P)
+      .box([0.05, 0.04, 0.06], [0, 0.065, -0.11], { color: Y, round: 0.4, ...P })
+      .box([0.012, 0.026, 0.02], [0, 0.195, -0.09], { color: '#d32f2f', round: 0.3, ...P })
+      .stick([0.02, 0.1, 0.07], [0.025, 0.135, 0.095], 0.016, '#2a2c30', P)
+      .ball(0.038, [0.026, 0.145, 0.1], { color: '#2a2c30', ...P });
+    return b
+      .act({ click: [A.operate('blade', 'on'), A.par(A.pose('saw', { move: [0, 0, 0.14], dur: 1.4 }), A.effect('dust', { dur: 1.5 }), A.say('Bzzzzzzz!', 1.5)), A.operate('blade', 'off'), A.pose('saw', { move: [0, 0, 0], dur: 0.6 })] })
+      .done();
   }),
   // Clam chowder in a sourdough bread bowl, the lid of crust beside it; steaming.
   e('clam chowder', 'food', 'soups', () =>
@@ -3899,7 +3984,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([6.2, 3.2, 6.2], [0, 35.2, 0], { color: S })
       .box([6.3, 2.4, 3.4], [0, 35.2, 0], { color: '#2a2726' })
       .box([3.4, 2.4, 6.3], [0, 35.2, 0], { color: '#2a2726' })
-      .pyramid([7.2, 7, 7.2], [0, 40.3, 0], 4, { color: '#3f6f5a', rot: [0, 45, 0] })
+      .pyramid([6.6 * Math.SQRT2, 7, 6.6 * Math.SQRT2], [0, 40.3, 0], 4, { color: '#3f6f5a' })
       .stick([0, 43.8, 0], [0, 45.5, 0], 0.2, 'gold')
       .box([2.6, 4.2, 0.2], [0, 3.3, 3.55], { color: '#5a3a22', name: 'door', pivot: [-1.3, 3.3, 3.55], mover: { kind: 'swing', axis: 'y', amount: -95 } });
     b.each(5, (i) => b.box([1.0, 2.8, 0.1], [0, 7 + i * 3.6, 3.52], { color: '#2f3d52' }));
@@ -3975,32 +4060,46 @@ export const ENTRIES: CatalogEntry[] = [
     b.heart(0.05, [0.026, 0.088, 0.004], { color: '#6ab04c', rot: [0, 0, -120], name: 'lucky', scale: 0 });
     return b.act({ click: [[A.par(A.pose('lucky', { scale: 1, dur: 0.5 }), A.effect('sparkle', { dur: 1.2 }), A.say('Lucky!', 1.2))], [A.pose('lucky', { scale: 0, dur: 0.4 })]] }).done();
   }),
-  // A clown car: a tiny bulbous runabout on fat wheels with goggle headlights, a bulb horn and a squirting flower.
-  // Click: honk honk, and clown after clown climbs out.
+  // A clown car: a tiny bulbous runabout (2.8 m long, 1.7 m to its red roof cap, so a grown-up only just squeezes
+  // in, which is the joke) with a soft yellow body covered in blue polka dots, a glass bubble cabin with red
+  // pillars and roof cap, a side door that swings open for the clowns, chrome bumpers, big goggle headlights, fat
+  // pink-hubbed wheels on axles, a bulb horn, a squirting flower and a bobbing antenna ball. Click: honk honk, the
+  // door opens and clown after clown climbs out.
   e('clown car', 'garage', 'cars', () => {
+    const y = '#f6d24a', r = '#e0473b';
     const b = m('clown car', { view: 'side' })
-      .loft([1.4, 0.95, 2.6], [0, 0.72, 0], [[0, 0.8, 0.7, 0.05], [0.25, 1, 1, 0], [0.7, 1, 0.95, -0.03], [1, 0.75, 0.6, -0.12]], { color: '#f6d24a', boxy: 0.3, name: 'body' })
-      .dome([1.2, 0.75, 1.3], [0, 1.15, -0.35], { color: '#e0473b' })
-      .dome([1.22, 0.45, 1.0], [0, 1.15, -0.25], { color: '#2f3d52', edge: 'sharp' })
-      .box([1.0, 0.2, 0.6], [0, 1.18, 0.55], { color: '#e0473b', round: 0.5 })
-      .stick([0.42, 1.1, -0.95], [0.48, 2.0, -0.95], 0.03, 'black')
-      .ball(0.2, [0.48, 2.05, -0.95], { color: 'magenta' })
-      .ball(0.1, [0.48, 2.05, -0.84], { color: 'yellow' })
-      .cone([0.12, 0.22, 0.12], [0.62, 1.05, 0.95], { color: 'gold', rot: [-70, 0, 0] })
-      .ball(0.16, [0.62, 1.1, 0.82], { color: '#e0473b', name: 'horn' });
+      .loft([1.45, 0.85, 2.8], [0, 0.72, 0], [[0, 0.8, 0.75, 0.05], [0.2, 0.98, 1, 0], [0.7, 1, 0.95, -0.02], [0.92, 0.85, 0.75, -0.08], [1, 0.6, 0.5, -0.12]], { color: y, boxy: 0.35, name: 'body', edge: 'soft' })
+      .loft([1.25, 1.0, 1.55], [0, 1.1, -0.3], [[0, 0.75, 0.5, -0.1], [0.25, 0.95, 0.95, 0], [0.75, 0.95, 0.95, 0], [1, 0.8, 0.45, -0.1]], { color: '#9fd0ea', cut: 'top', boxy: 0.5, edge: 'sharp' })
+      .dome([1.18, 0.22, 1.12], [0, 1.6, -0.3], { color: r, edge: 'soft' })
+      .box([1.32, 0.12, 0.14], [0, 0.42, 1.42], { color: 'silver', round: 0.5, edge: 'sharp' })
+      .box([1.32, 0.12, 0.14], [0, 0.44, -1.42], { color: 'silver', round: 0.5, edge: 'sharp' })
+      .box([0.035, 0.48, 0.72], [0.72, 0.78, -0.26], { color: y, round: 0.4, name: 'door', pivot: [0.72, 0.78, 0.1], mover: { kind: 'swing', axis: 'y', amount: -75 }, edge: 'sharp' })
+      .box([0.05, 0.04, 0.12], [0.745, 0.92, -0.5], { color: 'silver', parent: 'door', edge: 'sharp' })
+      .ball(0.13, [0.74, 0.72, -0.2], { color: '#4e8fd6', parent: 'door', noInk: true })
+      .stick([0.42, 1.0, -1.0], [0.5, 2.1, -1.0], 0.03, 'black', { name: 'antenna', pivot: [0.42, 1.0, -1.0] })
+      .ball(0.2, [0.5, 2.15, -1.0], { color: 'magenta', parent: 'antenna' })
+      .ball(0.1, [0.5, 2.15, -0.89], { color: 'yellow', parent: 'antenna' })
+      .cone([0.12, 0.22, 0.12], [0.55, 1.08, 0.95], { color: 'gold', rot: [-70, 0, 0], edge: 'sharp' })
+      .ball(0.16, [0.55, 1.13, 0.82], { color: r, name: 'horn' })
+      .stick([-0.45, 1.0, -0.95], [-0.45, 1.25, -0.95], 0.025, 'darkgreen')
+      .ball([0.2, 0.08, 0.2], [-0.45, 1.27, -0.95], { color: 'pink', name: 'flower' })
+      .ball(0.06, [-0.45, 1.31, -0.95], { color: 'yellow', parent: 'flower' });
     b.pair((s) => {
+      b.box([0.04, 0.42, 0.08], [s * 0.58, 1.34, -0.3], { color: r, round: 0.4, edge: 'sharp' });
       b.ball([0.28, 0.28, 0.12], [s * 0.38, 0.8, 1.28], { color: '#fff6c8', glow: true, name: `light${s > 0 ? 1 : 2}`, mover: { kind: 'light' } });
-      b.torus([0.32, 0.32, 0.06], [s * 0.38, 0.8, 1.3], { color: 'silver', tube: 0.18 });
+      b.torus([0.32, 0.32, 0.06], [s * 0.38, 0.8, 1.3], { color: 'silver', tube: 0.18, edge: 'sharp' });
+      b.box([0.2, 0.08, 0.04], [s * 0.45, 0.68, -1.4], { color: '#d02a20', glow: true, edge: 'sharp' });
     });
-    for (const [x, y, z] of [[0.7, 0.6, 0.4], [0.68, 0.5, -0.5], [-0.7, 0.62, 0.3], [-0.68, 0.7, -0.6]]) b.ball(0.18, [x, y, z], { color: '#4e8fd6', noInk: true });
+    // polka dots on the body (the right door carries its own)
+    for (const [x, yy, z] of [[0.72, 0.62, 0.55], [-0.7, 0.62, 0.35], [-0.68, 0.7, -0.75], [0.62, 0.98, 0.95], [-0.6, 0.98, 0.85], [0.66, 0.7, -1.05]]) b.ball(0.17, [x, yy, z], { color: '#4e8fd6', noInk: true });
     axle(b, 0.62, 0.36, 0.85, 0.72, 0.28, 'wheelF', '#d64fa0');
     axle(b, 0.62, 0.36, -0.85, 0.72, 0.28, 'wheelR', '#d64fa0');
     return b
-      .socket('seat', [0, 0.95, -0.3], 'seat')
+      .socket('seat', [0, 0.62, -0.35], 'seat')
       .act({
         click: [
-          [A.par(A.pose('horn', { scale: 0.7, dur: 0.1 }), A.say('Honk honk!', 1.2)), A.pose('horn', { scale: 1, dur: 0.1 }), A.spawn('c1', 'clown suit', { rel: 'right', of: 'self', dist: 'close' }), A.anim('hop', 1, 'c1'), A.spawn('c2', 'clown suit', { rel: 'left', of: 'self', dist: 'close' }), A.anim('hop', 1, 'c2'), A.par(A.anim('laugh', 1, 'c1'), A.say('Ta-da!', 1.5, 'c2'), A.anim('arms_up', 1, 'c2')), A.wait(0.5), A.par(A.remove('c1', 'fade'), A.remove('c2', 'fade'))],
-          [A.operate('light', 'on'), A.par(A.anim('bounce', 3), A.say('Beep-beep! Boing!', 1.5)), A.operate('light', 'off')],
+          [A.par(A.pose('horn', { scale: 0.7, dur: 0.1 }), A.say('Honk honk!', 1.2)), A.pose('horn', { scale: 1, dur: 0.1 }), A.operate('door', 'open'), A.spawn('c1', 'clown suit', { rel: 'right', of: 'self', dist: 'close' }), A.anim('hop', 1, 'c1'), A.spawn('c2', 'clown suit', { rel: 'left', of: 'self', dist: 'close' }), A.anim('hop', 1, 'c2'), A.par(A.anim('laugh', 1, 'c1'), A.say('Ta-da!', 1.5, 'c2'), A.anim('arms_up', 1, 'c2')), A.wait(0.5), A.par(A.remove('c1', 'fade'), A.remove('c2', 'fade'), A.operate('door', 'close'))],
+          [A.operate('light', 'on'), A.par(A.anim('bounce', 3), A.pose('antenna', { rot: [0, 0, 25], dur: 0.3, times: 3 }), A.say('Beep-beep! Boing!', 1.5)), A.operate('light', 'off')],
         ],
       })
       .done();

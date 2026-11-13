@@ -1,3 +1,4 @@
+import { figureOfEntity } from '../../shared/engine/transform';
 import { figureFor } from '../../shared/figure/items';
 import { FACE_KINDS, type Rig } from '../../shared/rig';
 import type { CompactWorld, StreamEvent } from '../../shared/schema';
@@ -96,7 +97,8 @@ export function compactWorld(model: WorldModel, target?: string, limit = 40, rig
       state: Object.keys(e.state).length ? e.state : undefined,
       effects: e.effects.length ? e.effects : undefined,
       structure: e.structure ? { gen: e.structure.gen, params: e.structure.params } : undefined,
-      parts: e.structure ? structureParts(e) : (figureBits(e)?.parts ?? partsOf(e.sprite.file ? rigOf(e.sprite.file) : undefined)),
+      // a model lists the pieces that come off it (none: nothing to take off), a picture its cut-out pieces
+      parts: e.structure ? structureParts(e) : figureBits(e) ? figureBits(e)!.parts : partsOf(e.sprite.file ? rigOf(e.sprite.file) : undefined),
       movers: figureBits(e)?.movers,
       sockets: figureBits(e)?.sockets,
     }));
@@ -105,8 +107,8 @@ export function compactWorld(model: WorldModel, target?: string, limit = 40, rig
 
 /** A code-drawn thing's pieces that come off, moving parts with their kind and state, and sockets with their kind. */
 function figureBits(e: Entity): { parts?: string[]; movers?: string[]; sockets?: string[] } | null {
-  if (e.structure || e.look === 'sprite') return null;
-  const fig = figureFor(e.word);
+  // the engine's own lookup: in the sprites Look things are pictures, with their cut-out pieces instead
+  const fig = figureOfEntity(e);
   if (!fig) return null;
   const parts = fig.parts.filter((p) => p.piece && p.parent).map((p) => p.name).slice(0, 32);
   const movers = fig.parts

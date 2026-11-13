@@ -945,7 +945,7 @@ export const ENTRIES: CatalogEntry[] = [
   e('secret agent', 'town', 'spies', () => acts(
     who('secret agent', { top: 'black', bottom: 'black', shoes: 'black', long: true, hair: 'black', style: 'short', acc: [front('black'), face('sunglasses'), earpiece, held('blaster', 'black')] }),
     [A.par(arm('L', 'eye'), A.say('Agent in position. Over.', 2.2)), A.wait(1.2), armsHome('L')],
-    [G('look_around', 'The name is Agent. Secret Agent.')],
+    [G('wink', 'The name is Agent. Secret Agent.')],
   )),
   e('secretary', 'town', 'office', () => acts(
     who('secretary', { top: 'white', skirt: 'darkgray', bottom: 'darkgray', long: true, style: 'bun', glasses: 'black', acc: [face('glasses'), held('clipboard'), held('phone', undefined, 'L'), wear('necklace', 'white')] }),
@@ -1016,7 +1016,7 @@ export const ENTRIES: CatalogEntry[] = [
   )),
   e('showgirl', 'town', 'entertainment', () => acts(
     paint(who('showgirl', { skin: 'skin2', top: 'magenta', bottom: 'magenta', legs: 'skin2', shoes: 'gold', hair: 'gold', style: 'long', acc: [plumes(), bit('hips', 'ball', [3.6, 3.0, 2.0], [0, -0.3, -2.0], 'pink'), wear('necklace', 'white'), fan('L')] }), ['legL', 'legR'], 'skin2'),
-    [G('thumbs_up', 'Ta-daaa!')],
+    [G('tada', 'Ta-daaa!')],
     [G('dance', 'Five, six, seven, eight!')],
   )),
   // Mic to the mouth: sings with the head thrown back; a note floats away.
@@ -1051,7 +1051,7 @@ export const ENTRIES: CatalogEntry[] = [
   e('slacker', 'town', 'everyday people', () => acts(
     who('slacker', { top: 'gray', bottom: '#5a5f66', shoes: 'darkgray', long: true, style: 'long', hair: 'brown', acc: [hoodDown('gray'), held('phone'), held('bag', 'orange', 'L')] }),
     [G('shrug', 'Meh.', 1.5)],
-    [A.par(A.expr('sleepy'), A.anim('nod'), A.say('Zzz... five more minutes...', 2.4))],
+    [A.par(A.expr('sleepy'), A.anim('yawn'), A.say('Yaaawn... five more minutes...', 2.4))],
   )),
   // Plays the pipe and the cobra (a joint) rises out of the basket and sways.
   e('snake charmer', 'town', 'entertainment', () => acts(
@@ -1127,7 +1127,7 @@ export const ENTRIES: CatalogEntry[] = [
   e('soldier', 'town', 'military', () => acts(
     who('soldier', { top: '#5c6b3a', bottom: '#5c6b3a', shoes: 'black', long: true, style: 'short', acc: [hat('military'), wear('backpack', '#4a5530'), wear('belt', 'darkbrown'), rifle('darkgray')] }),
     [A.par(arm('R', 'salute'), A.say('Yes, sir! Reporting for duty!', 2)), A.wait(1), armsHome('R')],
-    [G('look_around', 'All quiet on the front.')],
+    [G('nod', 'All quiet on the front.')],
   )),
   // The orb (a light) blazes up in the raised hand, then goes dark for a moment.
   e('sorceress', 'fantasy', 'witches and wizards', () => acts(
@@ -1481,7 +1481,7 @@ export const ENTRIES: CatalogEntry[] = [
   e('villain', 'town', 'villains', () => acts(
     who('villain', { top: 'black', bottom: 'purple', shoes: 'black', long: true, hair: 'black', style: 'short', acc: [hat('top', 'black'), wear('cape', 'black'), face('mustache', 'black'), hb('ball', [0.08, 0.08, 0.08], [0.24, -0.06, 0.46], 'black'), hb('ball', [0.08, 0.08, 0.08], [-0.24, -0.06, 0.46], 'black'), gloves('white'), bomb('L')] }),
     [G('laugh', 'Mwahahaha!')],
-    [A.par(A.effect('smoke', { dur: 1.5 }), A.anim('hands_on_hips'), A.say('Curses! Foiled again!', 2.2))],
+    [A.par(A.effect('smoke', { dur: 1.5 }), A.anim('stomp'), A.say('Curses! Foiled again!', 2.2))],
   )),
   // Violin under the chin, bow in the right hand: plays, the bow arm sawing.
   e('violinist', 'town', 'music', () => acts(

@@ -404,7 +404,7 @@ export const ENTRIES: CatalogEntry[] = [
       .socket('desk', [-0.75, 0.76, -1.0], 'top', { size: 0.4 })
       .act({
         click: [
-          [A.par(A.operate('screen', 'on'), A.say('Beep! Booting up...', 2)), A.pose('chair', { rot: [0, 360, 0], dur: 1.2 }), A.pose('chair', { rot: [0, 0, 0], dur: 0 })],
+          [A.par(A.operate('screen', 'on'), A.say('Beep!', 1.5)), A.pose('chair', { rot: [0, 360, 0], dur: 1.2 }), A.pose('chair', { rot: [0, 0, 0], dur: 0 })],
           [A.operate('drawer', 'out'), A.say('Shhk!', 1), A.wait(1.5), A.par(A.operate('drawer', 'in'), A.operate('screen', 'off'))],
         ],
       })
@@ -639,7 +639,7 @@ export const ENTRIES: CatalogEntry[] = [
       .act({
         click: [
           [A.par(A.operate('crank', 'on'), A.say('Creak... creak...', 2)), ...nod, ...nod, A.pose('beam', { rot: [0, 0, 0], dur: 0.6 }), A.operate('crank', 'off')],
-          [A.par(A.anim('shake'), A.say('Rumble...', 1.2)), A.par(A.pose('gusher', { scale: 1, dur: 0.5 }), A.pose('spray', { scale: 1, dur: 0.6 }), A.say('Gusher!', 2)), A.wait(2.5), A.par(A.pose('gusher', { scale: 0, dur: 0.6 }), A.pose('spray', { scale: 0, dur: 0.6 }))],
+          [A.par(A.anim('shake'), A.say('Rumble...', 1.2)), A.par(A.pose('gusher', { scale: 1, dur: 0.5 }), A.pose('spray', { scale: 1, dur: 0.6 }), A.say('WHOOSH!', 2)), A.wait(2.5), A.par(A.pose('gusher', { scale: 0, dur: 0.6 }), A.pose('spray', { scale: 0, dur: 0.6 }))],
         ],
       })
       .done();
@@ -723,14 +723,14 @@ export const ENTRIES: CatalogEntry[] = [
   e('onion', 'food', 'vegetables', () => {
     const b = m('onion')
       .ball([0.08, 0.072, 0.08], [0, 0.038, 0], { color: '#c98a4a', name: 'bulb' })
-      .cyl([0.06, 0.004, 0.06], [0, 0.066, 0], { color: '#fbf6e6', parent: 'bulb', edge: 'sharp' })
-      .torus([0.045, 0.045, 0.004], [0, 0.068, 0], { color: '#e8dcc0', rot: [90, 0, 0], tube: 0.1, parent: 'bulb', noInk: true })
-      .torus([0.028, 0.028, 0.004], [0, 0.068, 0], { color: '#e8dcc0', rot: [90, 0, 0], tube: 0.15, parent: 'bulb', noInk: true });
+      .cyl([0.054, 0.004, 0.054], [0, 0.06, 0], { color: '#fbf6e6', parent: 'bulb', edge: 'sharp' })
+      .torus([0.04, 0.04, 0.004], [0, 0.062, 0], { color: '#e8dcc0', rot: [90, 0, 0], tube: 0.1, parent: 'bulb', noInk: true })
+      .torus([0.024, 0.024, 0.004], [0, 0.062, 0], { color: '#e8dcc0', rot: [90, 0, 0], tube: 0.15, parent: 'bulb', noInk: true });
     b.ball([0.03, 0.04, 0.012], [0.018, 0.045, 0.032], { color: '#e0a868', noInk: true, parent: 'bulb' })
       .cyl([0.024, 0.006, 0.024], [0, 0.003, 0], { color: '#e8d8b0', parent: 'bulb' });
     return b
-      .dome([0.062, 0.024, 0.062], [0, 0.068, 0], { color: '#c98a4a', name: 'cap', parent: 'bulb', piece: true })
-      .cyl([0.022, 0.03, 0.022], [0, 0.092, 0], { color: '#b07438', taper: 0.3, parent: 'cap' })
+      .dome([0.064, 0.022, 0.064], [0, 0.072, 0], { color: '#c98a4a', name: 'cap', parent: 'bulb', piece: true })
+      .cyl([0.022, 0.03, 0.022], [0, 0.095, 0], { color: '#b07438', taper: 0.3, parent: 'cap' })
       .act({ click: [[A.detach('cap', 'cap'), A.say('Chop!', 1)], [A.reattach('cap')]] })
       .done();
   }),
@@ -797,7 +797,7 @@ export const ENTRIES: CatalogEntry[] = [
       .act({
         click: [
           [A.par(A.operate('orb', 'on'), A.effect('sparkle', { dur: 2 }), A.say('Wooooo...', 2)), A.pose('orb', { rot: [0, 360, 0], dur: 1.5 }), A.pose('orb', { rot: [0, 0, 0], dur: 0 })],
-          [A.operate('orb', 'off'), A.say('...hm.', 1)],
+          [A.operate('orb', 'off'), A.say('Fwoomp.', 1)],
         ],
       })
       .done();
@@ -1011,7 +1011,7 @@ export const ENTRIES: CatalogEntry[] = [
     b.box([2.8, 0.2, 2.8], [tx, 5.0, tz], { color: '#a0703f', edge: 'sharp' })
       .box([2.8, 0.9, 0.1], [tx, 5.55, tz + 1.35], { color: '#8c5a2b', edge: 'sharp' })
       .box([0.1, 0.9, 2.8], [tx + 1.35, 5.55, tz], { color: '#8c5a2b', edge: 'sharp' })
-      .pyramid([3.6, 1.4, 3.6], [tx, 7.1, tz], 4, { color: '#5a3a22', rot: [0, 45, 0], edge: 'sharp' })
+      .pyramid([3.4 * Math.SQRT2, 1.4, 3.4 * Math.SQRT2], [tx, 7.1, tz], 4, { color: '#5a3a22', edge: 'sharp' })
       .stick([tx, 7.8, tz], [tx, 10, tz], 0.08, 'darkwood')
       .box([1.3, 0.8, 0.04], [tx + 0.68, 9.55, tz], { color: '#e0473b', name: 'flag', pivot: [tx, 9.55, tz], edge: 'sharp' })
       .cyl([0.4, 0.45, 0.4], [tx, 6.0, tz], { color: 'bronze', taper: 0.6, name: 'bell', pivot: [tx, 6.3, tz], edge: 'sharp' })
@@ -1030,7 +1030,7 @@ export const ENTRIES: CatalogEntry[] = [
     plinth(m('oval'), 0.2, 0.03)
       .cyl([0.28, 0.025, 0.18], [0, 0.125, 0], { color: '#4e8fd6', rot: [90, 0, 0], name: 'oval', edge: 'sharp' })
       .cyl([0.22, 0.03, 0.13], [0, 0.125, 0], { color: '#7fb0e6', rot: [90, 0, 0], parent: 'oval', noInk: true })
-      .act({ click: [[A.par(A.pose('oval', { rot: [0, 360, 0], dur: 1.2 }), A.say('Oval!', 1.2)), A.pose('oval', { rot: [0, 0, 0], dur: 0 })]] })
+      .act({ click: [[A.par(A.pose('oval', { rot: [0, 360, 0], dur: 1.2 }), A.say('Whirl!', 1.2)), A.pose('oval', { rot: [0, 0, 0], dur: 0 })]] })
       .done(),
   ),
   // Denim bib overalls on a farmer in a straw hat, with a pitchfork.
@@ -1169,7 +1169,7 @@ export const ENTRIES: CatalogEntry[] = [
       // the eave: a shallow dark pyramid frustum with upturned corner tips
       const ew = w + 2.6;
       b.box([w + 0.6, 0.3, w + 0.6], [0, y + wh + 0.15, 0], { color: '#3a3633', round: 0.1 })
-        .cyl([ew * R2, 0.7, ew * R2], [0, y + wh + 0.55, 0], { color: '#3a4a5a', segs: 4, taper: 0.4, rot: [0, 45, 0] });
+        .cyl([ew * R2, 0.7, ew * R2], [0, y + wh + 0.55, 0], { color: '#3a4a5a', segs: 4, taper: 0.4 });
       for (const [sx, sz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
         b.cone([0.5, 0.8, 0.5], [sx * (ew / 2 - 0.15), y + wh + 0.5, sz * (ew / 2 - 0.15)], { color: '#3a4a5a', rot: [sz * 35, 0, -sx * 35] });
         if (i === 0) {
@@ -1313,7 +1313,7 @@ export const ENTRIES: CatalogEntry[] = [
           b.wedge([1.9, 0.5, 0.25], [wx, fy + 1.5, 5.1], { color: trim });
         }
       b.box([2.6, 10.6, 11.6], [cx + s * 7.4, 6.3, -0.5], { color: '#ece0c6', round: 0.01 })
-        .pyramid([3.4, 2.4, 3.4], [cx + s * 7.4, 12.8, 3.0], 4, { color: '#5fa89a', rot: [0, 45, 0] });
+        .pyramid([3.0 * Math.SQRT2, 2.4, 3.0 * Math.SQRT2], [cx + s * 7.4, 12.8, 3.0], 4, { color: '#5fa89a' });
     }
     return b
       .act({
@@ -1478,7 +1478,7 @@ export const ENTRIES: CatalogEntry[] = [
         .rod([s * 0.08, 0.44, 0.01], [s * 0.085, 0.08, 0], 0.07, '#4a3e44', { parent: 'waist' })
         .box([0.07, 0.05, 0.17], [s * 0.085, 0.025, 0.05], { color: '#2a2628', round: 0.6, parent: 'waist' }),
     );
-    return b.act({ click: [[A.par(A.anim('wobble'), A.say('Stretchy!', 1.2))]] }).done();
+    return b.act({ click: [[A.par(A.anim('wobble'), A.say('Boing!', 1.2))]] }).done();
   }),
   // A papaya: a long yellow-green fruit blushing orange, and a slice cut from it showing the orange flesh and
   // the black seeds; the slice comes away.
@@ -1649,7 +1649,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.16, 0.12, 0.03], [0, 0.09, 0], { color: '#f0923b', round: 0, name: 'shape', edge: 'sharp' })
       .wedge([0.06, 0.12, 0.03], [-0.11, 0.09, 0], { color: '#f0923b', apex: 0.5, parent: 'shape', edge: 'sharp' })
       .wedge([0.06, 0.12, 0.03], [0.11, 0.09, 0], { color: '#f0923b', apex: 0.5, rot: [0, 0, 180], parent: 'shape', edge: 'sharp' })
-      .act({ click: [[A.par(A.pose('shape', { rot: [0, 360, 0], dur: 1.2 }), A.say('Four sides, two slants!', 1.5)), A.pose('shape', { rot: [0, 0, 0], dur: 0 })]] })
+      .act({ click: [[A.par(A.pose('shape', { rot: [0, 360, 0], dur: 1.2 }), A.say('Whirl!', 1.2)), A.pose('shape', { rot: [0, 0, 0], dur: 0 })]] })
       .done(),
   ),
   // A parcel wrapped in brown paper and tied with string in a bow, with an address label. The bow comes undone.
@@ -1663,7 +1663,7 @@ export const ENTRIES: CatalogEntry[] = [
       .ball(0.018, [0, 0.168, 0], { color: 'cream', parent: 'bow' })
       .label('TO: GRANDMA', [0.12, 0.05], [0.08, 0.07, 0.111], { color: 'white', parent: 'box', depth: 0.003 })
       .box([0.03, 0.035, 0.003], [-0.1, 0.12, 0.111], { color: '#e0473b', parent: 'box', round: 0 })
-      .act({ click: [[A.detach('bow', 'bow'), A.say('Untied!', 1)], [A.reattach('bow'), A.say('Tied up again.', 1.2)]] })
+      .act({ click: [[A.detach('bow', 'bow'), A.say('Tug!', 1)], [A.reattach('bow'), A.say('Tug.', 1)]] })
       .done(),
   ),
   // A town park (22 x 16 m): lawns and a curving gravel path, three shade trees, a pond with reeds, a slatted
@@ -1768,7 +1768,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([1.4, 0.9, 0.06], [-W / 2 + 3.5, 1.9, D / 2 + 2.22], { color: 'glass' })
       .box([4.2, 0.12, 0.12], [-W / 2 + 6.4, 1.4, D / 2 + 1.4], { color: 'white', name: 'barrier', pivot: [-W / 2 + 4.3, 1.4, D / 2 + 1.4], mover: { kind: 'swing', axis: 'z', amount: 80 } });
     b.each(4, (i) => b.box([0.4, 0.14, 0.14], [-W / 2 + 4.8 + i * 1.0, 1.4, D / 2 + 1.4], { color: '#e0473b', parent: 'barrier' }));
-    return b.act({ click: [[A.operate('barrier', 'open'), A.say('Beep! Ticket, please.', 1.8), A.wait(2.5), A.operate('barrier', 'close')]] }).done();
+    return b.act({ click: [[A.operate('barrier', 'open'), A.say('Beep!', 1.2), A.wait(2.5), A.operate('barrier', 'close')]] }).done();
   }),
   // A parking ticket in its orange envelope, tucked behind a wiper blade as if on a windscreen. It flaps.
   e('parking ticket', 'study', 'papers', () =>
@@ -1803,7 +1803,7 @@ export const ENTRIES: CatalogEntry[] = [
     return b
       .ball(0.05, [0, 0.215, 0], { color: '#f6d24a', parent: 'hat' })
       .arc([0.12, 0.08, 0.004], [0, 0.0, 0.0], { color: 'white', rot: [180, 0, 0], tube: 0.04, arc: 160, parent: 'hat' })
-      .act({ click: [[A.par(A.anim('hop'), A.spawn('confetti', 'confetti', { rel: 'above', of: 'self', dist: 'close' }), A.say('Party time!', 1.5)), A.wait(1.5), A.remove('confetti', 'fade')]] })
+      .act({ click: [[A.par(A.anim('hop'), A.spawn('confetti', 'confetti', { rel: 'above', of: 'self', dist: 'close' }), A.say('Toot toot!', 1.5)), A.wait(1.5), A.remove('confetti', 'fade')]] })
       .done();
   }),
   // Spaghetti and meatballs on a plate under tomato sauce and basil, with a fork twirled into it that turns.
@@ -1834,7 +1834,7 @@ export const ENTRIES: CatalogEntry[] = [
       const th = 41 + i * 32.5, r = (th * Math.PI) / 180;
       b.ball([0.012, 0.04, 0.05], [Math.cos(r) * 0.06, 0.024, -0.05 + Math.sin(r) * 0.06], { color: '#a8601f', rot: [0, th + 90, 0], parent: 'body', noInk: true });
     });
-    return b.act({ click: [[A.par(A.effect('dust', { dur: 0.8 }), A.anim('hop'), A.say('Crunch! So flaky.', 1.5))]] }).done();
+    return b.act({ click: [[A.par(A.effect('dust', { dur: 0.8 }), A.anim('hop'), A.say('Crunch!', 1.2))]] }).done();
   }),
   // Iron-on patches on a square of denim: a red badge with a yellow star, a pink heart and a lime label. The star
   // patch peels off and is ironed back on.
@@ -1847,7 +1847,7 @@ export const ENTRIES: CatalogEntry[] = [
       .star(0.05, [-0.035, 0.14, 0.022], { color: '#f6d24a', round: 0.006, parent: 'badge' })
       .heart(0.06, [0.045, 0.065, 0.02], { color: '#f4a1c0', parent: 'denim' })
       .box([0.06, 0.04, 0.008], [0.05, 0.155, 0.013], { color: '#9be34d', rot: [-8, 0, 0], parent: 'denim' })
-      .act({ click: [[A.detach('badge', 'patch'), A.say('Rrrip!', 1)], [A.reattach('badge'), A.effect('steam', { dur: 1 }), A.say('Ironed on!', 1.2)]] })
+      .act({ click: [[A.detach('badge', 'patch'), A.say('Rrrip!', 1)], [A.reattach('badge'), A.effect('steam', { dur: 1 }), A.say('Fsss!', 1.2)]] })
       .done(),
   ),
   // A paved patio (4 x 4 m of slabs, one step up) set with a round table under a parasol, two chairs and a
@@ -1870,7 +1870,7 @@ export const ENTRIES: CatalogEntry[] = [
       .ball([0.75, 0.8, 0.75], [-1.5, 0.95, -1.5], { color: 'leaf', edge: 'soft' })
       .socket('table', [0, 0.78, 0], 'top', { size: 0.5 })
       .socket('chair', [0.95, 0.63, 0.25], 'seat')
-      .act({ click: [[A.pose('canopy', { scale: 0.3, dur: 0.6 }), A.say('Fold...', 1), A.wait(1), A.pose('canopy', { scale: 1, dur: 0.6 }), A.say('...and open!', 1)]] })
+      .act({ click: [[A.pose('canopy', { scale: 0.3, dur: 0.6 }), A.say('Fwump.', 1), A.wait(1), A.pose('canopy', { scale: 1, dur: 0.6 }), A.say('Fwap!', 1)]] })
       .done();
   }),
   // A police patrol boat, 12 m: a deep-V white hull with a blue band and POLICE on the side, a wheelhouse with a
@@ -2068,7 +2068,7 @@ export const ENTRIES: CatalogEntry[] = [
     jar('peanut butter', 0.11, 0.09, '#b07a3a', '#c0392b', 'PEANUT BUTTER', 'cream')
       .box([0.016, 0.11, 0.004], [0.07, 0.05, 0.05], { color: 'silver', rot: [0, 0, 15], edge: 'sharp' })
       .ball([0.022, 0.03, 0.012], [0.083, 0.09, 0.05], { color: '#b07a3a' })
-      .act({ click: [[A.pose('lid', { rot: [0, 360, 0], dur: 0.5 }), A.detach('lid', 'lid'), A.say('Pop! Smells nutty.', 1.5)], [A.reattach('lid'), A.say('Twist.', 1)]] })
+      .act({ click: [[A.pose('lid', { rot: [0, 360, 0], dur: 0.5 }), A.detach('lid', 'lid'), A.say('Pop!', 1)], [A.reattach('lid'), A.say('Twist.', 1)]] })
       .done(),
   ),
   // A blue bowl heaped with peanuts in their shells. One hops out.
@@ -2104,7 +2104,7 @@ export const ENTRIES: CatalogEntry[] = [
       .ball([0.1, 0.018, 0.08], [0, 0.072, -0.04], { color: '#e8e0f0', rot: [-60, 0, 0], parent: 'lid', noInk: true })
       .ball(0.04, [0, 0.055, 0.008], { color: 'white' })
       .ball([0.012, 0.01, 0.006], [-0.008, 0.066, 0.025], { color: '#fff8ff', noInk: true })
-      .act({ click: [[A.operate('lid', 'close'), A.say('Clam!', 1), A.wait(1), A.operate('lid', 'open'), A.effect('sparkle', { dur: 1.2 })]] })
+      .act({ click: [[A.operate('lid', 'close'), A.say('Clap!', 1), A.wait(1), A.operate('lid', 'open'), A.effect('sparkle', { dur: 1.2 })]] })
       .done(),
   ),
   // A little cairn of smooth river pebbles. The top one wobbles and clacks.
@@ -2311,7 +2311,7 @@ export const ENTRIES: CatalogEntry[] = [
     plinth(m('pentagon'), 0.2)
       .box([0.01, 0.01, 0.01], [0, 0.11, 0], { color: '#5aa553', name: 'shape', round: 0 })
       .prism([0.18, 0.03, 0.18], [0, 0.115, 0], 5, { color: '#5aa553', rot: eulerOf([0, -1, 0], [0, 0, 1]), parent: 'shape', edge: 'sharp' })
-      .act({ click: [[A.par(A.pose('shape', { rot: [0, 360, 0], dur: 1.2 }), A.say('Five sides!', 1.2)), A.pose('shape', { rot: [0, 0, 0], dur: 0 })]] })
+      .act({ click: [[A.par(A.pose('shape', { rot: [0, 360, 0], dur: 1.2 }), A.say('Whirl!', 1.2)), A.pose('shape', { rot: [0, 0, 0], dur: 0 })]] })
       .done(),
   ),
   // A turned wooden pepper mill (20 cm) with a crown knob that twists to grind; a few peppercorns beside it.
@@ -2372,7 +2372,7 @@ export const ENTRIES: CatalogEntry[] = [
       .rod([-0.055, 0.04, 0], [0.055, 0.2, 0], 0.02, '#8a5fc4', { name: 'sign' })
       .torus([0.055, 0.055, 0.022], [-0.045, 0.17, 0], { color: '#8a5fc4', tube: 0.35, parent: 'sign' })
       .torus([0.055, 0.055, 0.022], [0.045, 0.07, 0], { color: '#8a5fc4', tube: 0.35, parent: 'sign' })
-      .act({ click: [[A.par(A.pose('sign', { rot: [0, 360, 0], dur: 1.2 }), A.say('Percent!', 1.2)), A.pose('sign', { rot: [0, 0, 0], dur: 0 })]] })
+      .act({ click: [[A.par(A.pose('sign', { rot: [0, 360, 0], dur: 1.2 }), A.say('Whirl!', 1.2)), A.pose('sign', { rot: [0, 0, 0], dur: 0 })]] })
       .done(),
   ),
   // A cut-glass perfume bottle with a gold collar and a tasselled atomiser bulb. A squeeze: a puff of scent.
@@ -2415,7 +2415,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.06, 0.003, 0.002], [-0.005, 0.08, 0.008], { color: '#9da3a8', noInk: true, rot: [-8, 0, 0], round: 0 })
       .box([0.05, 0.003, 0.002], [-0.01, 0.07, 0.01], { color: '#9da3a8', noInk: true, rot: [-8, 0, 0], round: 0 })
       .cyl([0.03, 0.006, 0.03], [0.022, 0.045, 0.012], { color: '#c0392b', rot: [82, 0, 0], name: 'seal', scale: 0 })
-      .act({ click: [[A.say('Ka-chunk!', 1), A.par(A.pose('seal', { scale: 1, dur: 0.15 }), A.anim('hop')), A.say('Approved!', 1.2)], [A.pose('seal', { scale: 0, dur: 0.3 }), A.say('New form.', 1)]] })
+      .act({ click: [[A.say('Ka-chunk!', 1), A.par(A.pose('seal', { scale: 1, dur: 0.15 }), A.anim('hop')), A.say('Stamp!', 1.2)], [A.pose('seal', { scale: 0, dur: 0.3 }), A.say('Shuffle.', 1)]] })
       .done(),
   ),
   // A brown bottle of hydrogen peroxide with a white cap and label. Uncapped, it fizzes.
@@ -2480,7 +2480,7 @@ export const ENTRIES: CatalogEntry[] = [
       .ball([0.18, 0.04, 0.18], [0, 0.06, 0.1], { color: '#a0602a' });
     b.each(7, (i) => b.ball(0.022, [Math.cos(i * 0.9) * 0.05, 0.08, 0.1 + Math.sin(i * 0.9) * 0.05], { color: i % 2 ? '#c87a3a' : '#8a4a20' }));
     return b
-      .act({ click: [[A.spawn('dog', 'dog', { rel: 'front', of: 'self', dist: 'near' }), A.move('dog', { rel: 'near', of: 'self', dist: 'touch' }, { speed: 'run' }), A.par(A.anim('wag', 2, 'dog'), A.say('Woof! Dinner!', 1.5, 'dog')), A.wait(1), A.remove('dog', 'fade')]] })
+      .act({ click: [[A.spawn('dog', 'dog', { rel: 'front', of: 'self', dist: 'near' }), A.move('dog', { rel: 'near', of: 'self', dist: 'touch' }, { speed: 'run' }), A.par(A.anim('wag', 2, 'dog'), A.say('Woof woof!', 1.5, 'dog')), A.wait(1), A.remove('dog', 'fade')]] })
       .done();
   }),
   // A dog kennel (1 m long, 0.95 m to the ridge): plank walls, an arched doorway, a shingled pitched roof, a
@@ -2654,7 +2654,7 @@ export const ENTRIES: CatalogEntry[] = [
       .ball([0.1, 0.03, 0.004], [0, 0.115, 0.036], { color: 'grass', noInk: true, parent: 'cover' })
       .label('PHOTOS', [0.12, 0.03], [0, 0.05, 0.031], { color: '#e2b23a', parent: 'cover', depth: 0.002 })
       .box([0.08, 0.06, 0.004], [0.06, 0.25, 0.0], { color: 'white', rot: [0, 0, -12], round: 0 })
-      .act({ click: [[A.operate('cover', 'open'), A.say('Memories!', 1.5)], [A.operate('cover', 'close'), A.say('Thump.', 1)]] })
+      .act({ click: [[A.operate('cover', 'open'), A.say('Flip.', 1)], [A.operate('cover', 'close'), A.say('Thump.', 1)]] })
       .done(),
   ),
   // A street photo booth (1.8 x 1 m, 2.1 m tall): a curtained doorway with a stool inside, a screen, a coin slot
@@ -2680,7 +2680,7 @@ export const ENTRIES: CatalogEntry[] = [
       .act({
         click: [
           [A.operate('curtain', 'on'), A.say('Smile!', 1), A.operate('flash', 'on'), A.operate('flash', 'off'), A.wait(0.3), A.operate('flash', 'on'), A.operate('flash', 'off'), A.wait(0.3), A.par(A.operate('flash', 'on'), A.say('Flash!', 0.8)), A.operate('flash', 'off'), A.pose('strip', { scale: 1, dur: 0.8 }), A.operate('curtain', 'off')],
-          [A.pose('strip', { scale: 0, dur: 0.3 }), A.say('Next!', 1)],
+          [A.pose('strip', { scale: 0, dur: 0.3 }), A.say('Whirr.', 1)],
         ],
       })
       .done();
@@ -2694,7 +2694,7 @@ export const ENTRIES: CatalogEntry[] = [
       .ball([0.02, 0.02, 0.004], [0.025, 0.12, 0.01], { color: '#f6d24a', noInk: true, parent: 'photo' })
       .box([0.08, 0.008, 0.03], [0, 0.004, 0.0], { color: 'darkwood', round: 0.2 })
       .rod([0, 0.08, -0.014], [0, 0.0, -0.05], 0.008, 'darkwood')
-      .act({ click: [[A.par(A.effect('sparkle', { dur: 1 }), A.pose('photo', { rot: [-10, 0, 0], dur: 0.3 }), A.say('Cheese!', 1.2)), A.pose('photo', { rot: [0, 0, 0], dur: 0.3 })]] })
+      .act({ click: [[A.par(A.effect('sparkle', { dur: 1 }), A.pose('photo', { rot: [-10, 0, 0], dur: 0.3 }), A.say('Click!', 1.2)), A.pose('photo', { rot: [0, 0, 0], dur: 0.3 })]] })
       .done(),
   ),
   // A grand piano (1.5 m wide, 1.8 m long) with its lid propped open: a curved black case on three legs, a
@@ -2782,7 +2782,7 @@ export const ENTRIES: CatalogEntry[] = [
     return b
       .socket('table', [-0.3, 0.77, 0], 'top', { size: 0.6 })
       .socket('bench', [0.3, 0.48, 0.62], 'seat')
-      .act({ click: [[A.operate('lid', 'open'), A.spawn('food', 'sandwich', { rel: 'on', of: 'self', dist: 'touch' }), A.par(A.anim('hop', 1, 'food'), A.say('Picnic time!', 1.5)), A.wait(1.5), A.remove('food', 'fade'), A.operate('lid', 'close')]] })
+      .act({ click: [[A.operate('lid', 'open'), A.spawn('food', 'sandwich', { rel: 'on', of: 'self', dist: 'touch' }), A.par(A.anim('hop', 1, 'food'), A.say('Ta-da!', 1.5)), A.wait(1.5), A.remove('food', 'fade'), A.operate('lid', 'close')]] })
       .done();
   }),
   // A cherry pie in its tin (22 cm): fluted crust edge, a lattice top, dark fruit showing through. A slice is cut
@@ -2797,7 +2797,7 @@ export const ENTRIES: CatalogEntry[] = [
       .wedge([0.08, 0.11, 0.045], [0, 0.04, 0.056], { color: '#8a2a3a', rot: [-90, 0, 0], name: 'slice', parent: 'tin', piece: true })
       .box([0.08, 0.012, 0.025], [0, 0.064, 0.1], { color: 'crust', parent: 'slice' })
       .box([0.02, 0.01, 0.09], [0, 0.064, 0.06], { color: 'bread', parent: 'slice' })
-      .act({ click: [[A.detach('slice', 'slice'), A.say('A slice for you!', 1.5)], [A.reattach('slice')]] })
+      .act({ click: [[A.detach('slice', 'slice'), A.say('Slice!', 1.2)], [A.reattach('slice')]] })
       .done();
   }),
   // A pink ceramic piggy bank with a coin slot on its back, a snout, floppy ears, a curly tail and a stopper
@@ -2870,7 +2870,7 @@ export const ENTRIES: CatalogEntry[] = [
     return b
       .cyl([0.05, 0.03, 0.05], [0.07, 0.03, 0.06], { color: 'white', edge: 'sharp' })
       .cyl([0.044, 0.006, 0.044], [0.07, 0.045, 0.06], { color: '#f6c445' })
-      .act({ click: [[A.par(A.effect('steam', { dur: 1.5 }), A.say('Fresh from the oven!', 1.5))], [A.detach('pig', 'snack'), A.say('Yum!', 1)], [A.reattach('pig')]] })
+      .act({ click: [[A.par(A.effect('steam', { dur: 1.5 }), A.say('Sizzle!', 1.5))], [A.detach('pig', 'snack'), A.say('Chomp!', 1)], [A.reattach('pig')]] })
       .done();
   }),
   // A pilgrim's capotain: a tall black felt crown on a wide flat brim, with a band and a square gold buckle.
@@ -2882,7 +2882,7 @@ export const ENTRIES: CatalogEntry[] = [
       .cyl([0.182, 0.04, 0.182], [0, 0.036, 0], { color: '#5c6166', parent: 'hat' })
       .box([0.07, 0.055, 0.012], [0, 0.036, 0.09], { color: 'gold', parent: 'hat', edge: 'sharp' })
       .box([0.036, 0.028, 0.014], [0, 0.036, 0.092], { color: '#5c6166', parent: 'hat', edge: 'sharp' })
-      .act({ click: [[A.pose('hat', { move: [0, 0.06, 0], rot: [-20, 0, 0], dur: 0.3 }), A.say('Good day!', 1.2), A.pose('hat', { move: [0, 0, 0], rot: [0, 0, 0], dur: 0.3 })]] })
+      .act({ click: [[A.pose('hat', { move: [0, 0.06, 0], rot: [-20, 0, 0], dur: 0.3 }), A.say('Doff!', 1.2), A.pose('hat', { move: [0, 0, 0], rot: [0, 0, 0], dur: 0.3 })]] })
       .done(),
   ),
   // Pills: a round scored tablet (1 cm) and a two-tone capsule spilled from an orange prescription bottle with a
@@ -2992,14 +2992,16 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.3, 5, 1.4], [0, 3.6, -15.2], { color: '#4a2e1a', parent: 'hull' });
     // bowsprit, jib, figurehead
     b.rod([0, 7.6, 12], [0, 10.6, 19], 0.4, '#7a5230')
-      .wedge([0.1, 6, 5], [0, 11.0, 15.5], { color: '#efe6cf', rot: [0, 90, 0], apex: 0.45 })
+      .wedge([5, 6, 0.1], [0, 11.0, 15.5], { color: '#efe6cf', rot: [0, 90, 0], apex: 0.45, edge: 'sharp' })
       .ball([0.8, 1.6, 1.0], [0, 7.0, 15.3], { color: '#e2b23a', edge: 'soft' });
     // masts, yards, sails, crow's nest, flag
+    // square sails hang from their yards and belly forward in the wind: thin lofts stood upright, narrower at the top
+    const SAIL: Array<[number, number, number, number]> = [[0, 1, 0.48, 1.8], [0.25, 0.97, 0.48, -0.6], [0.5, 0.94, 0.48, -1.8], [0.75, 0.9, 0.48, -0.6], [1, 0.86, 0.48, 1.8]];
     const mast = (z: number, top: number, sails: Array<[number, number, number]>) => {
       b.stick([0, 6, z], [0, top, z], 0.65, '#7a5230');
       for (const [y, w, h] of sails) {
-        b.stick([w / 2 + 0.3, y + h / 2, z], [-w / 2 - 0.3, y + h / 2, z], 0.3, '#7a5230');
-        b.ball([w, h, 1.4], [0, y, z + 0.5], { color: '#efe6cf', edge: 'soft' });
+        b.stick([w / 2 + 0.3, y + h / 2, z + 0.4], [-w / 2 - 0.3, y + h / 2, z + 0.4], 0.3, '#7a5230');
+        b.loft([w, 0.3, h], [0, y, z + 0.95], SAIL, { color: '#efe6cf', rot: [-90, 0, 0], boxy: 0.85, edge: 'soft' });
       }
     };
     mast(-8, 21, [[14, 8, 4.4], [18.5, 6.4, 3.4]]);
@@ -3091,7 +3093,7 @@ export const ENTRIES: CatalogEntry[] = [
       .wedge([0.08, 0.13, 0.03], [0, 0.02, 0.07], { color: '#f6c445', rot: [-90, 0, 0], name: 'slice', parent: 'base', piece: true })
       .box([0.085, 0.022, 0.02], [0, 0.02, 0.135], { color: '#c8843a', parent: 'slice', round: 0.5 })
       .cyl([0.035, 0.006, 0.035], [0.0, 0.037, 0.09], { color: '#c8423a', parent: 'slice' })
-      .act({ click: [[A.detach('slice', 'slice'), A.say('Stretchy cheese!', 1.5)], [A.reattach('slice')]] })
+      .act({ click: [[A.detach('slice', 'slice'), A.say('Stre-e-etch!', 1.5)], [A.reattach('slice')]] })
       .done();
   }),
   // A cardboard pizza box (36 cm) with its lid open and a hot pizza inside. The lid shuts; it opens again in a
@@ -3106,7 +3108,7 @@ export const ENTRIES: CatalogEntry[] = [
       .cyl([0.045, 0.008, 0.045], [0.05, 0.06, 0.04], { color: '#c8423a', edge: 'soft' })
       .cyl([0.045, 0.008, 0.045], [-0.06, 0.06, -0.02], { color: '#c8423a', edge: 'soft' })
       .cyl([0.045, 0.008, 0.045], [0.02, 0.06, -0.07], { color: '#c8423a', edge: 'soft' })
-      .act({ click: [[A.operate('lid', 'on'), A.say('Flap!', 1)], [A.operate('lid', 'off'), A.par(A.effect('steam', { dur: 1.5 }), A.say('Hot pizza!', 1.5))]] })
+      .act({ click: [[A.operate('lid', 'on'), A.say('Flap!', 1)], [A.operate('lid', 'off'), A.par(A.effect('steam', { dur: 1.5 }), A.say('Fwoosh!', 1.5))]] })
       .done(),
   ),
   // A pizza wheel: a steel blade on a guard and a red grip, rolling across a slice on a board. Zzzip!
@@ -3140,7 +3142,7 @@ export const ENTRIES: CatalogEntry[] = [
       .socket('hearth', [0, 1.1, 0.4], 'inside', { size: 0.4 })
       .act({
         click: [
-          [A.par(A.operate('fire', 'on'), A.effect('fire', { dur: 2 }), A.say('Crackle crackle...', 2)), A.effect('smoke', { dur: 1.5 }), A.spawn('pie', 'pizza', { rel: 'front', of: 'self', dist: 'close' }), A.par(A.effect('steam', { id: 'pie', dur: 1.5 }), A.say('Pizza time!', 1.5)), A.wait(1.5), A.remove('pie', 'fade')],
+          [A.par(A.operate('fire', 'on'), A.effect('fire', { dur: 2 }), A.say('Crackle crackle...', 2)), A.effect('smoke', { dur: 1.5 }), A.spawn('pie', 'pizza', { rel: 'front', of: 'self', dist: 'close' }), A.par(A.effect('steam', { id: 'pie', dur: 1.5 }), A.say('Ding!', 1.5)), A.wait(1.5), A.remove('pie', 'fade')],
           [A.operate('fire', 'off'), A.effect('smoke', { dur: 1.2 })],
         ],
       })
@@ -3162,7 +3164,7 @@ export const ENTRIES: CatalogEntry[] = [
     return b.act({
       click: [
         [A.par(A.pose('body', { rot: [0, 0, 25], dur: 0.2 }), A.say('Whack!', 1)), A.pose('body', { rot: [0, 0, -18], dur: 0.3 }), A.pose('body', { rot: [0, 0, 0], dur: 0.3 })],
-        [A.par(A.anim('shake'), A.effect('explosion', { dur: 0.4 }), A.say('POP! Candy!', 1.5)), A.spawn('candy', 'candy', { rel: 'front', of: 'self', dist: 'close' }), A.spawn('bits', 'confetti', { rel: 'near', of: 'self', dist: 'close' }), A.wait(2), A.remove('candy', 'fade'), A.remove('bits', 'fade')],
+        [A.par(A.anim('shake'), A.effect('explosion', { dur: 0.4 }), A.say('POP!', 1.2)), A.spawn('candy', 'candy', { rel: 'front', of: 'self', dist: 'close' }), A.spawn('bits', 'confetti', { rel: 'near', of: 'self', dist: 'close' }), A.wait(2), A.remove('candy', 'fade'), A.remove('bits', 'fade')],
       ],
     }).done();
   }),
@@ -3178,7 +3180,7 @@ export const ENTRIES: CatalogEntry[] = [
       .cyl([0.06, 0.1, 0.06], [0.17, 0.057, -0.12], { color: 'glass', taper: 1.1 })
       .cyl([0.056, 0.06, 0.056], [0.17, 0.04, -0.12], { color: '#8fc6e6', noInk: true })
       .socket('plate', [0, 0.03, 0], 'top', { size: 0.2 })
-      .act({ click: [[A.spawn('dinner', 'pasta', { rel: 'on', of: 'self', dist: 'touch' }), A.attach('dinner', 'self', 'plate'), A.say('Ding! Dinner is served.', 1.8)], [A.remove('self.plate', 'fade'), A.say('All gone!', 1.2)]] })
+      .act({ click: [[A.spawn('dinner', 'pasta', { rel: 'on', of: 'self', dist: 'touch' }), A.attach('dinner', 'self', 'plate'), A.say('Ding!', 1.5)], [A.remove('self.plate', 'fade'), A.say('Clink.', 1)]] })
       .done();
   }),
   // A planet model for the planetarium (3.3 m): a banded gas giant tilted on its axis with a broad ring and a
@@ -3205,7 +3207,7 @@ export const ENTRIES: CatalogEntry[] = [
       b.rod([0, 0.05, 0], [Math.cos(a) * r, h, Math.sin(a) * r], 0.012, '#5aa553', { parent: 'top' });
       spoke(b, [Math.cos(a) * r, h, Math.sin(a) * r], -deg(a), 15, 0.2, 0.012, 0.11, i % 2 ? '#5aa553' : '#3f7a3a', { parent: 'top' });
     }
-    return b.ball([0.12, 0.2, 0.08], [0, 0.55, 0], { color: '#6ab04c', parent: 'top' }).act({ click: [[A.par(A.pose('top', { scale: 1.2, dur: 0.8 }), A.effect('sparkle', { dur: 1 }), A.say('Grow, grow!', 1.5)), A.wait(1), A.pose('top', { scale: 1, dur: 0.6 })]] }).done();
+    return b.ball([0.12, 0.2, 0.08], [0, 0.55, 0], { color: '#6ab04c', parent: 'top' }).act({ click: [[A.par(A.pose('top', { scale: 1.2, dur: 0.8 }), A.effect('sparkle', { dur: 1 }), A.say('Rustle!', 1.5)), A.wait(1), A.pose('top', { scale: 1, dur: 0.6 })]] }).done();
   }),
   // Plastic things: a squeezy bottle, a bucket, toy bricks and a tub. Squeezed, it squeaks and bounces.
   e('plastic', 'workshop', 'materials', () => {
@@ -3274,7 +3276,7 @@ export const ENTRIES: CatalogEntry[] = [
       .ball([0.05, 0.015, 0.03], [-0.05, 0.03, 0.11], { color: '#3f7a3a' })
       .dome([0.36, 0.2, 0.26], [0, 0.125, 0], { color: 'silver', name: 'cloche', mover: { kind: 'slide', axis: 'y', amount: 0.35 }, edge: 'sharp' })
       .ball(0.04, [0, 0.23, 0], { color: 'silver', parent: 'cloche', edge: 'sharp' })
-      .act({ click: [[A.operate('cloche', 'up'), A.par(A.effect('steam', { dur: 2 }), A.say('Voilà!', 1.5)), A.wait(2), A.operate('cloche', 'down')]] })
+      .act({ click: [[A.operate('cloche', 'up'), A.par(A.effect('steam', { dur: 2 }), A.say('Ta-da!', 1.5)), A.wait(2), A.operate('cloche', 'down')]] })
       .done(),
   ),
   // A playground (16 x 12 m) on safety matting: a slide with a ladder, a swing set with two swings, a seesaw, a
@@ -3284,7 +3286,7 @@ export const ENTRIES: CatalogEntry[] = [
     // slide: platform tower, ladder, chute
     for (const [xx, z] of [[-5.5, -3], [-4.3, -3], [-5.5, -1.8], [-4.3, -1.8]]) b.stick([xx, 0.1, z], [xx, 2.6, z], 0.12, '#e0473b');
     b.box([1.4, 0.1, 1.4], [-4.9, 1.6, -2.4], { color: '#4e8fd6' })
-      .pyramid([1.9, 0.8, 1.9], [-4.9, 3.0, -2.4], 4, { color: '#f6d24a', rot: [0, 45, 0] })
+      .pyramid([1.7 * Math.SQRT2, 0.8, 1.7 * Math.SQRT2], [-4.9, 3.0, -2.4], 4, { color: '#f6d24a' })
       .box([1.0, 0.12, 3.6], [-4.9, 0.95, 0.3], { color: '#f6d24a', rot: [24, 0, 0], round: 0.3 })
       .box([0.08, 0.3, 3.6], [-4.4, 1.1, 0.3], { color: '#f6d24a', rot: [24, 0, 0] })
       .box([0.08, 0.3, 3.6], [-5.4, 1.1, 0.3], { color: '#f6d24a', rot: [24, 0, 0] });
@@ -3313,7 +3315,7 @@ export const ENTRIES: CatalogEntry[] = [
       .act({
         click: [
           [A.par(A.pose('swing1', { rot: [35, 0, 0], dur: 0.7 }), A.pose('swing2', { rot: [-30, 0, 0], dur: 0.7 }), A.say('Wheee!', 1.5)), A.par(A.pose('swing1', { rot: [-30, 0, 0], dur: 0.8 }), A.pose('swing2', { rot: [30, 0, 0], dur: 0.8 })), A.par(A.pose('swing1', { rot: [0, 0, 0], dur: 0.7 }), A.pose('swing2', { rot: [0, 0, 0], dur: 0.7 }))],
-          [A.pose('seesaw', { rot: [0, 0, 12], dur: 0.6 }), A.par(A.pose('seesaw', { rot: [0, 0, -12], dur: 0.8 }), A.say('Up and down!', 1.5)), A.pose('seesaw', { rot: [0, 0, 0], dur: 0.6 })],
+          [A.pose('seesaw', { rot: [0, 0, 12], dur: 0.6 }), A.par(A.pose('seesaw', { rot: [0, 0, -12], dur: 0.8 }), A.say('Creak, creak!', 1.5)), A.pose('seesaw', { rot: [0, 0, 0], dur: 0.6 })],
         ],
       })
       .done();
@@ -3382,7 +3384,7 @@ export const ENTRIES: CatalogEntry[] = [
       .socket('beanbag', [1.2, 0.5, 1.0], 'seat')
       .act({
         click: [
-          [A.pose('horse', { rot: [12, 0, 0], dur: 0.4 }), A.par(A.pose('horse', { rot: [-12, 0, 0], dur: 0.5 }), A.say('Giddy up!', 1.5)), A.pose('horse', { rot: [10, 0, 0], dur: 0.5 }), A.pose('horse', { rot: [0, 0, 0], dur: 0.4 })],
+          [A.pose('horse', { rot: [12, 0, 0], dur: 0.4 }), A.par(A.pose('horse', { rot: [-12, 0, 0], dur: 0.5 }), A.say('Clip clop!', 1.5)), A.pose('horse', { rot: [10, 0, 0], dur: 0.5 }), A.pose('horse', { rot: [0, 0, 0], dur: 0.4 })],
           [A.operate('lid', 'open'), A.spawn('ball', 'ball', { rel: 'front', of: 'self', dist: 'close' }), A.par(A.anim('bounce', 2, 'ball'), A.say('Boing boing!', 1.5)), A.remove('ball', 'fade'), A.operate('lid', 'close')],
         ],
       })
@@ -3449,7 +3451,7 @@ export const ENTRIES: CatalogEntry[] = [
     plinth(m('plus sign'))
       .box([0.16, 0.05, 0.03], [0, 0.12, 0], { color: '#e0473b', round: 0.2, name: 'sign', edge: 'sharp' })
       .box([0.05, 0.16, 0.03], [0, 0.12, 0], { color: '#e0473b', round: 0.2, parent: 'sign', edge: 'sharp' })
-      .act({ click: [[A.par(A.pose('sign', { rot: [0, 360, 0], dur: 1.2 }), A.say('Plus!', 1.2)), A.pose('sign', { rot: [0, 0, 0], dur: 0 })]] })
+      .act({ click: [[A.par(A.pose('sign', { rot: [0, 360, 0], dur: 1.2 }), A.say('Whirl!', 1.2)), A.pose('sign', { rot: [0, 0, 0], dur: 0 })]] })
       .done(),
   ),
   // A red multi-tool pocket knife (9 cm closed) with a white cross badge: the main blade flicks open on its pivot
@@ -3529,7 +3531,7 @@ export const ENTRIES: CatalogEntry[] = [
       b.each(6, (i) => spoke(b, [cx, cy, cz], i * 60, 8, 0.1 * s, 0.01, 0.045 * s, i % 2 ? '#d42a2a' : '#b81f2a', { parent: 'head' }));
       b.ball(0.02 * s, [cx, cy + 0.005, cz], { color: '#f6d24a', parent: 'head' });
     }
-    return b.act({ click: [[A.par(A.pose('head', { scale: 1.2, dur: 0.6 }), A.effect('sparkle', { dur: 1.2 }), A.say('Merry Christmas!', 1.5)), A.wait(0.8), A.pose('head', { scale: 1, dur: 0.5 })]] }).done();
+    return b.act({ click: [[A.par(A.pose('head', { scale: 1.2, dur: 0.6 }), A.effect('sparkle', { dur: 1.2 }), A.say('Twinkle!', 1.5)), A.wait(0.8), A.pose('head', { scale: 1, dur: 0.5 })]] }).done();
   }),
   // Polarised sunglasses: a black wayfarer frame with dark green lenses that flash in the sun, standing on their
   // folded-out arms.
@@ -3542,7 +3544,7 @@ export const ENTRIES: CatalogEntry[] = [
       b.box([0.006, 0.01, 0.13], [s * 0.07, 0.055, -0.005], { color: '#2a2726', round: 0.4, parent: 'frame' });
       b.rod([s * 0.07, 0.055, -0.07], [s * 0.07, 0.0, -0.08], 0.006, '#2a2726', { parent: 'frame' });
     });
-    return b.box([0.012, 0.012, 0.012], [0, 0.03, 0.06], { color: '#2a2726', parent: 'frame' }).act({ click: [[A.par(A.effect('sparkle', { dur: 1 }), A.say('Cool!', 1.2))]] }).done();
+    return b.box([0.012, 0.012, 0.012], [0, 0.03, 0.06], { color: '#2a2726', parent: 'frame' }).act({ click: [[A.par(A.effect('sparkle', { dur: 1 }), A.say('Gleam!', 1.2))]] }).done();
   }),
   // A flagpole (6 m) on a concrete base with a ball finial, a halyard, and a flag that is raised to the top and
   // flaps, then lowered.
@@ -3570,7 +3572,7 @@ export const ENTRIES: CatalogEntry[] = [
     });
     return b
       .star(0.035, [0, 0.07, 0.11], { color: 'gold', rot: [-10, 0, 0], parent: 'cap' })
-      .act({ click: [[A.par(A.pose('cap', { move: [0, 0.05, 0], dur: 0.2 }), A.say('Evening all!', 1.5)), A.pose('cap', { move: [0, 0, 0], dur: 0.2 })]] })
+      .act({ click: [[A.par(A.pose('cap', { move: [0, 0.05, 0], dur: 0.2 }), A.say('Hup!', 1.2)), A.pose('cap', { move: [0, 0, 0], dur: 0.2 })]] })
       .done();
   }),
   // A police patrol car (4.8 m): white with black doors and POLICE on them, a red-and-blue light bar on the roof,
@@ -3674,7 +3676,7 @@ export const ENTRIES: CatalogEntry[] = [
       .dome([0.09, 0.045, 0.09], [0.1, 0.0225, 0.05], { color: '#a8202a', rot: [180, 0, 0], name: 'half' })
       .cyl([0.084, 0.004, 0.084], [0.1, 0.046, 0.05], { color: '#f6e6d0', parent: 'half', edge: 'sharp' });
     b.each(10, (i) => b.ball(0.012, [0.1 + Math.cos(i * 0.63) * (0.012 + (i % 3) * 0.008), 0.05, 0.05 + Math.sin(i * 0.63) * (0.012 + (i % 3) * 0.008)], { color: '#d8203a', parent: 'half' }));
-    return b.act({ click: [[A.par(A.pose('half', { move: [0, 0.05, 0], dur: 0.3 }), A.effect('sparkle', { dur: 1 }), A.say('So many seeds!', 1.5)), A.pose('half', { move: [0, 0, 0], dur: 0.3 })]] }).done();
+    return b.act({ click: [[A.par(A.pose('half', { move: [0, 0.05, 0], dur: 0.3 }), A.effect('sparkle', { dur: 1 }), A.say('Crack!', 1.2)), A.pose('half', { move: [0, 0, 0], dur: 0.3 })]] }).done();
   }),
   // A cheerleader's pompom: a big burst of red and white plastic ribbons on a hidden handle. Shake it: rah rah!
   e('pompom', 'sports', 'cheerleading', () => {
@@ -3757,7 +3759,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.34, 0.03, 0.02], [0, 0.02, -0.12], { color: 'darkwood', round: 0.3, name: 'rack', edge: 'sharp' })
       .box([0.02, 0.03, 0.36], [0.085, 0.02, 0.035], { color: 'darkwood', rot: [0, -30, 0], round: 0.3, parent: 'rack', edge: 'sharp' })
       .box([0.02, 0.03, 0.36], [-0.085, 0.02, 0.035], { color: 'darkwood', rot: [0, 30, 0], round: 0.3, parent: 'rack', edge: 'sharp' })
-      .act({ click: [[A.pose('rack', { move: [0, 0.25, 0], dur: 0.5 }), A.say('Rack em up!', 1.5), A.pose('rack', { move: [0, 0, 0], dur: 0.5 })], [A.par(A.anim('shake'), A.say('CRACK! Break!', 1.5))]] })
+      .act({ click: [[A.pose('rack', { move: [0, 0.25, 0], dur: 0.5 }), A.say('Clack!', 1.2), A.pose('rack', { move: [0, 0, 0], dur: 0.5 })], [A.par(A.anim('shake'), A.say('CRACK!', 1.2))]] })
       .done();
   }),
   // A poolside sun lounger (1.9 m): an aluminium frame on wheels, slatted white bed, a padded cushion, and a
@@ -3773,7 +3775,7 @@ export const ENTRIES: CatalogEntry[] = [
       .cyl([0.18, 0.05, 0.18], [-0.33, 0.09, -0.5], { color: '#2a2726', rot: [0, 0, 90], name: 'wheelR' })
       .stick([0.3, 0.1, -0.5], [0.3, 0.33, -0.4], 0.04, 'silver').stick([-0.3, 0.1, -0.5], [-0.3, 0.33, -0.4], 0.04, 'silver')
       .socket('seat', [0, 0.45, 0.2], 'seat')
-      .act({ click: [[A.operate('back', 'on'), A.say('Ahh, relax...', 1.5)], [A.operate('back', 'off'), A.say('Click.', 1)]] })
+      .act({ click: [[A.operate('back', 'on'), A.say('Creak.', 1.2)], [A.operate('back', 'off'), A.say('Click.', 1)]] })
       .done(),
   ),
   // A pool cue (1.45 m) standing on its butt: a tapering maple shaft, a white ferrule and blue chalked tip, a
@@ -3804,7 +3806,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.04, 0.6, 0.5], [2.8, 0.9, 3.55], { color: '#f0923b', round: 0.3, edge: 'soft' })
       .box([0.65, 0.05, 1.8], [-2.5, 0.38, 3.6], { color: 'white', round: 0.3 })
       .box([0.6, 0.06, 1.7], [-2.5, 0.42, 3.6], { color: '#4e8fd6', round: 0.5, edge: 'soft' });
-    return b.act({ click: [[A.operate('slide', 'open'), A.say('Swoosh!', 1), A.wait(2.5), A.operate('slide', 'close')], [A.operate('door', 'open'), A.say('Changing room!', 1.2), A.wait(2), A.operate('door', 'close')]] }).done();
+    return b.act({ click: [[A.operate('slide', 'open'), A.say('Swoosh!', 1), A.wait(2.5), A.operate('slide', 'close')], [A.operate('door', 'open'), A.say('Creak.', 1.2), A.wait(2), A.operate('door', 'close')]] }).done();
   }),
   // A pool table (2.7 x 1.5 m, 0.8 m high): green baize, cushioned wooden rails with diamond sights, six net
   // pockets, carved legs, a racked triangle of balls, the white ball and a cue. The white ball shoots up the
@@ -3838,7 +3840,7 @@ export const ENTRIES: CatalogEntry[] = [
       .torus([0.05, 0.05, 0.012], [0, 0.13, 0.3], { color: '#f6d24a', rot: [0, 0, 0], parent: 'stock' })
       .cyl([0.032, 0.03, 0.032], [0, 0.13, 0.325], { color: 'tan', rot: [90, 0, 0], taper: 0.85, name: 'cork', parent: 'stock', piece: true })
       .rod([0, 0.13, 0.33], [0, 0.09, 0.15], 0.004, 'white', { parent: 'cork' })
-      .act({ click: [[A.par(A.detach('cork', 'cork'), A.say('POP!', 1))], [A.reattach('cork'), A.say('Reload.', 1)]] })
+      .act({ click: [[A.par(A.detach('cork', 'cork'), A.say('POP!', 1))], [A.reattach('cork'), A.say('Click.', 1)]] })
       .done(),
   ),
   // A red-and-white striped popcorn bucket heaped with fluffy popcorn. More pops up out of it.
@@ -3861,7 +3863,7 @@ export const ENTRIES: CatalogEntry[] = [
     return b
       .ball([0.009, 0.007, 0.008], [0.05, 0.0035, 0.02], { color: '#e8b030', name: 'kernel' })
       .ball([0.025, 0.02, 0.022], [0.05, 0.01, 0.02], { color: '#fff3d6', name: 'popped', scale: 0 })
-      .act({ click: [[A.par(A.pose('kernel', { scale: 0, dur: 0.1 }), A.pose('popped', { scale: 1, dur: 0.15 }), A.anim('hop'), A.say('POP!', 1))], [A.par(A.pose('kernel', { scale: 1, dur: 0.2 }), A.pose('popped', { scale: 0, dur: 0.2 }), A.say('Another one...', 1.2))]] })
+      .act({ click: [[A.par(A.pose('kernel', { scale: 0, dur: 0.1 }), A.pose('popped', { scale: 1, dur: 0.15 }), A.anim('hop'), A.say('POP!', 1))], [A.par(A.pose('kernel', { scale: 1, dur: 0.2 }), A.pose('popped', { scale: 0, dur: 0.2 }), A.say('Rattle...', 1.2))]] })
       .done();
   }),
   // A front porch (5 x 2.5 m): a wooden deck up two steps, turned posts and a railing, a roof with a beadboard
@@ -3894,7 +3896,7 @@ export const ENTRIES: CatalogEntry[] = [
       .act({
         click: [
           [A.pose('rocker', { rot: [10, 0, 0], dur: 0.6, times: 3 }), A.say('Creak... creak...', 1.5)],
-          [A.operate('door', 'open'), A.say('Come on in!', 1.5), A.wait(2), A.operate('door', 'close')],
+          [A.operate('door', 'open'), A.say('Creak...', 1.5), A.wait(2), A.operate('door', 'close')],
         ],
       })
       .done();
@@ -3976,7 +3978,7 @@ export const ENTRIES: CatalogEntry[] = [
       .torus([0.42, 0.42, 0.04], [0, 0.4, 0.075], { color: 'brass', tube: 0.12, parent: 'window' })
       .box([0.08, 0.04, 0.04], [0.22, 0.4, 0.1], { color: 'brass', parent: 'window' })
       .ball([0.1, 0.04, 0.004], [-0.05, 0.47, 0.092], { color: 'white', noInk: true, parent: 'window' })
-      .act({ click: [[A.operate('window', 'open'), A.par(A.effect('water_spray', { dur: 1 }), A.say('Whoosh! Sea air!', 1.5)), A.wait(1.5), A.operate('window', 'close')]] })
+      .act({ click: [[A.operate('window', 'open'), A.par(A.effect('water_spray', { dur: 1 }), A.say('Whoosh!', 1.2)), A.wait(1.5), A.operate('window', 'close')]] })
       .done();
   }),
   // A blue portable toilet (1.1 x 1.1 m, 2.3 m): a moulded plastic cabin with a white roof, vents, a door on its
@@ -3991,7 +3993,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.12, 0.05, 0.03], [0.35, 1.15, 0.62], { color: '#e0473b', name: 'sign', parent: 'door', mover: { kind: 'light' } })
       .box([0.5, 0.12, 0.03], [0, 1.85, 0.62], { color: '#2a2726', parent: 'door', round: 0 })
       .box([0.03, 0.4, 0.5], [0.57, 1.7, 0], { color: '#2a5aa0', round: 0.3 })
-      .act({ click: [[A.operate('door', 'open'), A.say('Creak...', 1), A.wait(1.5), A.par(A.operate('door', 'close'), A.operate('sign', 'on'), A.say('Occupied!', 1.5)), A.wait(1.5), A.operate('sign', 'off')]] })
+      .act({ click: [[A.operate('door', 'open'), A.say('Creak...', 1), A.wait(1.5), A.par(A.operate('door', 'close'), A.operate('sign', 'on'), A.say('Click!', 1.2)), A.wait(1.5), A.operate('sign', 'off')]] })
       .done(),
   ),
   // A post office: brick front with POST OFFICE over glass doors, a flag, a postbox at the kerb whose slot takes
@@ -4029,7 +4031,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.06, 0.002, 0.001], [-0.03, 0.06, -0.002], { color: '#5c6166', parent: 'card', round: 0, noInk: true })
       .box([0.06, 0.002, 0.001], [-0.03, 0.05, -0.002], { color: '#5c6166', parent: 'card', round: 0, noInk: true })
       .box([0.002, 0.08, 0.001], [0.0, 0.065, -0.002], { color: '#9da3a8', parent: 'card', round: 0, noInk: true })
-      .act({ click: [[A.pose('card', { rot: [0, 180, 0], dur: 0.6 }), A.say('Wish you were here!', 1.8)], [A.pose('card', { rot: [0, 0, 0], dur: 0.6 })]] })
+      .act({ click: [[A.pose('card', { rot: [0, 180, 0], dur: 0.6 }), A.say('Flip!', 1.2)], [A.pose('card', { rot: [0, 0, 0], dur: 0.6 })]] })
       .done(),
   ),
   // A film poster (70 x 100 cm) on an A-frame display board: a rocket, a moon and a title. Its corner curls in
@@ -4072,7 +4074,7 @@ export const ENTRIES: CatalogEntry[] = [
     for (const [xx, z] of [[0.18, 0.08], [0.2, 0.0]]) b.cyl([0.035, 0.006, 0.035], [xx, 0.003, z], { color: '#f6c445', edge: 'sharp' });
     const rb = ['#e0473b', '#f0923b', '#f6d24a', '#5aa553', '#4e8fd6', '#8a5fc4'];
     rb.forEach((c, i) => b.arc([1.2 - i * 0.07, 1.2 - i * 0.07, 0.03], [0.25, 0.05, -0.15], { color: c, tube: 0.06, arc: 140, rot: [0, 0, -20], noInk: true }));
-    return b.act({ click: [[A.par(A.effect('sparkle', { dur: 1.5 }), A.spawn('lep', 'leprechaun', { rel: 'front', of: 'self', dist: 'close' })), A.par(A.anim('dance', 1, 'lep'), A.say("Hands off me gold!", 2, 'lep')), A.wait(0.5), A.remove('lep', 'pop')]] }).done();
+    return b.act({ click: [[A.par(A.effect('sparkle', { dur: 1.5 }), A.spawn('lep', 'leprechaun', { rel: 'front', of: 'self', dist: 'close' })), A.par(A.anim('dance', 1, 'lep'), A.say("Top o' the mornin'! Me lucky day!", 2.2, 'lep')), A.wait(0.5), A.remove('lep', 'pop')]] }).done();
   }),
   // Pan-fried dumplings in a bamboo steamer with a dish of soy dipping sauce. The steamer lid lifts in a cloud of
   // steam.
@@ -4086,7 +4088,7 @@ export const ENTRIES: CatalogEntry[] = [
       .dome([0.22, 0.03, 0.22], [0, 0.145, 0], { color: '#c89a5a', parent: 'lid' })
       .cyl([0.08, 0.02, 0.08], [0.17, 0.01, 0.1], { color: 'white', edge: 'sharp' })
       .cyl([0.065, 0.006, 0.065], [0.17, 0.02, 0.1], { color: '#5a2a1a' })
-      .act({ click: [[A.operate('lid', 'up'), A.par(A.effect('steam', { dur: 2 }), A.say('Steamy!', 1.5)), A.wait(1.5), A.operate('lid', 'down')]] })
+      .act({ click: [[A.operate('lid', 'up'), A.par(A.effect('steam', { dur: 2 }), A.say('Fsssh!', 1.5)), A.wait(1.5), A.operate('lid', 'down')]] })
       .done();
   }),
   // A russet potato (12 cm) with little eyes; given time, a sprout pushes out of one.
@@ -4095,7 +4097,7 @@ export const ENTRIES: CatalogEntry[] = [
     for (const [xx, y, z] of [[0.03, 0.05, 0.035], [-0.035, 0.04, 0.035], [0.0, 0.065, -0.01], [0.05, 0.03, -0.03]]) b.ball([0.008, 0.006, 0.004], [xx, y, z], { color: '#7a5a3a', noInk: true, parent: 'spud' });
     return b
       .cyl([0.006, 0.04, 0.006], [0.0, 0.085, -0.01], { color: '#c8a0e0', name: 'sprout', scale: 0, parent: 'spud' })
-      .act({ click: [[A.par(A.pose('sprout', { scale: 1, dur: 0.8 }), A.say('Sprouting!', 1.2))], [A.par(A.pose('sprout', { scale: 0, dur: 0.3 }), A.anim('hop'), A.say('Spud!', 1))]] })
+      .act({ click: [[A.par(A.pose('sprout', { scale: 1, dur: 0.8 }), A.say('Sprout!', 1.2))], [A.par(A.pose('sprout', { scale: 0, dur: 0.3 }), A.anim('hop'), A.say('Plop!', 1))]] })
       .done();
   }),
   // An open bag of ridged potato chips with chips spilling out on the table. One flies out: crunch!
@@ -4130,7 +4132,7 @@ export const ENTRIES: CatalogEntry[] = [
     b.each(6, (i) => b.box([0.02, 0.003, 0.003], [Math.cos(i) * 0.06, 0.12, Math.sin(i) * 0.06], { color: '#3f7a3a', rot: [0, i * 40, 0], round: 0, noInk: true }));
     return b
       .rod([0.02, 0.1, 0.0], [0.1, 0.24, -0.04], 0.012, 'silver', { name: 'spoon', pivot: [0, 0.1, 0], edge: 'sharp' })
-      .act({ click: [[A.par(A.pose('spoon', { rot: [0, 360, 0], dur: 1 }), A.say('Mix, mix!', 1.2)), A.pose('spoon', { rot: [0, 0, 0], dur: 0 })]] })
+      .act({ click: [[A.par(A.pose('spoon', { rot: [0, 360, 0], dur: 1 }), A.say('Swish, swish!', 1.2)), A.pose('spoon', { rot: [0, 0, 0], dur: 0 })]] })
       .done();
   }),
   // A witch's potion: a round glass flask of glowing purple brew with a cork, a tag on a string and bubbles
@@ -4173,20 +4175,38 @@ export const ENTRIES: CatalogEntry[] = [
     for (let i = 0; i < 8; i++) spoke(b, [0.01, 0.3 + i * 0.04, 0], i * 137 % 360, 25 - i * 2, 0.14, 0.012, 0.08, i % 2 ? '#2f6a32' : '#3f7a3a', { parent: 'top' });
     return b.ball([0.05, 0.08, 0.02], [0.02, 0.63, 0], { color: '#8a2b3a', parent: 'top' }).act({ click: [[A.par(A.pose('top', { rot: [0, 0, 6], dur: 0.4, times: 2 }), A.say('Rustle...', 1.2)), A.pose('top', { scale: 1.1, dur: 0.4 }), A.pose('top', { scale: 1, dur: 0.4 })]] }).done();
   }),
-  // Pottery: a potter's wheel with a clay pot taking shape on its turning head, beside a finished glazed vase and
-  // a bowl. The wheel spins and the pot grows taller.
-  e('pottery', 'home', 'decor', () =>
-    m('pottery')
-      .box([0.6, 0.4, 0.5], [0, 0.2, 0], { color: '#5c6166', round: 0.15, edge: 'sharp' })
-      .cyl([0.62, 0.06, 0.62], [0, 0.43, 0], { color: '#7a7f85', taper: 1.1, edge: 'sharp' })
-      .cyl([0.3, 0.04, 0.3], [0, 0.48, 0], { color: '#9da3a8', name: 'wheel', mover: { kind: 'spin', axis: 'y', amount: 360 }, edge: 'sharp' })
-      .cyl([0.16, 0.14, 0.16], [0, 0.57, 0], { color: '#c87a4a', taper: 0.75, name: 'clay', parent: 'wheel' })
-      .cyl([0.15, 0.32, 0.15], [0.55, 0.16, 0.1], { color: '#2f8f88', taper: 0.5 })
-      .cyl([0.08, 0.06, 0.08], [0.55, 0.34, 0.1], { color: '#2f8f88', taper: 1.4 })
-      .cyl([0.18, 0.07, 0.18], [-0.5, 0.035, 0.15], { color: '#e8b060', taper: 1.4 })
-      .act({ click: [[A.par(A.operate('wheel', 'on'), A.pose('clay', { scale: 1.3, dur: 1.5 }), A.say('Whirr...', 1.5)), A.wait(1), A.par(A.operate('wheel', 'off'), A.pose('clay', { scale: 1, dur: 0.5 }))]] })
-      .done(),
-  ),
+  // Pottery: a potter's wheel at real size (wheel head at 0.53 m) on four legs, with its cream splash pan, a wet
+  // clay pot taking shape on the turning head, a sponge, the foot pedal, and the potter's stool behind it (a seat
+  // at 0.45 m); finished pots on the floor beside it: a tall teal-glazed vase, a terracotta bowl and a little
+  // cream jug. The wheel spins and the pot grows taller.
+  e('pottery', 'home', 'decor', () => {
+    const b = m('pottery', { edge: 'sharp' }), clay = '#b8703f';
+    b.box([0.48, 0.16, 0.56], [0, 0.34, 0], { color: '#9da3a8', round: 0.15 })
+      .pair((s) => b.cyl([0.04, 0.27, 0.04], [s * 0.19, 0.135, 0.2], { color: '#4a4f55' }).cyl([0.04, 0.27, 0.04], [s * 0.19, 0.135, -0.2], { color: '#4a4f55' }))
+      .cyl([0.6, 0.1, 0.6], [0, 0.47, 0], { color: '#ece6d8', taper: 1.08, round: 0.2 })
+      .cyl([0.56, 0.006, 0.56], [0, 0.521, 0], { color: '#8a7a68', noInk: true })
+      .cyl([0.32, 0.03, 0.32], [0, 0.535, 0], { color: '#7a7f85', name: 'wheel', mover: { kind: 'spin', axis: 'y', amount: 360 } })
+      .ball([0.17, 0.15, 0.17], [0, 0.615, 0], { color: clay, name: 'clay', parent: 'wheel', pivot: [0, 0.55, 0], edge: 'soft' })
+      .cyl([0.1, 0.07, 0.1], [0, 0.705, 0], { color: clay, taper: 1.15, parent: 'clay', edge: 'soft' })
+      .cyl([0.075, 0.004, 0.075], [0, 0.741, 0], { color: '#7a4424', parent: 'clay', noInk: true })
+      .box([0.1, 0.04, 0.07], [0.19, 0.44, 0.245], { color: '#f6d24a', round: 0.5, edge: 'soft' })
+      .box([0.12, 0.04, 0.2], [0.45, 0.03, 0.12], { color: '#3a3f44', rot: [8, 0, 0], round: 0.3 })
+      .rod([0.45, 0.03, 0.02], [0.24, 0.3, -0.05], 0.012, '#2a2726', { edge: 'soft' })
+      .cyl([0.36, 0.05, 0.36], [0, 0.45, -0.58], { color: 'wood', round: 0.3 });
+    b.each(3, (i) => {
+      const a = (i / 3) * Math.PI * 2 + 0.5;
+      b.stick([Math.cos(a) * 0.1, 0.43, -0.58 + Math.sin(a) * 0.1], [Math.cos(a) * 0.16, 0, -0.58 + Math.sin(a) * 0.16], 0.035, 'darkwood');
+    });
+    b.ball([0.2, 0.24, 0.2], [0.68, 0.14, 0.18], { color: '#2f8f88', edge: 'soft' })
+      .cyl([0.08, 0.16, 0.08], [0.68, 0.32, 0.18], { color: '#2f8f88', taper: 0.85, edge: 'soft' })
+      .torus([0.1, 0.1, 0.02], [0.68, 0.4, 0.18], { color: '#2f8f88', rot: [90, 0, 0], tube: 0.25, edge: 'soft' })
+      .cyl([0.24, 0.09, 0.24], [-0.62, 0.045, 0.2], { color: '#c0643a', taper: 1.35, edge: 'soft' })
+      .cyl([0.2, 0.004, 0.2], [-0.62, 0.091, 0.2], { color: '#7a3a1e', noInk: true })
+      .cyl([0.11, 0.14, 0.11], [-0.66, 0.07, -0.1], { color: '#efe6cf', taper: 0.8, edge: 'soft' })
+      .arc([0.07, 0.08, 0.015], [-0.705, 0.08, -0.1], { color: '#efe6cf', rot: [0, 0, 90], tube: 0.25, arc: 200, edge: 'soft' })
+      .socket('seat', [0, 0.475, -0.58], 'seat');
+    return b.act({ click: [[A.par(A.operate('wheel', 'on'), A.pose('clay', { scale: 1.3, dur: 1.5 }), A.say('Whirr...', 1.5)), A.wait(1), A.par(A.operate('wheel', 'off'), A.pose('clay', { scale: 1, dur: 0.5 }))]] }).done();
+  }),
   // A speedboat (6.5 m): a deep-V white hull with a red stripe, a wraparound windscreen, two bucket seats and a
   // bench in the open cockpit, a steering wheel, and a big outboard motor whose propeller spins. Vroom!
   e('power boat', 'garage', 'boats', () => {
@@ -4212,29 +4232,64 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [[A.par(A.operate('propeller', 'on'), A.effect('water_spray', { dur: 2 }), A.anim('wobble'), A.say('VROOOOM!', 2)), A.wait(2), A.operate('propeller', 'off')]] })
       .done();
   }),
-  // Power lines: two 10 m wooden utility poles with crossarms and glass insulators, three cables sagging between
-  // them, a transformer drum and a ladder of steps. The wires hum; a pigeon lands on them.
+  // Power lines: two 10.5 m creosoted wooden poles 22 m apart. Each has a crossarm ACROSS the line (along z) on
+  // two steel braces, green glass insulators on the arm ends and a pole-top pin, so the three conductors run side
+  // by side and sag between the poles; a lower phone cable on a bracket, lineman's steps, a pole-top transformer
+  // can with its drop wires, and a cobra-head street light. The wires hum; a pigeon lands on them; the lamp lights.
   e('power lines', 'places', 'street things', () => {
     const b = m('power lines', { edge: 'sharp' });
-    const span = 14;
+    const half = 11, P = '#6b4f35', G = '#8f99a3', arm = 9.6;
+    /** A wire sagging from (-half, y0, z) to (half, y0, z), `sag` lower in the middle, as short straight runs. */
+    const wire = (y0: number, z: number, sag: number, t: number, c = '#2a2726') => {
+      const yAt = (x: number) => y0 - sag * (1 - (x / half) ** 2);
+      for (let i = 0; i < 10; i++) {
+        const x0 = -half + (i * 2 * half) / 10, x1 = -half + ((i + 1) * 2 * half) / 10;
+        b.stick([x0, yAt(x0), z], [x1, yAt(x1), z], t, c);
+      }
+    };
     for (const s of [1, -1]) {
-      const xx = s * span / 2;
-      b.cyl([0.32, 10, 0.32], [xx, 5, 0], { color: '#7a5a3a', taper: 0.8 })
-        .box([2.4, 0.15, 0.15], [xx, 9.3, 0], { color: '#7a5a3a', round: 0.2 })
-        .rod([xx, 8.6, 0], [xx + 0.8, 9.25, 0], 0.06, '#7a5a3a').rod([xx, 8.6, 0], [xx - 0.8, 9.25, 0], 0.06, '#7a5a3a');
-      for (const dx of [-1.0, 0, 1.0]) b.cyl([0.12, 0.2, 0.12], [xx + dx, 9.47, 0], { color: '#7fc8a0', edge: 'soft' });
-      b.each(6, (i) => b.box([0.25, 0.04, 0.04], [xx + (i % 2 ? 0.17 : -0.17), 2.5 + i * 0.5, 0], { color: '#5c6166', round: 0.2 }));
+      const xx = s * half;
+      b.cyl([0.3, 10.5, 0.3], [xx, 5.25, 0], { color: P, taper: 0.78 })
+        .cyl([0.25, 0.06, 0.25], [xx, 10.53, 0], { color: '#3a3633' })
+        .box([0.13, 0.14, 2.7], [xx, arm, 0], { color: P, round: 0.15 });
+      b.pair((k) => void b.stick([xx, arm - 0.75, 0.12 * k], [xx, arm - 0.07, k * 0.95], 0.05, G));
+      // insulators: a steel pin and a ribbed glass bell on each arm end, one on the pole top
+      for (const [y, z] of [[arm + 0.07, -1.2], [arm + 0.07, 1.2], [10.56, 0]] as const) {
+        b.stick([xx, y, z], [xx, y + 0.14, z], 0.035, G)
+          .cyl([0.17, 0.2, 0.17], [xx, y + 0.22, z], { color: '#6fbf96', taper: 0.55, edge: 'soft' })
+          .cyl([0.2, 0.035, 0.2], [xx, y + 0.13, z], { color: '#6fbf96', edge: 'soft' });
+      }
+      // the phone cable's bracket and the lineman's steps
+      b.stick([xx, 7.2, 0], [xx, 7.2, 0.55], 0.05, G);
+      b.each(8, (i) => b.box([0.28, 0.035, 0.035], [xx + (i % 2 ? 0.18 : -0.18), 2.6 + i * 0.5, 0], { color: G, round: 0.2 }));
     }
-    b.cyl([0.6, 1.0, 0.6], [-span / 2 + 0.45, 7.4, 0.35], { color: '#9da3a8' }).box([0.16, 0.5, 0.16], [-span / 2 + 0.45, 8.1, 0.35], { color: '#5c6166' });
-    // each cable in two sagging halves
-    for (const dz of [-1.0, 0, 1.0])
-      b.rod([-span / 2 + dz, 9.55, 0], [dz * 0.2, 8.6, 0], 0.035, '#2a2726').rod([dz * 0.2, 8.6, 0], [span / 2 + dz, 9.55, 0], 0.035, '#2a2726');
+    // three conductors side by side, the phone cable lower and fatter
+    wire(arm + 0.36, -1.2, 0.85, 0.03);
+    wire(arm + 0.36, 1.2, 0.85, 0.03);
+    wire(10.85, 0, 0.85, 0.03);
+    wire(7.2, 0.55, 0.7, 0.06, '#1e1e1e');
+    // a transformer can on a bracket on the left pole, its bushings dropped to the front conductor by a fuse
+    const tx = -half;
+    b.box([0.12, 0.6, 0.12], [tx, 7.75, 0.22], { color: G })
+      .cyl([0.62, 1.05, 0.62], [tx, 7.75, 0.6], { color: '#9da3a8', segs: 16 })
+      .cyl([0.66, 0.08, 0.66], [tx, 8.3, 0.6], { color: '#7f878f', segs: 16 })
+      .cyl([0.1, 0.22, 0.1], [tx - 0.15, 8.45, 0.6], { color: '#6b7078' })
+      .cyl([0.1, 0.22, 0.1], [tx + 0.15, 8.45, 0.6], { color: '#6b7078' })
+      .label('25 kVA', [0.32, 0.1], [tx, 7.75, 0.92], { color: '#7f878f', depth: 0.01 })
+      .stick([tx + 0.15, 8.56, 0.6], [tx + 0.05, 9.95, 1.2], 0.02, '#2a2726')
+      .cyl([0.05, 0.3, 0.05], [tx + 0.08, 9.4, 1.0], { color: '#c8c2b4', rot: [-20, 0, 0] });
+    // a cobra-head street light on the right pole
+    const lx = half;
+    b.rod([lx, 7.6, 0.12], [lx, 8.1, 1.5], 0.07, G)
+      .box([0.32, 0.14, 0.62], [lx, 8.12, 1.75], { color: '#5c6166', round: 0.4 })
+      .box([0.24, 0.04, 0.42], [lx, 8.04, 1.78], { color: '#fff3c0', glow: true, name: 'lamp', mover: { kind: 'light', on: false } });
     return b
-      .socket('wire', [0, 8.65, 0], 'top', { size: 0.4 })
+      .socket('wire', [0, arm + 0.36 - 0.85 + 0.02, 1.2], 'top', { size: 0.4 })
       .act({
         click: [
           [A.par(A.effect('sparkle', { dur: 1.2 }), A.say('Bzzzzzz...', 1.8))],
           [A.spawn('bird', 'pigeon', { rel: 'above', of: 'self', dist: 'close' }), A.attach('bird', 'self', 'wire'), A.say('Coo!', 1.2, 'bird'), A.wait(1.5), A.remove('bird', 'fly_away')],
+          [A.operate('lamp', 'on'), A.say('Hummm...', 1.5), A.wait(2), A.operate('lamp', 'off')],
         ],
       })
       .done();
@@ -4284,7 +4339,7 @@ export const ENTRIES: CatalogEntry[] = [
         .torus([0.03, 0.03, 0.006], [xx, 0.3, 0], { color: '#f7f5ef', tube: 0.2, parent: nm });
       b.each(3, (i) => b.box([0.12, 0.004, 0.003], [xx, 0.13 + i * 0.05, 0.026], { color: '#a3322a', parent: nm, noInk: true, round: 0 }));
     }
-    return b.act({ click: [[A.par(A.pose('mittL', { rot: [0, 0, 15], dur: 0.15, times: 2 }), A.pose('mittR', { rot: [0, 0, -15], dur: 0.15, times: 2 }), A.say('Hot, hot, hot!', 1.5))]] }).done();
+    return b.act({ click: [[A.par(A.pose('mittL', { rot: [0, 0, 15], dur: 0.15, times: 2 }), A.pose('mittR', { rot: [0, 0, -15], dur: 0.15, times: 2 }), A.say('Pat pat pat!', 1.5))]] }).done();
   }),
   // A computer power supply (15 x 8.6 x 14 cm): a black steel box with a fan grille on top, a switch and a socket
   // at the back, and a bundle of coloured cables. Click: the fan spins up.
@@ -4324,7 +4379,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([0.12, 0.004, 0.06], [0, 0.112, 0.06], { color: '#4e8fd6', parent: 'page', round: 0, noInk: true })
       .box([0.1, 0.04, 0.05], [0.15, 0.21, 0.13], { color: '#3a3633', rot: [-30, 0, 0], round: 0.3 })
       .ball(0.012, [0.12, 0.225, 0.15], { color: '#5ad06a', name: 'ready', mover: { kind: 'light', on: true } })
-      .act({ click: [[A.par(A.say('Whirr... chk chk chk...', 2), A.operate('ready', 'off')), A.operate('page', 'out'), A.par(A.operate('ready', 'on'), A.say('Done!', 1)), A.wait(1.5), A.operate('page', 'in')]] })
+      .act({ click: [[A.par(A.say('Whirr... chk chk chk...', 2), A.operate('ready', 'off')), A.operate('page', 'out'), A.par(A.operate('ready', 'on'), A.say('Ding!', 1)), A.wait(1.5), A.operate('page', 'in')]] })
       .done(),
   ),
   // A wooden hand printing press (2 m): two heavy uprights and crossbeams, a big iron screw turned by a long bar,
@@ -4343,7 +4398,7 @@ export const ENTRIES: CatalogEntry[] = [
       .rod([0, 1.6, 0], [0.75, 1.75, 0.2], 0.05, '#3a3633', { parent: 'screw' })
       .box([0.7, 0.12, 0.55], [0, 1.25, 0.1], { color: '#8a6a4a', name: 'platen', mover: { kind: 'slide', axis: 'y', amount: -0.25 }, round: 0.1 });
     return b
-      .act({ click: [[A.par(A.operate('screw', 'on'), A.operate('platen', 'down'), A.say('Creak...', 1)), A.par(A.operate('screw', 'off'), A.say('THUNK!', 1)), A.par(A.operate('platen', 'up'), A.say('Hot off the press!', 1.5))]] })
+      .act({ click: [[A.par(A.operate('screw', 'on'), A.operate('platen', 'down'), A.say('Creak...', 1)), A.par(A.operate('screw', 'off'), A.say('THUNK!', 1)), A.par(A.operate('platen', 'up'), A.say('Ka-chunk!', 1.2))]] })
       .done();
   }),
   // A prison (26 x 20 m): a 6 m perimeter wall topped with coils of barbed wire, a barred gate that slides
@@ -4375,7 +4430,7 @@ export const ENTRIES: CatalogEntry[] = [
     for (const [dx, dz] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) b.stick([W / 2 - 1.5 + dx * 1.0, 0, D / 2 - 1.5 + dz * 1.0], [W / 2 - 1.5 + dx * 1.0, 9, D / 2 - 1.5 + dz * 1.0], 0.3, '#7a7f85');
     b.box([3.2, 2.4, 3.2], [W / 2 - 1.5, 10.2, D / 2 - 1.5], { color: '#b9b5ad', round: 0.05 })
       .box([3.0, 1.0, 0.1], [W / 2 - 1.5, 10.6, D / 2 + 0.11], { color: '#8fc6e6' })
-      .pyramid([4.6, 1.4, 4.6], [W / 2 - 1.5, 12.1, D / 2 - 1.5], 4, { color: '#5c6166', rot: [0, 45, 0] })
+      .pyramid([3.6 * Math.SQRT2, 1.4, 3.6 * Math.SQRT2], [W / 2 - 1.5, 12.1, D / 2 - 1.5], 4, { color: '#5c6166' })
       .cyl([0.8, 0.8, 0.8], [W / 2 - 1.5, 11.8, D / 2 + 0.6], { color: '#5c6166', rot: [70, 0, 0], name: 'search', pivot: [W / 2 - 1.5, 11.8, D / 2 + 0.3] })
       .cyl([0.7, 0.05, 0.7], [W / 2 - 1.5, 11.65, D / 2 + 1.0], { color: '#fff6c8', rot: [70, 0, 0], name: 'beam', parent: 'search', mover: { kind: 'light' } });
     return b
@@ -4424,7 +4479,7 @@ export const ENTRIES: CatalogEntry[] = [
       .ball([0.6, 0.3, 0.004], [0.1, 1.25, 0.096], { color: '#5aa553', parent: 'picture', noInk: true })
       .ball(0.16, [-0.35, 1.75, 0.096], { color: '#f6d24a', parent: 'picture', noInk: true })
       .stick([0, 2.1, 0.08], [0, 2.3, 0.02], 0.02, '#2a2726', { parent: 'screen' })
-      .act({ click: [[A.operate('picture', 'on'), A.say('Showtime!', 1.5)], [A.operate('picture', 'off'), A.pose('screen', { scale: 0.1, dur: 0.6 }), A.say('Zzzip!', 1), A.pose('screen', { scale: 1, dur: 0.6 })]] })
+      .act({ click: [[A.operate('picture', 'on'), A.say('Click!', 1.2)], [A.operate('picture', 'off'), A.pose('screen', { scale: 0.1, dur: 0.6 }), A.say('Zzzip!', 1), A.pose('screen', { scale: 1, dur: 0.6 })]] })
       .done();
   }),
   // A 100 lb propane cylinder (1.2 m): a white steel tank with domed ends, a protective collar round the valve
@@ -4479,7 +4534,7 @@ export const ENTRIES: CatalogEntry[] = [
     }
     return b
       .box([0.003, 0.07, 0.002], [0, 0.047, 0.004], { color: '#e0473b', name: 'arm', pivot: [0, 0.012, 0.004], rot: [0, 0, 0], round: 0 })
-      .act({ click: [[A.pose('arm', { rot: [0, 0, 60], dur: 0.6 }), A.say('Sixty degrees!', 1.2), A.pose('arm', { rot: [0, 0, -45], dur: 0.6 }), A.pose('arm', { rot: [0, 0, 0], dur: 0.4 })]] })
+      .act({ click: [[A.pose('arm', { rot: [0, 0, 60], dur: 0.6 }), A.say('Tick!', 1), A.pose('arm', { rot: [0, 0, -45], dur: 0.6 }), A.pose('arm', { rot: [0, 0, 0], dur: 0.4 })]] })
       .done();
   }),
   // A portable PA: a speaker cabinet with a woofer and a horn tweeter, a little mixer with knobs on top, and a
@@ -4581,7 +4636,7 @@ export const ENTRIES: CatalogEntry[] = [
       .act({
         click: [
           [A.par(A.pose('eyeL', { scale: 1, dur: 0.3 }), A.pose('eyeR', { scale: 1, dur: 0.3 }), A.pose('mouth', { scale: 1, dur: 0.3 }), A.anim('hop'), A.say('BOO!', 1.5))],
-          [A.par(A.pose('eyeL', { scale: 0, dur: 0.3 }), A.pose('eyeR', { scale: 0, dur: 0.3 }), A.pose('mouth', { scale: 0, dur: 0.3 }), A.say('...just a pumpkin.', 1.5))],
+          [A.par(A.pose('eyeL', { scale: 0, dur: 0.3 }), A.pose('eyeR', { scale: 0, dur: 0.3 }), A.pose('mouth', { scale: 0, dur: 0.3 }), A.say('Fwoomp.', 1.2))],
         ],
       })
       .done();
@@ -4601,7 +4656,7 @@ export const ENTRIES: CatalogEntry[] = [
       .wedge([0.08, 0.1, 0.03], [0, 0.028, 0.06], { color: '#d8762a', rot: [-90, 0, 0], name: 'slice', parent: 'tin', piece: true })
       .box([0.085, 0.024, 0.02], [0, 0.03, 0.11], { color: '#d99a50', parent: 'slice', round: 0.5 })
       .cone([0.03, 0.026, 0.03], [0, 0.056, 0.07], { color: '#fbf8f0', segs: 8, parent: 'slice' })
-      .act({ click: [[A.detach('slice', 'slice'), A.say('A slice of autumn!', 1.5)], [A.reattach('slice')]] })
+      .act({ click: [[A.detach('slice', 'slice'), A.say('Slice!', 1.2)], [A.reattach('slice')]] })
       .done();
   }),
   // A heavy punching bag (1.2 m) hanging on chains from a steel stand: a leather bag with a red band and a
@@ -4659,9 +4714,9 @@ export const ENTRIES: CatalogEntry[] = [
   // its real proportions (the vocabulary's 1.46 m is a souvenir), smooth limestone faces, a gilded capstone, an
   // entrance on the north face, a sphinx keeping watch and palms in the sand. A sandstorm blows past.
   e('pyramid (landmark)', 'places', 'landmarks', () => {
-    const b = m('pyramid (landmark)', { edge: 'sharp' }).box([90, 0.4, 90], [0, 0.2, 0], { color: 'sand', round: 0.01, edge: 'soft' });
-    pyramid(b, 0, 0, 0.4, 70, 44.5, '#e2c88a', 1.5);
-    b.pyramid([6.4 * Math.SQRT2, 4.1, 6.4 * Math.SQRT2], [0, 42.45, 0], 4, { color: 'gold', rot: [0, 45, 0], name: 'cap' });
+    const b = m('pyramid (landmark)', { edge: 'sharp' }).box([86, 0.4, 86], [0, 0.2, 0], { color: '#d4b47a', round: 0.01, edge: 'soft' });
+    pyramid(b, 0, 0, 0.4, 70, 44.5, '#ecdaa8', 1.5);
+    b.pyramid([6.4 * Math.SQRT2, 4.1, 6.4 * Math.SQRT2], [0, 42.45, 0], 4, { color: 'gold', name: 'cap' });
     b.box([3, 4, 1.2], [0, 17, 21.5], { color: '#5a4a32', rot: [-33, 0, 0], round: 0.05 });
     // the sphinx: a lion's body and paws and a pharaoh's head
     b.box([6, 5, 16], [30, 2.9, 35], { color: '#d9b878', round: 0.3, edge: 'soft' })
@@ -4670,14 +4725,14 @@ export const ENTRIES: CatalogEntry[] = [
       .wedge([6, 4, 3.6], [30, 7.6, 40.5], { color: '#c8a868' });
     for (const [xx, z] of [[-38, 30], [-34, 38], [36, 18]]) b.rod([xx, 0.4, z], [xx + 1, 9, z], 0.8, '#8a6440').ball([5, 2, 5], [xx + 1, 9.2, z], { color: '#3f7a3a', edge: 'soft' });
     return b
-      .act({ click: [[A.par(A.effect('dust', { dur: 2.5 }), A.say('Whooosh...', 2)), A.par(A.effect('sparkle', { dur: 1.5 }), A.say('The sun on the capstone!', 1.8))]] })
+      .act({ click: [[A.par(A.effect('dust', { dur: 2.5 }), A.say('Whooosh...', 2)), A.par(A.effect('sparkle', { dur: 1.5 }), A.say('Gleam!', 1.5))]] })
       .done();
   }),
   // A square pyramid on a stand: a point over four triangular faces. It turns.
   e('pyramid (shape)', 'ideas', 'shapes', () => {
     const b = plinth(m('pyramid (shape)'), 0.2).box([0.01, 0.01, 0.01], [0, 0.04, 0], { color: '#f6d24a', name: 'shape', round: 0 });
     pyramid(b, 0, 0, 0.03, 0.12, 0.1, '#f6d24a', 0.008, { parent: 'shape', edge: 'sharp' });
-    return b.act({ click: [[A.par(A.pose('shape', { rot: [0, 360, 0], dur: 1.2 }), A.say('Pyramid!', 1.2)), A.pose('shape', { rot: [0, 0, 0], dur: 0 })]] }).done();
+    return b.act({ click: [[A.par(A.pose('shape', { rot: [0, 360, 0], dur: 1.2 }), A.say('Whirl!', 1.2)), A.pose('shape', { rot: [0, 0, 0], dur: 0 })]] }).done();
   }),
   // A lucky rabbit's foot keyring: a fluffy white foot with a little pink pad, on a chain and a split ring. Luck!
   e('rabbits foot', 'toys', 'lucky charms', () =>
@@ -4688,7 +4743,7 @@ export const ENTRIES: CatalogEntry[] = [
       .capsule([0.034, 0.07, 0.03], [0, 0.045, 0], { color: '#f7f5ef', parent: 'foot' })
       .ball([0.03, 0.02, 0.026], [0, 0.012, 0.008], { color: '#f7f5ef', parent: 'foot' })
       .ball([0.012, 0.008, 0.004], [0, 0.01, 0.022], { color: '#f4a1c0', parent: 'foot', noInk: true })
-      .act({ click: [[A.par(A.pose('foot', { rot: [0, 0, 20], dur: 0.25, times: 2 }), A.effect('sparkle', { dur: 1.2 }), A.say('Lucky!', 1.2))]] })
+      .act({ click: [[A.par(A.pose('foot', { rot: [0, 0, 20], dur: 0.25, times: 2 }), A.effect('sparkle', { dur: 1.2 }), A.say('Jingle!', 1.2))]] })
       .done(),
   ),
   // A Formula-style race car (5 m, 0.95 m tall): a slim red nose and tub with an open cockpit, the driver's helmet
@@ -4730,7 +4785,7 @@ export const ENTRIES: CatalogEntry[] = [
       .act({
         click: [
           [A.par(A.operate('taillight', 'on'), A.anim('shake'), A.effect('smoke', { dur: 1.5 }), A.say('VROOOOOM!', 2)), A.wait(1), A.operate('taillight', 'off')],
-          [A.detach('wheel1', 'tyre'), A.say('Pit stop!', 1.2), A.wait(1), A.reattach('wheel1'), A.say('Go go go!', 1.2)],
+          [A.detach('wheel1', 'tyre'), A.say('Whirr-clunk!', 1.2), A.wait(1), A.reattach('wheel1'), A.say('Vroom!', 1.2)],
         ],
       })
       .done();
@@ -4832,6 +4887,6 @@ export const ENTRIES: CatalogEntry[] = [
       .rod([0.13, 0.18, 0], [0.17, 0.18, 0], 0.014, '#5c6166')
       .rod([0.17, 0.18, 0], [0.17, 0.13, 0.04], 0.01, '#5c6166');
     b.each(4, (i) => b.box([0.05, 0.03, 0.003], [-0.1 + i * 0.055, 0.0015, 0.16], { color: '#e0473b', round: 0 }).label(String(41 + i), [0.03, 0.02], [-0.1 + i * 0.055, 0.004, 0.16], { color: '#e0473b', rot: [-90, 0, 0], depth: 0.001 }));
-    return b.act({ click: [[A.par(A.operate('drum', 'on'), A.say('Round and round...', 1.5)), A.wait(1.5), A.operate('drum', 'off'), A.par(A.effect('sparkle', { dur: 1.2 }), A.say('Ticket 42 wins!', 2))]] }).done();
+    return b.act({ click: [[A.par(A.operate('drum', 'on'), A.say('Clatter clatter...', 1.5)), A.wait(1.5), A.operate('drum', 'off'), A.par(A.effect('sparkle', { dur: 1.2 }), A.say('Ding! Number 42!', 2))]] }).done();
   }),
 ];

@@ -125,7 +125,9 @@ function describe(e: CompactEntity, ctx: CompactWorld): string {
   if (e.pos[1] > 0.3 && !e.parent) parts.push(`${Math.round(e.pos[1])}m up`);
   const flags = Object.entries(e.state ?? {})
     // a building's moving pieces show in its parts with their state instead
-    .filter(([k, v]) => v === true && !k.startsWith('off_') && !(e.structure && (k.startsWith('open_') || k === 'door_open')))
+    // the engine's own bookkeeping (taken-off pieces, mover states shown under moves:, acts, the town's markers)
+    // is not something to set
+    .filter(([k, v]) => v === true && !/^(off_|op_|act_|piece)/.test(k) && k !== 'stay' && k !== 'setup' && k !== 'afloat' && !(e.structure && (k.startsWith('open_') || k === 'door_open')))
     .map(([k]) => k);
   if (flags.length) parts.push(flags.join(','));
   if (e.effects?.length) parts.push(e.effects.join(','));

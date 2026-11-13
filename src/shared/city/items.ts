@@ -120,7 +120,8 @@ export function assignVenues(items: TownItem[]): Map<string, { place: PlaceId; i
   for (const it of order) {
     const cap = venueCapacity(it.venue);
     if ((count.get(it.venue) ?? 0) <= cap) continue;
-    const alt = it.alts.find((a) => (count.get(a) ?? 0) < venueCapacity(a) * 0.9);
+    // only to another real venue: rooms, backyards, the street and the sky are laid out elsewhere
+    const alt = it.alts.find((a) => ['shop', 'hall', 'lot', 'open'].includes(PLACES[a].kind) && (count.get(a) ?? 0) < venueCapacity(a) * 0.9);
     if (!alt) continue;
     count.set(it.venue, count.get(it.venue)! - 1);
     count.set(alt, (count.get(alt) ?? 0) + 1);

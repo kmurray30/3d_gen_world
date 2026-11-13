@@ -4,6 +4,7 @@ import '../shared/figure/catalog/index';
 import type { TimeOfDay, World } from '../shared/types';
 import { TIMES_OF_DAY } from '../shared/types';
 import { Engine } from '../shared/engine/index';
+import { setFiguresDrawn } from '../shared/engine/transform';
 import { resolveStepsLocally } from '../shared/engine/resolve-local';
 import { DevConsole } from './ui/dev-console';
 import { compactWorld, fetchConfig, streamNdjson, type ClientConfig } from './net/api';
@@ -167,6 +168,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   rig.setMode(settings.mode, engine.world.player);
   scene.fadeWalls = settings.fade;
   scene.look = atlas && settings.look === 'sprites' ? 'cel' : settings.look;
+  setFiguresDrawn(scene.look !== 'sprites');
   const LOOK_NAMES = { sprites: 'sprites', paper: 'paper', origami: 'origami', toon: '3D', cel: 'cel' } as const;
   const refreshViewLabels = () => {
     const sound = sounds!.mixer.soundMode;
@@ -175,6 +177,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   };
   const cycleLook = () => {
     scene.look = LOOKS[(LOOKS.indexOf(scene.look) + 1) % LOOKS.length];
+    setFiguresDrawn(scene.look !== 'sprites');
     hud.toast(
       scene.look === 'sprites'
         ? 'Look: the original sprites.'

@@ -108,7 +108,9 @@ function loftGeometry(p: FigPart, stations: number, around: number): THREE.Buffe
   for (let i = 0; i < stations; i++)
     for (let k = 0; k < around; k++) {
       const a = i * around + k, b = i * around + ((k + 1) % around), c = (i + 1) * around + k, e = (i + 1) * around + ((k + 1) % around);
-      idx.push(a, c, b, b, c, e);
+      // counter-clockwise seen from outside, so the faces point out (the cel look culls back faces and draws
+      // its ink outline from them: an inside-out loft showed as a black wing)
+      idx.push(a, b, c, b, e, c);
     }
   // end caps: a fan to each end section's centre
   for (const [ring, t, flip] of [[0, 0, true], [stations, 1, false]] as Array<[number, number, boolean]>) {
@@ -117,8 +119,8 @@ function loftGeometry(p: FigPart, stations: number, around: number): THREE.Buffe
     pos.push(0, p.cut === 'bottom' ? s.y - s.h / 2 : p.cut === 'top' ? s.y + s.h / 2 : s.y, (t - 0.5) * d);
     for (let k = 0; k < around; k++) {
       const a = ring * around + k, b = ring * around + ((k + 1) % around);
-      if (flip) idx.push(ci, a, b);
-      else idx.push(ci, b, a);
+      if (flip) idx.push(ci, b, a);
+      else idx.push(ci, a, b);
     }
   }
   const g = new THREE.BufferGeometry();
@@ -404,11 +406,13 @@ export class ToonFigure {
       j.node.rotation.set((j.rest[0] + (d?.[0] ?? 0)) * DEG, (j.rest[1] + (d?.[1] ?? 0)) * DEG, (j.rest[2] + (d?.[2] ?? 0)) * DEG, 'XYZ');
       const t = pose.t?.[j.part.name];
       j.node.position.set(j.at[0] + (t?.[0] ?? 0), j.at[1] + (t?.[1] ?? 0), j.at[2] + (t?.[2] ?? 0));
+      // a part's size scales it and what hangs off it, as in the cel look and the sculpt (a hidden lid hides its
+      // handle too; a flame grown from nothing brings its glow)
       const k = pose.sc?.[j.part.name];
       if (k !== undefined || j.part.scale !== undefined) {
         const size = k ?? j.part.scale ?? 1;
-        j.holder.scale.setScalar(Math.max(1e-4, size));
-        j.holder.visible = size > 0.001;
+        j.node.scale.setScalar(Math.max(1e-4, size));
+        j.node.visible = size > 0.001;
       }
     }
     if (expr !== this.expr) {

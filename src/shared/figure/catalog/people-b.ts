@@ -843,7 +843,18 @@ export const ENTRIES: CatalogEntry[] = [
             ['hips', 'box', [d.lw * 0.6, d.lw * 0.15, d.lw * 0.6], [d.tw * 0.62, d.lw * 0.05, d.td * 0.1], 'gold'],
             ...[1, -1].map((s): Spec => ['', 'box', [0.06, 0.03, 0.02], [s * d.tw * 0.24, d.H * 0.035, d.H * 0.06], 'silver', { edge: 'sharp' }]),
           ]),
-          tricorn('#1d1d22', '#d9c08a'),
+          // the tricorn: a crown inside three upturned brim walls (a point to the front), buff edging, a cockade
+          x((d) => {
+            const W = d.headW, H = d.headH, t = top(d), R = W * 0.85, side = R * Math.sqrt(3), y = t + H * 0.03;
+            const out: Spec[] = [['head', 'ball', [W * 0.92, H * 0.5, d.headD * 0.9], [0, t + H * 0.02, 0], '#1d1d22']];
+            for (const phi of [60, 180, 300]) {
+              const r = (phi * Math.PI) / 180, m = R / 2;
+              out.push(['head', 'box', [side, H * 0.34, W * 0.08], [Math.sin(r) * m, y, Math.cos(r) * m], '#1d1d22', { srot: [0, phi, 0], round: 0.4 }]);
+              out.push(['head', 'box', [side * 0.98, H * 0.025, W * 0.09], [Math.sin(r) * m, y + H * 0.17, Math.cos(r) * m], '#c8a85a', { srot: [0, phi, 0], noInk: true }]);
+            }
+            out.push(['head', 'ball', [W * 0.16, W * 0.16, W * 0.06], [Math.sin(Math.PI / 3) * R * 0.55, y + H * 0.02, Math.cos(Math.PI / 3) * R * 0.55], '#1d1d22', { srot: [0, 60, 0], layer: 6 }]);
+            return out;
+          }),
           shoulders('gold', 0.65),
         ],
       }),
@@ -2717,7 +2728,7 @@ export const ENTRIES: CatalogEntry[] = [
         ],
       }),
       [
-        talk('thumbs_up', 'Ta-daaa!'),
+        talk('tada', 'Ta-daaa!'),
         [A.par(A.face('player'), A.say('Now watch me disappear!', 2)), A.effect('sparkle', { dur: 1.5 }), A.pose('hips', { scale: 0, dur: 0.4 }), A.wait(1.2), A.pose('hips', { scale: 1, dur: 0.4 }), A.say('Ta-da!', 1.5)],
       ],
     ),
@@ -3212,7 +3223,7 @@ export const ENTRIES: CatalogEntry[] = [
           held('cane', 'black'),
         ],
       }),
-      [talk('laugh', 'Hahaha! Jekyll is gone!'), talk('hands_on_hips', 'GRRRAH! Out of my way!')],
+      [talk('laugh', 'Hahaha! Jekyll is gone!'), talk('stomp', 'GRRRAH! Out of my way!')],
     ),
   ),
   // A mohawk on a display head: a tall magenta crest of spikes on a shaved head, ear studs, on a black stand.
@@ -3446,7 +3457,18 @@ export const ENTRIES: CatalogEntry[] = [
       who('napoleon bonaparte', {
         h: 1.68, build: 1.1, skin: 'skin1', top: '#1f2a5a', long: true, bottom: 'white', shoes: 'black', hair: '#3b2a1e', style: 'short',
         acc: [
-          bicorne('#1d1d1d', '#2f5aa8'),
+          // the bicorne side-on: a tall half-moon from the front, a thin lens from above, on a low crown, with a
+          // blue-white-red cockade
+          x((d) => {
+            const W = d.headW, H = d.headH, t = top(d);
+            return [
+              ['head', 'ball', [W * 0.9, H * 0.36, d.headD * 0.86], [0, t - H * 0.04, 0], '#1d1d1d'],
+              ['head', 'dome', [W * 2.15, H * 0.62, d.headD * 0.5], [0, t + H * 0.12, -d.headD * 0.04], '#1d1d1d'],
+              ['head', 'cyl', [W * 0.2, W * 0.04, W * 0.2], [W * 0.38, t + H * 0.2, d.headD * 0.22], '#2f5aa8', { srot: [90, 0, 0], layer: 6 }],
+              ['head', 'cyl', [W * 0.13, W * 0.05, W * 0.13], [W * 0.38, t + H * 0.2, d.headD * 0.235], 'white', { srot: [90, 0, 0], layer: 7 }],
+              ['head', 'cyl', [W * 0.06, W * 0.06, W * 0.06], [W * 0.38, t + H * 0.2, d.headD * 0.25], '#c8323c', { srot: [90, 0, 0], layer: 8 }],
+            ];
+          }),
           wear('coat', '#1f2a5a'),
           x((d) => [['torso', 'box', [d.tw * 0.45, d.torsoH * 0.6, d.td * 0.1], [0, d.torsoH * 0.6, d.td * 0.56], 'white', { layer: 4 }], ['torso', 'box', [d.tw * 0.7, d.torsoH * 0.16, d.td * 0.08], [0, d.torsoH * 0.95, d.td * 0.4], '#c8323c', { layer: 5 }]]),
           shoulders('gold', 0.75),

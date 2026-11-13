@@ -92,7 +92,15 @@ export function createApp(deps: AppDeps): Hono {
     townJson = JSON.stringify({ world: townWorld(words, TOWN_TAGS as Record<string, Tag>, sprite, decal, 0) });
     return townJson;
   };
-  if (deps.prebuildTown) setTimeout(() => buildTown(), 50).unref?.();
+  if (deps.prebuildTown)
+    setTimeout(() => {
+      // a failure here must not take the server down: the town route reports it instead
+      try {
+        buildTown();
+      } catch (err) {
+        console.error('[town] build failed', err);
+      }
+    }, 50).unref?.();
   for (const path of ['/api/town', '/api/atlas']) {
     app.get(path, (c) => {
       c.header('Content-Type', 'application/json');

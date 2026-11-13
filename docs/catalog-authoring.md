@@ -104,7 +104,7 @@ m(key, { view?: 'front' | 'side', edge?: 'sharp' | 'soft' })   // 'side': vehicl
   .dome(size, at, o?)          // top half of an ellipsoid, flat side down: cupolas, caps, jellyfish, igloos
   .loft(size, at, profile, o?) // a smooth body along z through cross-sections: fuselages, hulls (o.cut 'bottom'),
                                // car bodies (o.boxy 0.5-0.8), fish, submarines, bottles and cans lying down, loaves
-  .wedge(size, at, o?)         // triangular prism (gable roof)
+  .wedge(size, at, o?)         // triangular prism (gable roof): the triangle spans size[0] wide and size[1] high, extruded along size[2] (a sail is [length, height, thickness], not the other way round)
   .rod(a, b, thick, color?, o?) / .stick(a, b, thick, color?, o?)   // between two points
   .label(text, [w, h], at, o?) // printed card; o.depth sets its thickness (default 0.02; 0.003 for a sticker)
   .star(size, at, o?)          // o.rot now turns the whole star (rot [90, 0, 0] lays it flat)

@@ -12,7 +12,7 @@
  * builds it once and caches it.
  */
 import type { Entity, Vec3, World } from '../types';
-import type { DecalResolver } from '../structure/types';
+import type { DecalResolver, Structure } from '../structure/types';
 import type { PathSpec, SurfaceSpec, TerrainSpec } from '../terrain/field';
 import { Parts } from '../structure/build';
 import { generate } from '../structure/index';
@@ -70,6 +70,8 @@ interface Region {
   streets: PathSpec[];
   w: number;
   d: number;
+  /** Its last row faces a street along its south edge (else a strip of pavement). */
+  southStreet: boolean;
 }
 
 /**
@@ -79,65 +81,90 @@ interface Region {
 function layoutRegion(zone: Zone, plans: VenuePlan[], spacer = 0, boulevard = 0): Region {
   const area = plans.reduce((s, p) => s + (p.w + 6) * (p.d + STREET / 2 + 3), 0) + spacer * spacer;
   const target = Math.max(80, Math.min(420, Math.sqrt(area) * 1.15));
-  const width = Math.max(target, ...plans.map((p) => p.w + 8));
-  const rows: VenuePlan[][] = [];
-  let cur: VenuePlan[] = [];
-  let used = spacer ? spacer + 6 : boulevard ? boulevard + 6 : 0;
-  // big ones first so rows come out even
-  for (const p of [...plans].sort((a, b) => b.d - a.d || b.w - a.w || a.key.localeCompare(b.key))) {
-    if (cur.length && used + p.w + 6 > width) {
-      rows.push(cur);
-      cur = [];
-      used = boulevard ? boulevard + 6 : 0;
+  const widest = Math.max(0, ...plans.map((p) => p.w + 6));
+  // with a gap up the middle (the boulevard, the plaza) each side must take the widest plan
+  const width = Math.max(target, boulevard || spacer ? widest * 2 + Math.max(boulevard, spacer) + 6 : widest + 2);
+  type Row = { left: VenuePlan[]; right: VenuePlan[]; gap: number };
+  // rows of plans either side of the gap, each side only as full as it has room for; what does not fit starts
+  // the next row
+  const fill = (list: VenuePlan[], gap: number): Row[] => {
+    const cap = gap ? (width - gap) / 2 - 3 : width - 3;
+    const out: Row[] = [];
+    let cur: Row = { left: [], right: [], gap };
+    let lw = 0, rw = 0;
+    for (const p of list) {
+      const need = p.w + 6;
+      if (lw + need <= cap || (!cur.left.length && !cur.right.length)) {
+        cur.left.push(p);
+        lw += need;
+      } else if (gap && rw + need <= cap) {
+        cur.right.push(p);
+        rw += need;
+      } else {
+        out.push(cur);
+        cur = { left: [p], right: [], gap };
+        lw = need;
+        rw = 0;
+      }
     }
-    cur.push(p);
-    used += p.w + 6;
+    if (cur.left.length || cur.right.length) out.push(cur);
+    return out;
+  };
+  // big ones first so rows come out even; the last row (the smallest things) faces the plaza across its gap
+  const sorted = [...plans].sort((a, b) => b.d - a.d || b.w - a.w || a.key.localeCompare(b.key));
+  const rows = fill(sorted, boulevard);
+  if (spacer && rows.length) {
+    const last = rows.pop()!;
+    rows.push(...fill([...last.left, ...last.right], spacer));
   }
-  if (cur.length) rows.push(cur);
   const at: Region['at'] = [];
   const streets: PathSpec[] = [];
-  // rows run from the region's south edge (z = d) northward when it is the plaza row first; simpler: top to
-  // bottom, pairs facing each other across a street
+  // rows top to bottom, pairs facing each other across a street
   let z = 0;
+  let boulevardEnd = 0;
   rows.forEach((row, i) => {
     const facesSouth = i % 2 === 0;
-    const depth = Math.max(...row.map((p) => p.d));
-    let x = 3;
-    const first = i === rows.length - 1 && spacer ? true : false;
-    const items = [...row];
-    // an empty space in the middle: the plaza in the last row, the boulevard up the middle of the others
-    const gap = first ? spacer : boulevard;
-    // split the row so the gap lands on the region's centre line
-    let left: VenuePlan[] = [], right: VenuePlan[] = [];
-    if (gap) {
-      let lw = 0;
-      const total = items.reduce((s, p) => s + p.w + 6, 0);
-      for (const p of items) {
-        if (lw + p.w / 2 < total / 2) {
-          left.push(p);
-          lw += p.w + 6;
-        } else right.push(p);
-      }
-    } else left = items;
-    const lw = left.reduce((s, p) => s + p.w + 6, 0);
-    x = gap ? width / 2 - gap / 2 - lw : (width - (lw - 6)) / 2;
-    for (const p of [...left, ...(gap ? [null] : []), ...right]) {
-      if (!p) {
-        x = width / 2 + gap / 2 + 6;
-        continue;
-      }
+    const plazaRow = i === rows.length - 1 && spacer > 0;
+    if (!plazaRow) boulevardEnd = z;
+    // the plaza row is at least as deep as the plaza, so the plaza never reaches the row behind
+    const depth = Math.max(...[...row.left, ...row.right].map((p) => p.d), plazaRow ? spacer : 0);
+    const place = (p: VenuePlan, x: number) => {
       const cz = facesSouth ? z + depth - p.d / 2 : z + p.d / 2;
       at.push({ plan: p, x: x + p.w / 2, z: cz, yaw: facesSouth ? 0 : 180 });
-      x += p.w + 6;
+    };
+    if (row.gap) {
+      // the left side ends at the gap, the right side starts after it
+      let x = width / 2 - row.gap / 2 - row.left.reduce((s, p) => s + p.w + 6, 0) + 3;
+      for (const p of row.left) {
+        place(p, x);
+        x += p.w + 6;
+      }
+      x = width / 2 + row.gap / 2 + 3;
+      for (const p of row.right) {
+        place(p, x);
+        x += p.w + 6;
+      }
+    } else {
+      let x = (width - row.left.reduce((s, p) => s + p.w + 6, 0) + 6) / 2;
+      for (const p of row.left) {
+        place(p, x);
+        x += p.w + 6;
+      }
     }
     z += depth;
+    if (!plazaRow) boulevardEnd = z;
     if (facesSouth) {
-      streets.push({ pts: [[0, z + STREET / 2], [width, z + STREET / 2]], width: STREET - 3.2 });
+      const sz = z + STREET / 2;
+      // the plaza row's street stops either side of the plaza
+      if (plazaRow) for (const [a, b] of [[0, width / 2 - spacer / 2], [width / 2 + spacer / 2, width]]) streets.push({ pts: [[a, sz], [b, sz]], width: STREET - 3.2 });
+      else streets.push({ pts: [[0, sz], [width, sz]], width: STREET - 3.2 });
       z += STREET;
     } else z += 5;
+    if (!plazaRow) boulevardEnd = z;
   });
-  if (boulevard) streets.push({ pts: [[width / 2, 0], [width / 2, z]], width: boulevard - 3.2 });
-  return { zone, plans, at, streets, w: width, d: Math.max(20, z) };
+  // the boulevard runs up the middle as far as the plaza
+  if (boulevard) streets.push({ pts: [[width / 2, 0], [width / 2, spacer ? boulevardEnd : z]], width: boulevard - 3.2 });
+  return { zone, plans, at, streets, w: width, d: Math.max(20, z), southStreet: rows.length > 0 && (rows.length - 1) % 2 === 0 && z >= 20 };
 }
 
 /** A building standing on a plot of its own (a bank's facade beside the bank, a skyscraper downtown). */
@@ -329,35 +356,53 @@ export function townWorld(words: TownWord[], tags: Record<string, Tag>, resolve:
     }
   }
 
-  // 5. the sea south of the waterfront, with boats along piers and big swimmers offshore
-  const seaZ = southEdge + 4;
+  // 5. the sea south of the waterfront (past its avenue and a strip of shore), with boats moored in rows and big
+  // swimmers offshore
+  const seaZ = southEdge + AVENUE + 6;
   let seaFar = seaZ + 120;
-  // boats moor at piers in rows out from the shore in front of their venue; whales and big fish swim beyond them
-  for (const group of afloat) {
-    const ROW = 180;
-    let x = 0, rowZ = seaZ + 8, rowDepth = 0;
-    const startX = group.x - ROW / 2;
+  // each venue's boats sit in front of it, groups side by side along the shore (never on top of each other): a
+  // trunk pier from the shore down the group's west side, a dock across the head of each row, and a finger pier
+  // beside each boat
+  const plank = (len: number, alongZ: boolean): Structure => {
+    const pier = new Parts(decals);
+    pier.box(0, -0.2, 0, alongZ ? 2.2 : len, 0.35, alongZ ? len : 2.2, 'plank', '#a0784e');
+    for (let k = 0; k * 6 < len; k++) for (const sd of [-1, 1]) pier.box(alongZ ? sd * 1.0 : -len / 2 + k * 6 + 1, -2.2, alongZ ? -len / 2 + k * 6 + 1 : sd * 1.0, 0.25, 2.2, 0.25, 'plank', '#6b4a2b');
+    return pier.finish('pier', {});
+  };
+  const ROW = 180;
+  let cursor = -Infinity;
+  for (const group of [...afloat].sort((p, q) => p.x - q.x)) {
+    const startX = Math.max(group.x - ROW / 2, cursor);
+    let x = 0, rowZ = seaZ + 8, rowDepth = 0, widest = 0;
     const boats = group.items.filter((it) => !(it.fig?.rig === 'fish' || it.kind === 'animal')).sort((a, b) => b.fz - a.fz);
     const swimmers = group.items.filter((it) => it.fig?.rig === 'fish' || it.kind === 'animal');
+    const dock = (z: number, w: number) => entities.push(structureEntity(id('pier'), 'pier', plank(w, false), [startX - 2 + w / 2, 0, z], 0, now, 'pier'));
+    let rowW = 0;
     for (const it of boats) {
       const along = it.fx + 6;
       if (x + along > ROW && x > 0) {
+        dock(rowZ - 1, rowW + 2);
         rowZ += rowDepth + 12;
         x = 0;
         rowDepth = 0;
       }
       const bx = startX + x + along / 2;
-      // a pier from the shore (or the previous row) out past the boat, and the boat moored beside it
-      const pier = new Parts(decals);
-      const pl = rowZ - seaZ + it.fz + 4;
-      pier.box(0, -0.2, 0, 2.2, 0.35, pl, 'plank', '#a0784e');
-      for (let k = 0; k * 6 < pl; k++) for (const sd of [-1, 1]) pier.box(sd * 1.0, -2.2, -pl / 2 + k * 6 + 1, 0.25, 2.2, 0.25, 'plank', '#6b4a2b');
-      entities.push(structureEntity(id('pier'), 'pier', pier.finish('pier', {}), [bx - it.fx / 2 - 1.8, 0, seaZ + pl / 2], 0, now, 'pier'));
+      // a finger pier from the row's dock out past the boat, in the gap beside it
+      const pl = it.fz + 5;
+      entities.push(structureEntity(id('pier'), 'pier', plank(pl, true), [bx - it.fx / 2 - 1.8, 0, rowZ - 1 + pl / 2], 0, now, 'pier'));
       const e = thing(it, bx, -0.75, rowZ + it.fz / 2 + 2, 0);
       e.state.afloat = true;
       seaFar = Math.max(seaFar, rowZ + it.fz + 2);
       x += along;
+      rowW = Math.max(rowW, x);
+      widest = Math.max(widest, x);
       rowDepth = Math.max(rowDepth, it.fz);
+    }
+    if (boats.length) {
+      dock(rowZ - 1, rowW + 2);
+      // the trunk pier from the shore to the last row's dock
+      const tl = rowZ - 1 - seaZ + 2;
+      entities.push(structureEntity(id('pier'), 'pier', plank(tl, true), [startX - 2, 0, seaZ - 1 + tl / 2], 0, now, 'pier'));
     }
     let sx = 0;
     const swimZ = rowZ + rowDepth + 18;
@@ -367,6 +412,7 @@ export function townWorld(words: TownWord[], tags: Record<string, Tag>, resolve:
       seaFar = Math.max(seaFar, swimZ + it.fz);
       sx += it.fx + 10;
     }
+    cursor = startX + Math.max(widest, sx, 40) + 16;
   }
 
   // the sea reaches past the farthest boat, and the land goes on past the sea's far shore
@@ -386,11 +432,16 @@ export function townWorld(words: TownWord[], tags: Record<string, Tag>, resolve:
   streetItems.forEach((it, i) => {
     const k = free[(i * stride + Math.floor(stride / 2)) % free.length];
     if (!k) return;
-    const vehicle = it.spot === 'parked' || Math.max(it.fx, it.fz) > 2.5;
-    // vehicles park in the street along the kerb, nose along the road; the rest stand on the pavement
-    const back = vehicle ? 2.6 + it.fz / 2 : 0;
+    const vehicle = it.spot === 'parked';
+    const big = Math.max(it.fx, it.fz);
+    // vehicles park in the road along the kerb, their long side along the road; the rest stand on the pavement.
+    // k.yaw faces the road: a thing at that yaw has its footprint's x along the road and its z across it
+    const along = it.fx >= it.fz;
+    const yaw = vehicle ? (along ? k.yaw : k.yaw + 90) : k.yaw;
+    // anything else big (an awning, a skip) steps back from the kerb so it stays off the road
+    const back = vehicle ? 2.6 + (along ? it.fz : it.fx) / 2 : big > 2 ? -(big / 2 - 1) : 0;
     const r = (k.yaw * Math.PI) / 180;
-    const e = thing(it, k.x - Math.sin(r) * back, 0, k.z - Math.cos(r) * back, vehicle ? k.yaw + 90 : k.yaw, 'st');
+    const e = thing(it, k.x + Math.sin(r) * back, 0, k.z + Math.cos(r) * back, yaw, 'st');
     if (it.spot === 'person') e.state.wander = true;
   });
   // extra people out and about
@@ -456,8 +507,10 @@ export function townWorld(words: TownWord[], tags: Record<string, Tag>, resolve:
     const s = waysign(decals, pointTo(j), j);
     entities.push(structureEntity(id('signpost'), 'signpost', s, [j.x, 0, j.z], 0, now, 'signpost'));
   }
-  const mapsAt: Array<{ x: number; z: number; yaw: number }> = [{ x: plaza.x - 8, z: plaza.z + plaza.r - 5, yaw: 0 }];
-  for (const { region, ox, oz: rz } of placed) mapsAt.push({ x: ox + region.w / 2 + 4, z: rz + region.d + 2.5, yaw: 0 });
+  // the plaza's map stands on the plaza (its south edge is the avenue's middle), the districts' inside their edge
+  const mapsAt: Array<{ x: number; z: number; yaw: number }> = [{ x: plaza.x - 8, z: plaza.z + plaza.r - 11, yaw: 0 }];
+  // each district's map stands just inside its south edge, beside the middle, clear of the avenue
+  for (const { region, ox, oz: rz } of placed) mapsAt.push({ x: ox + region.w / 2 + (region.zone === 'downtown' ? PLAZA / 2 + 6 : 4), z: rz + region.d - (region.southStreet ? 0 : 3), yaw: 0 });
   for (const mp of mapsAt) entities.push(structureEntity(id('map'), 'map', mapBoard(decals, mp.x, mp.z, mp.yaw), [mp.x, 0, mp.z], mp.yaw, now, 'map'));
 
   // 10. the ground: flat town, the sea to the south, hills round the edge

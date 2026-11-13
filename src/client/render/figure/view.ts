@@ -45,6 +45,12 @@ export class FigureView {
   /** In a seat socket: a person sits (hips and knees bent, lowered onto the seat) and does not walk. */
   seated = false;
   private hipDrop: number | null = null;
+  private wasTurned = false;
+
+  /** The way the 3D model faces now, in degrees (null for paper, which stands in its plane). */
+  get shownFacing(): number | null {
+    return this.paper ? null : this.facing;
+  }
   /** Seconds since the view was made (spinning parts turn by it). */
   private clock = 0;
   private last: Vec3 | null = null;
@@ -220,9 +226,11 @@ export class FigureView {
       if (this.heldFacing !== null) this.wantFacing = this.heldFacing;
       else if (moving) this.wantFacing = Math.atan2(this.dir![0], this.dir![1]) / DEG;
       else if (lookAt) this.wantFacing = Math.atan2(lookAt[0] - pos[0], lookAt[1] - pos[2]) / DEG;
-      else if (this.facing === null || (this.followYaw && (yawDeg !== this.seenYaw || flip !== this.seenFlip))) {
+      else if (this.facing === null || this.wasTurned || (this.followYaw && (yawDeg !== this.seenYaw || flip !== this.seenFlip))) {
+        // back to how it stands once a look at someone or a walk is over, even if its yaw never changed
         this.wantFacing = this.fig.view === 'front' ? yawDeg : yawDeg + (flip ? 90 : -90);
       }
+      this.wasTurned = this.heldFacing === null && !!(moving || lookAt);
       this.seenYaw = yawDeg;
       this.seenFlip = flip;
       this.facing = this.facing === null ? this.wantFacing : lerpAngle(this.facing, this.wantFacing, Math.min(1, dt * 7));

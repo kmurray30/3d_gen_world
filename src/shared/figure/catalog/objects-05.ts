@@ -1671,7 +1671,7 @@ export const ENTRIES: CatalogEntry[] = [
     b.cyl([0.4, 0.15, 0.4], [0, 3.38, 0.2], { color: '#3a3d42', name: 'blades', parent: 'body', mover: { kind: 'spin', axis: 'y', amount: 900 } });
     b.box([0.28, 0.05, 11], [0, 3.42, 0.2], { color: '#2b2d31', parent: 'blades', round: 0.3 });
     b.box([11, 0.05, 0.28], [0, 3.42, 0.2], { color: '#2b2d31', parent: 'blades', round: 0.3 });
-    b.wedge([0.12, 1.2, 0.9], [0, 2.75, -6.4], { color: '#c62828', rot: [0, 90, -12], apex: 0.4, parent: 'body' });
+    b.wedge([1.0, 1.25, 0.12], [0, 2.75, -6.35], { color: '#c62828', rot: [0, 90, -12], apex: 0.4, parent: 'body' });
     b.box([1.4, 0.07, 0.4], [0, 2.15, -5.8], { color: '#c62828', parent: 'body' });
     b.cyl([0.14, 0.18, 0.14], [0.2, 2.6, -6.5], { color: '#3a3d42', rot: [0, 0, 90], name: 'tailrotor', parent: 'body', mover: { kind: 'spin', axis: 'x', amount: 1440 } });
     b.box([0.04, 1.5, 0.14], [0.3, 2.6, -6.5], { color: '#2b2d31', parent: 'tailrotor' });
@@ -2779,21 +2779,23 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [A.par(A.pose('postL', { rot: [80, 0, 0], dur: 0.35 }), A.pose('postR', { rot: [80, 0, 0], dur: 0.35 }), A.say('Clatter!', 1.2)), A.wait(1), A.par(A.pose('postL', { rot: [0, 0, 0], dur: 0.5 }), A.pose('postR', { rot: [0, 0, 0], dur: 0.5 }))] })
       .done();
   }),
-  // A round thatched hut, 3.5 m: mud walls, a deep conical thatch roof on its eave poles, a plank door and a small
-  // window; the door opens and smoke drifts from the roof.
+  // A round thatched hut (a rondavel, 4 m across, 5 m to the top): soft mud walls 2.1 m high on a darker footing,
+  // a deep layered conical thatch roof on a ring of eave poles, a 1.85 m plank door (people walk in upright) with a
+  // stone step, and a small window; the door opens and smoke drifts from the roof.
   e('hut', 'places', 'houses', () => {
     const b = m('hut');
-    b.cyl([3.0, 1.8, 3.0], [0, 0.9, 0], { color: '#b88a5a' });
-    b.cyl([3.05, 0.2, 3.05], [0, 0.1, 0], { color: '#8a6a4a' });
-    b.cone([4.4, 2.2, 4.4], [0, 2.9, 0], { color: '#c9a050' });
-    b.cyl([4.45, 0.25, 4.45], [0, 1.88, 0], { color: '#b8903e', taper: 0.95 });
-    for (let i = 0; i < 6; i++) b.cone([4.4 - i * 0.7, 0.06, 4.4 - i * 0.7], [0, 2.0 + i * 0.36, 0], { color: '#a8803a', noInk: true });
-    b.cyl([0.3, 0.6, 0.3], [0, 4.1, 0], { color: '#a8803a', taper: 0.4 });
-    around(6, 1.9, 0.3).forEach(([x, zz]) => b.stick([x, 0, zz], [x, 1.85, zz], 0.1, '#5a3a22', { edge: 'sharp' }));
-    b.box([0.9, 1.6, 0.12], [0, 0.85, 1.48], { color: '#3a2416', edge: 'sharp' });
-    b.box([0.8, 1.5, 0.08], [0, 0.82, 1.55], { color: '#8a5a32', round: 0.2, name: 'door', pivot: [-0.4, 0.82, 1.55], mover: { kind: 'swing', axis: 'y', amount: -95 }, edge: 'sharp' });
-    b.each(3, (i) => b.box([0.82, 0.04, 0.02], [0, 0.35 + i * 0.5, 1.6], { color: '#5a3a22', parent: 'door', noInk: true }));
-    b.box([0.5, 0.4, 0.1], [1.1, 1.15, 1.05], { color: '#3a2416', rot: [0, 45, 0], edge: 'sharp' });
+    b.cyl([4.0, 2.1, 4.0], [0, 1.05, 0], { color: '#b88a5a' });
+    b.cyl([4.06, 0.25, 4.06], [0, 0.125, 0], { color: '#8a6a4a' });
+    b.cone([5.4, 2.6, 5.4], [0, 3.5, 0], { color: '#c9a050' });
+    b.cyl([5.45, 0.25, 5.45], [0, 2.2, 0], { color: '#b8903e', taper: 0.95 });
+    for (let i = 0; i < 6; i++) b.cone([5.4 - i * 0.8, 0.06, 5.4 - i * 0.8], [0, 2.35 + i * 0.4, 0], { color: '#a8803a', noInk: true });
+    b.cyl([0.35, 0.6, 0.35], [0, 4.85, 0], { color: '#a8803a', taper: 0.4 });
+    around(6, 2.45, 0.3).forEach(([x, zz]) => b.stick([x, 0, zz], [x, 2.15, zz], 0.11, '#5a3a22', { edge: 'sharp' }));
+    b.box([0.95, 1.95, 0.12], [0, 1.0, 1.98], { color: '#3a2416', edge: 'sharp' });
+    b.box([1.1, 0.12, 0.45], [0, 0.06, 2.2], { color: 'stone', edge: 'sharp', round: 0.2 });
+    b.box([0.85, 1.85, 0.08], [0, 0.97, 2.05], { color: '#8a5a32', round: 0.2, name: 'door', pivot: [-0.425, 0.97, 2.05], mover: { kind: 'swing', axis: 'y', amount: -95 }, edge: 'sharp' });
+    b.each(3, (i) => b.box([0.87, 0.05, 0.02], [0, 0.4 + i * 0.6, 2.1], { color: '#5a3a22', parent: 'door', noInk: true }));
+    b.box([0.55, 0.45, 0.1], [1.42, 1.4, 1.42], { color: '#3a2416', rot: [0, 45, 0], edge: 'sharp' });
     return b
       .act({ click: [[A.operate('door', 'open'), A.wait(2.5), A.operate('door', 'close')], [A.effect('smoke', { dur: 3 }), A.say('Crackle...', 1.5)]] })
       .done();
@@ -3542,15 +3544,30 @@ export const ENTRIES: CatalogEntry[] = [
       })
       .done();
   }),
-  // A musical jewellery box: pink case with gold trim, a mirrored lid, rows of rings and pearls, and a ballerina who
-  // rises and spins when the lid opens.
+  // A musical jewellery box, 20 cm wide, on gold ball feet: a pink case with gold trim, a little drawer with a knob
+  // and a keyhole plate on the front, a padded, buttoned lid with a gold heart and a mirror underneath, a string of
+  // pearls caught under the lid; inside, red velvet, a ring and pearls, and a ballerina who rises and spins when the
+  // lid opens.
   e('jewelry box', 'home', 'bedroom', () => {
-    const b = m('jewelry box', { edge: 'sharp' }).box([0.2, 0.09, 0.14], [0, 0.045, 0], { color: '#f48fb1', round: 0.2 }).box([0.18, 0.006, 0.12], [0, 0.091, 0], { color: '#8a1a3a', noInk: true });
-    b.box([0.202, 0.012, 0.142], [0, 0.02, 0], { color: 'gold', noInk: true });
-    b.box([0.2, 0.02, 0.14], [0, 0.1, 0], { color: '#f48fb1', round: 0.2, name: 'lid', pivot: [0, 0.1, -0.07], mover: { kind: 'swing', axis: 'x', amount: -100 } });
-    b.box([0.15, 0.004, 0.1], [0, 0.088, 0], { color: '#dff0f6', parent: 'lid' });
-    b.box([0.202, 0.006, 0.142], [0, 0.107, 0], { color: 'gold', parent: 'lid', noInk: true });
-    b.each(5, (i) => b.ball(0.012, [-0.07 + i * 0.016, 0.095, 0.045], { color: 'white' }));
+    const pk = '#f48fb1';
+    const b = m('jewelry box', { edge: 'sharp' }).box([0.2, 0.075, 0.13], [0, 0.0515, 0], { color: pk, round: 0.2 }).box([0.18, 0.006, 0.11], [0, 0.087, 0], { color: '#8a1a3a', noInk: true });
+    for (const [x, z] of [[0.088, 0.055], [-0.088, 0.055], [0.088, -0.055], [-0.088, -0.055]]) b.ball(0.018, [x, 0.009, z], { color: 'gold' });
+    b.box([0.206, 0.01, 0.136], [0, 0.019, 0], { color: 'gold', round: 0.3, noInk: true })
+      .box([0.202, 0.004, 0.132], [0, 0.054, 0], { color: 'gold', round: 0, noInk: true })
+      .box([0.17, 0.026, 0.006], [0, 0.037, 0.066], { color: '#f8a5c2', round: 0.3 })
+      .ball(0.012, [0, 0.037, 0.072], { color: 'gold' })
+      .box([0.018, 0.022, 0.004], [0, 0.07, 0.066], { color: 'gold', round: 0.3 })
+      .box([0.004, 0.008, 0.002], [0, 0.068, 0.069], { color: '#3a2a1a', round: 0, noInk: true });
+    // the lid: a trimmed frame, the buttoned cushion and heart on top, and the mirror on its underside
+    b.box([0.2, 0.018, 0.13], [0, 0.098, 0], { color: pk, round: 0.3, name: 'lid', pivot: [0, 0.089, -0.065], mover: { kind: 'swing', axis: 'x', amount: -100 } })
+      .box([0.202, 0.005, 0.132], [0, 0.092, 0], { color: 'gold', parent: 'lid', noInk: true })
+      .box([0.17, 0.016, 0.1], [0, 0.11, 0], { color: '#f8bbd0', round: 0.9, edge: 'soft', parent: 'lid' })
+      .heart(0.03, [0, 0.122, 0.0], { color: 'gold', rot: [-90, 0, 0], parent: 'lid' })
+      .box([0.15, 0.004, 0.1], [0, 0.0885, 0], { color: '#dff0f6', parent: 'lid' });
+    for (const [x, z] of [[-0.05, -0.03], [0.05, -0.03], [-0.05, 0.03], [0.05, 0.03]]) b.ball(0.006, [x, 0.118, z], { color: 'gold', parent: 'lid', noInk: true });
+    // a string of pearls caught under the front of the lid
+    b.each(9, (i) => b.ball(0.008, [-0.075 + i * 0.0075, 0.087 - 0.028 * Math.sin((Math.PI * i) / 8), 0.068], { color: 'white' }));
+    b.each(5, (i) => b.ball(0.012, [-0.07 + i * 0.016, 0.093, 0.04], { color: 'white' }));
     b.torus([0.022, 0.022, 0.006], [0.06, 0.098, 0.03], { color: 'gold' });
     b.ball(0.01, [0.06, 0.112, 0.03], { color: '#26c6da' });
     b.stick([0, 0.05, 0], [0, 0.085, 0], 0.004, 'gold', { name: 'dancer' });
@@ -3588,26 +3605,39 @@ export const ENTRIES: CatalogEntry[] = [
       })
       .done();
   }),
-  // A cordless jigsaw on a board it is cutting: teal body, closed handle with trigger, a steel shoe and a blade that
-  // jumps up and down.
-  e('jigsaw', 'workshop', 'power tools', () =>
-    m('jigsaw', { edge: 'sharp' })
-      .box([0.32, 0.02, 0.16], [0, 0.01, 0], { color: 'lightwood' })
-      .box([0.12, 0.004, 0.003], [0.1, 0.021, 0.02], { color: '#5a3a22', rot: [0, 10, 0], noInk: true })
-      .box([0.2, 0.012, 0.08], [0, 0.026, 0], { color: 'silver' })
-      .box([0.008, 0.07, 0.004], [0.07, 0.02, 0], { color: 'steel', round: 0, name: 'blade' })
-      .box([0.22, 0.08, 0.07], [0, 0.072, 0], { color: '#00897b', round: 0.4, edge: 'soft' })
-      .torus([0.17, 0.1, 0.03], [-0.01, 0.13, 0], { color: '#1e1e1e' })
-      .box([0.012, 0.02, 0.01], [0.0, 0.12, 0], { color: '#d32f2f' })
-      .box([0.06, 0.05, 0.065], [-0.12, 0.07, 0], { color: '#1e1e1e', round: 0.3 })
+  // A cordless top-handle jigsaw (25 cm long, nose to +x) cutting along a pencil line in a board laid across two
+  // blocks, so its blade shows through underneath: a steel shoe, the grey gear housing at the nose with the blade
+  // clamp and the thin blade, the teal motor body, the closed D-handle with a black grip and red trigger, and the
+  // battery pack at the back. The blade saws up and down as the saw runs along the line.
+  e('jigsaw', 'workshop', 'power tools', () => {
+    const T = '#00897b', K = '#1e1e1e', P = { parent: 'saw' };
+    const b = m('jigsaw', { edge: 'sharp' });
+    for (const x of [-0.14, 0.2]) b.box([0.05, 0.057, 0.2], [x, 0.0285, 0], { color: 'darkwood', round: 0.1 });
+    b.box([0.42, 0.018, 0.2], [0.03, 0.066, 0], { color: 'lightwood', round: 0.05 })
+      .box([0.12, 0.002, 0.003], [0.15, 0.0755, 0], { color: '#4a4a4a', round: 0, noInk: true })
+      .box([0.2, 0.01, 0.075], [0, 0.08, 0], { color: 'silver', round: 0.3, name: 'saw' })
+      .box([0.007, 0.13, 0.0015], [0.075, 0.0775, 0], { color: 'steel', round: 0, name: 'blade', ...P })
+      .cyl([0.014, 0.012, 0.014], [0.066, 0.1, 0], { color: '#3a3d42', rot: [90, 0, 0], ...P })
+      .box([0.12, 0.014, 0.05], [-0.02, 0.091, 0], { color: '#5a5f66', round: 0.3, ...P })
+      .box([0.06, 0.072, 0.062], [0.07, 0.151, 0], { color: '#5a5f66', round: 0.35, ...P })
+      .box([0.15, 0.092, 0.068], [-0.03, 0.142, 0], { color: T, round: 0.4, ...P })
+      .arc([0.18, 0.13, 0.034], [-0.02, 0.185, 0], { color: T, tube: 0.22, ...P })
+      .arc([0.184, 0.134, 0.038], [-0.02, 0.185, 0], { color: K, tube: 0.22, arc: 80, ...P })
+      .box([0.012, 0.022, 0.012], [-0.005, 0.215, 0], { color: '#d32f2f', round: 0.3, ...P })
+      .box([0.07, 0.06, 0.075], [-0.135, 0.13, 0], { color: K, round: 0.3, ...P })
+      .box([0.072, 0.008, 0.077], [-0.135, 0.14, 0], { color: T, round: 0.3, ...P });
+    for (const s of [1, -1]) b.each(3, (i) => b.box([0.03, 0.004, 0.002], [-0.07, 0.125 + i * 0.013, s * 0.034], { color: '#004d40', round: 0, noInk: true, ...P }));
+    return b
       .act({
         click: [
-          A.par(A.say('Bzzzzt!', 1.5), A.effect('dust', { dur: 1.5 })),
-          ...[0, 1, 2, 3, 4, 5].flatMap(() => [A.pose('blade', { move: [0, 0.015, 0], dur: 0.05 }), A.pose('blade', { move: [0, 0, 0], dur: 0.05 })]),
+          [
+            A.par(A.say('Bzzzzt!', 1.5), A.effect('dust', { dur: 1.5 }), A.pose('saw', { move: [0.08, 0, 0], dur: 1.4 }), A.pose('blade', { move: [0, 0.015, 0], dur: 0.06, times: 11 })),
+            A.pose('saw', { move: [0, 0, 0], dur: 0.6 }),
+          ],
         ],
       })
-      .done(),
-  ),
+      .done();
+  }),
   // A jigsaw puzzle almost done on its board, the picture box lid behind; the last piece clicks into place, then is
   // taken out again.
   e('jigsaw puzzle', 'toys', 'puzzles', () => {
@@ -4680,26 +4710,71 @@ export const ENTRIES: CatalogEntry[] = [
     });
     return b.act({ click: [A.par(...[0, 1, 2, 3, 4].map((i) => A.pose(`rose${i}`, { scale: 1.6, dur: 0.6 })), A.effect('sparkle', { dur: 1.2 })), A.wait(1), A.par(...[0, 1, 2, 3, 4].map((i) => A.pose(`rose${i}`, { scale: 1, dur: 0.5 })))] }).done();
   }),
-  // A laundromat: sky-blue front with a WASH & DRY sign, rows of front-loading washers seen through the windows,
-  // doors that open; the drums churn.
+  // A laundromat (9 m front, 3.8 m storey) you can see into: a sky-blue front of corner piers, a sign fascia, low
+  // stall risers and big open window bays with white glazing bars and a glazed transom, glass double doors that
+  // open. Inside on a tiled floor: an island of six front-loading washers on a raised base (their round doors face
+  // the street), stacked dryers along the back wall, a folding table with a basket, ceiling lights and an OPEN
+  // sign. The doors ding; the drums churn.
   e('laundromat', 'places', 'shops', () => {
-    const { b, z } = shop('laundromat', { w: 9, d: 7, wall: '#81d4fa', trim: 'white', sign: 'LAUNDROMAT  WASH & DRY', signBg: 'white', glass: '#b8dcec' });
+    const W = 9, D = 7, H = 3.8, fz = D / 2, BL = '#81d4fa', TR = 'white', GL = '#b8dcec';
+    const b = m('laundromat', { edge: 'sharp' })
+      .box([W + 0.2, 0.3, D + 0.2], [0, 0.15, 0], { color: '#7d7873', round: 0.05 })
+      .box([W - 0.5, 0.05, D - 0.5], [0, 0.325, 0], { color: '#ebe6dc', round: 0, noInk: true })
+      .box([W, H, 0.25], [0, 0.3 + H / 2, -fz + 0.125], { color: '#e6f4fb', round: 0.02 })
+      .box([W + 0.2, 0.3, D + 0.2], [0, 0.3 + H + 0.15, 0], { color: '#5a5652', round: 0.05 })
+      .box([W + 0.4, 0.5, 0.35], [0, 0.3 + H + 0.25, fz], { color: TR, round: 0.1 })
+      .box([W, 0.9, 0.3], [0, 3.65, fz - 0.15], { color: BL, round: 0.05 })
+      .label('LAUNDROMAT', [5.6, 0.55], [0, 3.76, fz + 0.02], { color: 'white', depth: 0.04 })
+      .label('WASH & DRY - OPEN 7 DAYS', [4.2, 0.22], [0, 3.33, fz + 0.02], { color: BL, depth: 0.02 });
     b.pair((s) => {
-      for (let i = 0; i < 2; i++) {
-        const x = s * (1.65 + i * 1.15);
-        const n = `drum${s > 0 ? 'L' : 'R'}${i}`;
-        b.box([1.0, 1.0, 0.06], [x, 1.0, z + 0.1], { color: 'white', round: 0.1 });
-        b.torus([0.72, 0.72, 0.06], [x, 0.95, z + 0.15], { color: 'silver' });
-        b.cyl([0.6, 0.03, 0.6], [x, 0.95, z + 0.15], { color: '#5f9fc8', rot: [90, 0, 0], name: n, pivot: [x, 0.95, z + 0.15] });
-        b.box([0.12, 0.3, 0.02], [x, 0.95, z + 0.17], { color: 'white', parent: n, noInk: true });
-        b.box([0.3, 0.06, 0.02], [x, 1.42, z + 0.14], { color: '#3a3d42' });
+      // side wall, corner pier, door pier, stall riser, window bay bars, transom glass, sill
+      b.box([0.25, H, D], [s * (W / 2 - 0.125), 0.3 + H / 2, 0], { color: BL, round: 0.02 })
+        .box([0.45, 2.9, 0.34], [s * (W / 2 - 0.2), 1.75, fz - 0.15], { color: BL, round: 0.05 })
+        .box([0.22, 2.9, 0.3], [s * 0.92, 1.75, fz - 0.15], { color: TR, round: 0.05 })
+        .box([3.2, 0.42, 0.3], [s * 2.55, 0.51, fz - 0.15], { color: BL, round: 0.05 })
+        .box([3.3, 0.06, 0.3], [s * 2.55, 0.74, fz - 0.08], { color: TR, round: 0.2 })
+        .box([0.08, 2.46, 0.12], [s * 2.55, 1.97, fz - 0.1], { color: TR, round: 0.2 })
+        .box([3.2, 0.08, 0.12], [s * 2.55, 2.62, fz - 0.1], { color: TR, round: 0.2 })
+        .box([3.2, 0.52, 0.04], [s * 2.55, 2.92, fz - 0.12], { color: GL, round: 0.05 });
+      // glass door on its hinge
+      const dn = s > 0 ? 'doorL' : 'doorR';
+      b.box([0.78, 2.25, 0.06], [s * 0.41, 1.45, fz - 0.12], { color: GL, round: 0.08, name: dn, pivot: [s * 0.8, 1.45, fz - 0.12], mover: { kind: 'swing', axis: 'y', amount: s * 95 } })
+        .box([0.84, 0.1, 0.07], [s * 0.41, 0.36, fz - 0.115], { color: TR, parent: dn })
+        .box([0.84, 0.08, 0.07], [s * 0.41, 2.55, fz - 0.115], { color: TR, parent: dn })
+        .box([0.04, 0.5, 0.05], [s * 0.1, 1.4, fz - 0.07], { color: 'silver', parent: dn });
+      // the washers: a raised base and three machines, round glass doors facing out; their drums churn
+      b.box([2.5, 0.25, 0.85], [s * 2.35, 0.475, 0.9], { color: '#9da3a8', round: 0.05 });
+      for (let i = 0; i < 3; i++) {
+        const x = s * (1.55 + i * 0.8), n = `drum${s > 0 ? 'L' : 'R'}${i}`;
+        b.box([0.72, 0.85, 0.7], [x, 1.025, 0.9], { color: 'white', round: 0.08 })
+          .box([0.72, 0.13, 0.04], [x, 1.37, 1.26], { color: '#5c6166', round: 0.1 })
+          .torus([0.5, 0.5, 0.06], [x, 0.97, 1.27], { color: 'silver' })
+          .cyl([0.4, 0.03, 0.4], [x, 0.97, 1.27], { color: '#5f9fc8', rot: [90, 0, 0], name: n, pivot: [x, 0.97, 1.27] })
+          .box([0.08, 0.26, 0.02], [x, 0.97, 1.29], { color: 'white', parent: n, noInk: true });
       }
+      // stacked dryers along the back wall
+      for (let i = 0; i < 2; i++)
+        for (let k = 0; k < 2; k++) {
+          const x = s * (1.6 + i * 0.85), y = 0.75 + k * 0.85;
+          b.box([0.8, 0.82, 0.7], [x, y, -fz + 0.6], { color: '#d8dce0', round: 0.06 })
+            .torus([0.52, 0.52, 0.06], [x, y - 0.05, -fz + 0.96], { color: 'silver' })
+            .cyl([0.42, 0.02, 0.42], [x, y - 0.05, -fz + 0.96], { color: '#3a3d42', rot: [90, 0, 0] });
+        }
+      b.box([0.9, 0.06, 0.4], [s * 2.0, 0.3 + H - 0.05, 0.2], { color: '#fffbe6', glow: true, round: 0.2 });
     });
+    b.box([1.6, 0.06, 0.7], [0, 0.95, -2.2], { color: '#c8a46a', round: 0.1 })
+      .pair((s) => void b.box([0.06, 0.6, 0.6], [s * 0.72, 0.62, -2.2], { color: '#9da3a8', round: 0.1 }))
+      .cyl([0.5, 0.3, 0.4], [0.3, 1.13, -2.2], { color: '#f4a1c0', taper: 1.15, edge: 'soft' })
+      .box([0.7, 0.28, 0.04], [3.3, 2.3, fz - 0.2], { color: '#ff4fa0', glow: true, round: 0.3, name: 'open', mover: { kind: 'light', on: false } })
+      .label('OPEN', [0.56, 0.2], [3.3, 2.3, fz - 0.17], { color: '#ff4fa0', parent: 'open', depth: 0.01 })
+      .box([1.62, 0.56, 0.04], [0, 2.9, fz - 0.12], { color: GL, round: 0.05 })
+      .box([1.62, 0.08, 0.1], [0, 2.6, fz - 0.1], { color: TR, round: 0.2 });
+    const drums = ['drumL0', 'drumL1', 'drumL2', 'drumR0', 'drumR1', 'drumR2'];
     return b
       .act({
         click: [
-          [A.operate('door', 'open'), A.say('Ding!', 1), A.wait(2.5), A.operate('door', 'close')],
-          [A.par(...['drumL0', 'drumL1', 'drumR0', 'drumR1'].map((n) => A.pose(n, { spin: [0, 0, 300] })), A.effect('water_spray', { dur: 2 }), A.say('Swish swish...', 2)), A.wait(2), A.par(...['drumL0', 'drumL1', 'drumR0', 'drumR1'].map((n) => A.pose(n, { spin: [0, 0, 0] })))],
+          [A.par(A.operate('door', 'open'), A.operate('open', 'on')), A.say('Ding!', 1), A.wait(2.5), A.par(A.operate('door', 'close'), A.operate('open', 'off'))],
+          [A.par(...drums.map((n) => A.pose(n, { spin: [0, 0, 300] })), A.effect('water_spray', { dur: 2 }), A.say('Swish swish...', 2)), A.wait(2), A.par(...drums.map((n) => A.pose(n, { spin: [0, 0, 0] })))],
         ],
       })
       .done();

@@ -212,7 +212,8 @@ export function loadViewSettings(): ViewSettings {
   } catch {
     /* ignore */
   }
-  return { mode: 'first', angle: 1, fade: true, look: 'sprites' };
+  // every word has a sculpted model (with a part that moves and an act), so new visitors see those first
+  return { mode: 'first', angle: 1, fade: true, look: 'cel' };
 }
 
 export function saveViewSettings(v: ViewSettings): void {

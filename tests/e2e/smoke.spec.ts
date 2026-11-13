@@ -3,6 +3,8 @@ import { expect, test, type Page } from '@playwright/test';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // window.__game is exposed by the client for tests (see src/client/app.ts).
 async function enter(page: Page): Promise<void> {
+  // the light sprites look keeps this command-and-save test quick on a software renderer
+  await page.addInitScript(() => localStorage.setItem('pw.view', JSON.stringify({ mode: 'first', angle: 1, fade: true, look: 'sprites' })));
   await page.goto('/');
   await page.fill('input[name=passcode]', 'test-pass');
   await page.press('input[name=passcode]', 'Enter');

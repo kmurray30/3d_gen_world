@@ -2214,7 +2214,7 @@ export const ENTRIES: CatalogEntry[] = [
     const b = m('kingston', { edge: 'sharp' });
     b.box([W + 6, 0.12, D + 8], [0, 0.06, 2], { color: '#8ab04c' }).box([3, 0.13, 8], [0, 0.065, zf + 4], { color: '#d9c8a8' });
     b.box([W, H, D], [0, H / 2 + 0.6, 0], { color: '#f7f5ef', round: 0.02 }).box([W + 0.2, 0.6, D + 0.2], [0, 0.3, 0], { color: 'stone' });
-    b.pyramid([W * 1.15, 3.2, D * 1.3], [0, H + 0.6 + 1.6, 0], 4, { color: '#b5483a', rot: [0, 45, 0], taper: 0.3 });
+    b.pyramid([(W + 1.2) * Math.SQRT2, 3.2, (D + 1.2) * Math.SQRT2], [0, H + 0.6 + 1.6, 0], 4, { color: '#b5483a', taper: 0.3 });
     b.box([W - 1, 0.3, 2.4], [0, 3.6, zf + 1.2], { color: '#f7f5ef' }).box([W - 0.8, 0.25, 2.6], [0, H + 0.4, zf + 1.3], { color: '#b5483a' });
     for (let i = 0; i < 8; i++) b.cyl([0.22, H - 0.2, 0.22], [-W / 2 + 1 + i * ((W - 2) / 7), H / 2 + 0.6, zf + 2.3], { color: 'white', edge: 'soft' });
     for (const y of [4.6]) b.box([W - 1, 0.7, 0.06], [0, y, zf + 2.4], { color: 'white' });
@@ -2405,18 +2405,20 @@ export const ENTRIES: CatalogEntry[] = [
       .rod([0, 5.6, 12.5], [0, 8.4, 19.5], 0.45, 'darkwood', { parent: 'hull' })
       .ball([0.6, 0.9, 0.6], [0, 9.3, -13.0], { color: '#ffd27a', glow: true, parent: 'hull', name: 'lantern', mover: { kind: 'light', on: true } });
     b.pair((s) => { for (let i = 0; i < 5; i++) b.box([0.1, 0.6, 0.7], [s * 3.65, 3.3, -6 + i * 3.2], { color: '#2a1d16', parent: 'hull', edge: 'sharp' }); });
+    const SAIL: Array<[number, number, number, number]> = [[0, 1, 0.34, 1.33], [0.25, 0.97, 0.34, -0.5], [0.5, 0.94, 0.34, -1.33], [0.75, 0.9, 0.34, -0.5], [1, 0.86, 0.34, 1.33]];
     const mast = (z: number, h: number, sails: number[]) => {
       b.cyl([0.55, h, 0.55], [0, 5 + h / 2, z], { color: 'darkwood', parent: 'hull' });
       sails.forEach((w, i) => {
         const y = 5 + h * (0.42 + i * 0.36);
-        b.cyl([0.22, w + 1.2, 0.22], [0, y + h * 0.15, z], { color: 'darkwood', rot: [0, 0, 90], parent: 'hull' });
-        b.ball([w, h * 0.3, 1.1], [0, y, z + 0.4], { color: 'cream', parent: 'hull', name: `sail${z}${i}` });
+        b.cyl([0.22, w + 1.2, 0.22], [0, y + h * 0.15, z + 0.3], { color: 'darkwood', rot: [0, 0, 90], parent: 'hull' });
+        // a square sail hanging from its yard and bellying forward in the wind: a thin loft stood upright
+        b.loft([w, 0.3, h * 0.3], [0, y, z + 0.8], SAIL, { color: 'cream', rot: [-90, 0, 0], boxy: 0.85, parent: 'hull', name: `sail${z}${i}`, edge: 'soft' });
       });
       b.box([0.05, 1.2, 1.8], [0, 5 + h + 0.6, z - 0.9], { color: 'red', parent: 'hull', edge: 'sharp' });
     };
     mast(6.5, 18, [9, 6.5]);
     mast(-1, 21, [10.5, 7.5]);
-    b.cyl([0.45, 14, 0.45], [0, 8.5 + 7, -9], { color: 'darkwood', parent: 'hull' }).wedge([0.08, 8, 7], [0, 15, -9.5], { color: 'cream', apex: 0.4, rot: [0, 90, 0], parent: 'hull', edge: 'sharp' });
+    b.cyl([0.45, 14, 0.45], [0, 8.5 + 7, -9], { color: 'darkwood', parent: 'hull' }).wedge([7, 8, 0.08], [0, 15, -9.5], { color: 'cream', apex: 0.4, rot: [0, 90, 0], parent: 'hull', edge: 'sharp' });
     for (const [z0, z1, h] of [[6.5, 14, 22], [-1, -12, 25], [6.5, -1, 22]] as const) b.stick([0, 5.2, z1], [0, h, z0], 0.06, '#5a4a3a', { parent: 'hull', noInk: true });
     return b
       .socket('deck', [0, 5.15, 2], 'top', { part: 'hull', size: 4 })
@@ -4021,7 +4023,7 @@ export const ENTRIES: CatalogEntry[] = [
   e('yacht club', 'places', 'clubs', () => {
     const b = m('yacht club', { edge: 'sharp' });
     b.box([34, 0.15, 26], [0, 0.075, 0], { color: 'water' }).box([20, 0.6, 10], [-6, 0.3, -7], { color: '#c9c4b8' });
-    b.box([12, 6, 7], [-7, 3.6, -8], { color: 'white', round: 0.02 }).pyramid([14, 2.6, 9], [-7, 7.9, -8], 4, { color: '#2f4f8f', rot: [0, 45, 0], taper: 0.4 });
+    b.box([12, 6, 7], [-7, 3.6, -8], { color: 'white', round: 0.02 }).pyramid([13 * Math.SQRT2, 2.6, 8 * Math.SQRT2], [-7, 7.9, -8], 4, { color: '#2f4f8f', taper: 0.4 });
     b.box([12, 0.25, 2.4], [-7, 3.5, -3.3], { color: 'white' }).box([12, 0.9, 0.06], [-7, 4.1, -2.2], { color: 'white' });
     for (let i = 0; i < 6; i++) b.cyl([0.18, 3.0, 0.18], [-12.5 + i * 2.2, 2.0, -2.3], { color: 'white', edge: 'soft' });
     b.label('YACHT CLUB', [5, 0.7], [-7, 5.6, -4.45], { color: '#2f4f8f' });

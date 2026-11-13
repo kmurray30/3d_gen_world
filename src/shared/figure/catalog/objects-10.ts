@@ -346,29 +346,34 @@ export const ENTRIES: CatalogEntry[] = [
       })
       .done();
   }),
-  // A moulded ceramic toilet (soft) with a seat and lid on one hinge and a chrome flush lever; seat height 0.42.
-  e('toilet', 'home', 'bathroom', () =>
-    m('toilet')
-      .cyl([0.24, 0.3, 0.34], [0, 0.15, 0.04], { color: 'white', taper: 1.25 })
-      .cyl([0.31, 0.12, 0.4], [0, 0.34, 0.08], { color: 'white', taper: 1.2 })
-      .torus([0.38, 0.48, 0.04], [0, 0.4, 0.09], { color: 'white', rot: [90, 0, 0], tube: 0.2 })
-      .cyl([0.26, 0.01, 0.34], [0, 0.37, 0.09], { color: '#7fc0e6' })
-      .torus([0.37, 0.46, 0.028], [0, 0.428, 0.09], { color: '#f2f2ee', rot: [90, 0, 0], tube: 0.22, name: 'seat', pivot: [0, 0.428, -0.13], mover: { kind: 'swing', axis: 'x', amount: -95 } })
-      .cyl([0.37, 0.022, 0.45], [0, 0.453, 0.09], { color: '#f2f2ee', name: 'lid', pivot: [0, 0.453, -0.13], mover: { kind: 'swing', axis: 'x', amount: -100 } })
-      .box([0.44, 0.38, 0.18], [0, 0.6, -0.22], { color: 'white', round: 0.2 })
-      .box([0.46, 0.04, 0.2], [0, 0.81, -0.22], { color: 'white', round: 0.4 })
-      .cyl([0.04, 0.012, 0.04], [-0.15, 0.73, -0.128], { color: 'silver', rot: [90, 0, 0], edge: 'sharp' })
-      .box([0.08, 0.018, 0.022], [-0.19, 0.73, -0.12], { color: 'silver', edge: 'sharp', round: 0.4, name: 'lever', pivot: [-0.15, 0.73, -0.12], mover: { kind: 'swing', axis: 'z', amount: 35 } })
-      .cyl([0.06, 0.04, 0.06], [0, 0.4, -0.31], { color: 'silver', rot: [90, 0, 0], edge: 'sharp' })
-      .socket('seat', [0, 0.45, 0.06], 'seat')
+  // A close-coupled toilet (0.8 m, seat at 0.42): one moulded ceramic body (soft) that flares from a footed
+  // pedestal into an elongated bowl, a deck under the cistern, the cistern with its lid, a chrome flush lever and
+  // supply pipe; the plastic seat and lid on chrome hinges (crisp pieces of their own).
+  e('toilet', 'home', 'bathroom', () => {
+    const b = m('toilet')
+      .loft([0.38, 0.52, 0.39], [0, 0.195, 0.06], [[0, 0.6, 0.66, 0.12], [0.1, 0.56, 0.6, 0.12], [0.4, 0.5, 0.56, 0.1], [0.72, 0.88, 0.86, 0], [0.92, 1, 1, -0.02], [1, 0.98, 0.98, -0.02]], { color: 'white', rot: [-90, 0, 0], name: 'bowl' })
+      .box([0.3, 0.15, 0.2], [0, 0.33, -0.22], { color: 'white', round: 0.3 })
+      .cyl([0.24, 0.006, 0.31], [0, 0.392, 0.09], { color: '#9fd2ee', noInk: true })
+      .box([0.46, 0.37, 0.19], [0, 0.6, -0.245], { color: 'white', round: 0.22, name: 'tank' })
+      .box([0.485, 0.045, 0.21], [0, 0.807, -0.245], { color: '#f6f6f2', round: 0.35, blend: 0 })
+      .stick([-0.15, 0, -0.3], [-0.15, 0.42, -0.3], 0.014, 'silver', { edge: 'sharp' })
+      .cyl([0.03, 0.04, 0.03], [-0.15, 0.1, -0.3], { color: 'silver', edge: 'sharp' })
+      .cyl([0.04, 0.012, 0.04], [-0.17, 0.73, -0.146], { color: 'silver', rot: [90, 0, 0], edge: 'sharp' })
+      .box([0.085, 0.018, 0.022], [-0.13, 0.73, -0.137], { color: 'silver', edge: 'sharp', round: 0.4, name: 'lever', pivot: [-0.17, 0.73, -0.137], mover: { kind: 'swing', axis: 'z', amount: -30 } });
+    // bolt caps either side of the foot, and the seat's two chrome hinges
+    b.pair((s) => b.ball([0.03, 0.035, 0.04], [s * 0.112, 0.03, 0.0], { color: 'white' }).cyl([0.03, 0.03, 0.03], [s * 0.08, 0.41, -0.125], { color: 'silver', rot: [0, 0, 90], edge: 'sharp' }));
+    return b
+      .torus([0.37, 0.45, 0.03], [0, 0.405, 0.095], { color: '#f4f4f0', rot: [90, 0, 0], tube: 0.24, name: 'seat', pivot: [0, 0.405, -0.12], mover: { kind: 'swing', axis: 'x', amount: -94 } })
+      .cyl([0.37, 0.022, 0.45], [0, 0.431, 0.095], { color: '#f4f4f0', name: 'lid', pivot: [0, 0.431, -0.115], mover: { kind: 'swing', axis: 'x', amount: -97 } })
+      .socket('seat', [0, 0.43, 0.06], 'seat')
       .act({
         click: [
           [A.operate('lid', 'open'), A.wait(0.4), A.operate('lever', 'down'), A.par(A.effect('water_spray', { dur: 1.5 }), A.say('Whoooosh!', 1.6)), A.operate('lever', 'up'), A.wait(1), A.operate('lid', 'close')],
           [A.operate('lid', 'open'), A.operate('seat', 'open'), A.wait(1.5), A.operate('seat', 'close'), A.operate('lid', 'close'), A.say('Clonk!', 1)],
         ],
       })
-      .done(),
-  ),
+      .done();
+  }),
   // A roll on its side with the paper coming off the front; more sheets roll out along the floor, then tear off.
   e('toilet paper', 'home', 'bathroom', () => {
     const b = m('toilet paper')
@@ -2948,19 +2953,28 @@ export const ENTRIES: CatalogEntry[] = [
     for (const u of [-0.05, 0, 0.05]) for (const v of [-0.05, 0, 0.05]) b.box([0.034, 0.004, 0.034], [u, 0.04, v], { color: '#b8742f', noInk: true });
     return b.act({ click: [[A.pose('jug', { rot: [0, 0, 60], dur: 0.4 }), A.par(A.pose('syrup', { scale: 1, dur: 0.8 }), A.say('Drizzle...', 1.4)), A.pose('jug', { rot: [0, 0, 0], dur: 0.4 })], [A.pose('syrup', { scale: 0, dur: 0.3 })]] }).done();
   }),
-  // A round Belgian waffle maker: a black base with a grid plate, a hinged lid with a cool-touch handle, a ready
-  // light; it opens on a cooked waffle in a puff of steam.
+  // A round Belgian waffle maker (19 cm tall): a black base on four feet with a front grip and two lights, the
+  // dark grid plate holding a golden waffle, and a domed brushed-steel lid on a back hinge with a black
+  // cool-touch handle; it opens on the cooked waffle in a puff of steam.
   e('waffle iron', 'kitchen', 'appliances', () => {
+    const blk = '#2a2726', steel = '#c9ccd1';
     const b = m('waffle iron', { edge: 'sharp' })
-      .cyl([0.26, 0.06, 0.26], [0, 0.03, 0], { color: '#2a2726' })
-      .cyl([0.22, 0.012, 0.22], [0, 0.066, 0], { color: '#5c6166' })
-      .cyl([0.2, 0.014, 0.2], [0, 0.075, 0], { color: '#e0a24e', edge: 'soft' })
-      .box([0.04, 0.025, 0.1], [0, 0.04, 0.17], { color: '#2a2726' })
-      .ball(0.015, [0.08, 0.04, 0.12], { color: '#e0473b', glow: true, name: 'ready', mover: { kind: 'light', on: false } })
-      .cyl([0.26, 0.05, 0.26], [0, 0.11, 0], { color: '#2a2726', name: 'lid', pivot: [0, 0.085, -0.13], mover: { kind: 'swing', axis: 'x', amount: -100 } })
-      .box([0.04, 0.025, 0.12], [0, 0.115, 0.18], { color: '#2a2726', parent: 'lid' })
-      .box([0.16, 0.004, 0.16], [0, 0.137, 0], { color: '#3a3a3a', noInk: true, rot: [0, 45, 0], parent: 'lid' });
-    for (const u of [-0.05, 0, 0.05]) for (const v of [-0.05, 0, 0.05]) b.box([0.03, 0.004, 0.03], [u, 0.083, v], { color: '#b8742f', noInk: true });
+      .cyl([0.27, 0.07, 0.27], [0, 0.045, 0], { color: blk, taper: 1.04, round: 0.2 })
+      .box([0.05, 0.03, 0.1], [0, 0.06, 0.17], { color: blk, round: 0.4 })
+      .box([0.09, 0.06, 0.05], [0, 0.11, -0.145], { color: blk, round: 0.3 })
+      .cyl([0.225, 0.012, 0.225], [0, 0.086, 0], { color: '#4a4f55' })
+      .cyl([0.2, 0.02, 0.2], [0, 0.098, 0], { color: '#e0a24e', edge: 'soft' })
+      .ball(0.014, [0.05, 0.06, 0.137], { color: '#5ad06a', glow: true, name: 'ready', mover: { kind: 'light', on: false } })
+      .ball(0.012, [-0.05, 0.06, 0.137], { color: '#e0473b', glow: true })
+      .cyl([0.275, 0.035, 0.275], [0, 0.126, 0], { color: steel, name: 'lid', pivot: [0, 0.11, -0.14], mover: { kind: 'swing', axis: 'x', amount: -100 } })
+      .dome([0.25, 0.05, 0.25], [0, 0.168, 0], { color: steel, parent: 'lid' })
+      .cyl([0.08, 0.004, 0.08], [0, 0.194, 0], { color: '#9da3a8', parent: 'lid' })
+      .box([0.048, 0.032, 0.13], [0, 0.132, 0.19], { color: blk, round: 0.4, parent: 'lid' });
+    b.each(4, (i) => b.cyl([0.03, 0.012, 0.03], [i % 2 ? 0.09 : -0.09, 0.006, i < 2 ? 0.09 : -0.09], { color: '#3a3633' }));
+    for (const u of [-0.06, -0.02, 0.02, 0.06]) {
+      const len = 2 * Math.sqrt(0.01 - u * u) - 0.012;
+      b.box([0.004, 0.005, len], [u, 0.109, 0], { color: '#b8742f', noInk: true }).box([len, 0.005, 0.004], [0, 0.109, u], { color: '#b8742f', noInk: true });
+    }
     return b.act({ click: [A.operate('ready', 'on'), A.wait(0.6), A.par(A.operate('lid', 'open'), A.effect('steam', { dur: 1.8 }), A.say('Ding!', 1)), A.wait(1.8), A.par(A.operate('lid', 'close'), A.operate('ready', 'off'))] }).done();
   }),
   // A covered wagon of the old West, 3.1 m tall and 4.5 m long (plus its tongue): a wooden bed on big spoked wheels

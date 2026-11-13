@@ -161,5 +161,6 @@ export function toEuler(m: number[]): Vec3 {
 export function findPart(fig: Figure, name: string): FigPart | undefined {
   const norm = (v: string) => v.toLowerCase().replace(/[\s_-]+/g, '');
   const w = norm(name);
-  return fig.parts.find((p) => p.name === name) ?? fig.parts.find((p) => norm(p.name) === w) ?? fig.parts.find((p) => norm(p.name).startsWith(w));
+  if (!w) return undefined; // "_" is no part at all (and must not match the root)
+  return fig.parts.find((p) => p.name === name) ?? fig.parts.find((p) => norm(p.name) === w) ?? (w.length >= 2 ? fig.parts.find((p) => norm(p.name).startsWith(w)) : undefined);
 }

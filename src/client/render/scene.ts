@@ -261,15 +261,28 @@ export class SceneView {
         // in another thing's socket (bread in a toaster): turn with the owner
         fv.heldFacing = null;
         fv.seated = false;
+        let shownPos = pos;
         if (e.parent && e.anchor?.startsWith('@')) {
           const owner = byId.get(e.parent);
           const of = owner ? figureFor(owner.word) : null;
           const sock = of?.sockets?.find((k) => k.name === e.anchor!.slice(1));
-          if (owner && of) fv.heldFacing = restFacing(owner, of) + (sock?.yaw ?? 0);
+          if (owner && of) {
+            // the engine places it by how the owner stands; the owner may be drawn turned (walking, looking at
+            // you), so turn it round the owner by the difference, and face it the way the owner faces
+            const rest = restFacing(owner, of);
+            const shown = this.figures.get(owner.id)?.shownFacing ?? rest;
+            const d = ((shown - rest) * Math.PI) / 180;
+            if (Math.abs(d) > 1e-4) {
+              const o = model.renderPos(owner);
+              const dx = pos[0] - o[0], dz = pos[2] - o[2];
+              shownPos = [o[0] + dx * Math.cos(d) + dz * Math.sin(d), pos[1], o[2] - dx * Math.sin(d) + dz * Math.cos(d)];
+            }
+            fv.heldFacing = shown + (sock?.yaw ?? 0);
+          }
           // a person in a seat (a chair, a saddle, a car's driving seat) sits in it
           fv.seated = sock?.kind === 'seat';
         }
-        fv.update(e, pos, cam.yaw, cam.pitch, this.resolveFlip(e, pos, byId, camState), model.transient.get(e.id)?.sq ?? 1, dt, lookAt, this.groundView);
+        fv.update(e, shownPos, cam.yaw, cam.pitch, this.resolveFlip(e, pos, byId, camState), model.transient.get(e.id)?.sq ?? 1, dt, lookAt, this.groundView);
         continue;
       }
       const oldFigure = this.figures.get(e.id);

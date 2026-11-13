@@ -171,7 +171,7 @@ export const EXAMPLES: CatalogEntry[] = [
       .box([2.3, 0.06, 7.8], [0, 0.98, -0.2], { color: 'lightwood', edge: 'sharp' })
       .stick([0, 1.0, 1.0], [0, 11.5, 1.0], 0.16, 'silver')
       .stick([0, 1.9, 0.9], [0, 1.9, -3.3], 0.1, 'silver', { name: 'boom', pivot: [0, 1.9, 1.0], mover: { kind: 'swing', axis: 'y', amount: 35 } })
-      .wedge([0.04, 9.2, 4.2], [0, 6.5, -1.0], { color: 'white', rot: [0, 90, 0], apex: 0.5, parent: 'boom', edge: 'sharp' })
+      .wedge([4.2, 9.2, 0.04], [0, 6.5, -1.0], { color: 'white', rot: [0, 90, 0], apex: 0.5, parent: 'boom', edge: 'sharp' })
       .act({ click: [[A.operate('boom', 'out'), A.effect('water_spray', { dur: 1.5 })], [A.operate('boom', 'in')]] })
       .done(),
   ),

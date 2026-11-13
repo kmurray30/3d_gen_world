@@ -1827,7 +1827,7 @@ export const ENTRIES: CatalogEntry[] = [
     // hose tower with a bell
     b.box([2.4, 14, 2.4], [W / 2 - 1.2, 7, -fz + 1.2], { color: brick, round: 0.02 })
       .box([2.7, 0.3, 2.7], [W / 2 - 1.2, 14, -fz + 1.2], { color: '#e8e2d6', round: 0.1 })
-      .pyramid([2.9, 1.6, 2.9], [W / 2 - 1.2, 14.95, -fz + 1.2], 4, { color: '#5a5f66', rot: [0, 45, 0] })
+      .pyramid([2.7 * Math.SQRT2, 1.6, 2.7 * Math.SQRT2], [W / 2 - 1.2, 14.95, -fz + 1.2], 4, { color: '#5a5f66' })
       .box([1.2, 1.4, 0.06], [W / 2 - 1.2, 12.6, -fz + 2.42], { color: '#2a2726' })
       .cone([0.6, 0.6, 0.6], [W / 2 - 1.2, 12.6, -fz + 1.2], { color: 'brass', taper: 0.4, name: 'bell' })
       .stick([-W / 2 + 0.5, H, fz - 0.5], [-W / 2 + 0.5, H + 4.5, fz - 0.5], 0.08, 'silver')
@@ -2145,25 +2145,40 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [A.operate('screen', 'on'), A.par(A.anim('shake', 2), A.say('Bzz! 10,000 steps!', 2)), A.wait(1), A.operate('screen', 'off')] })
       .done(),
   ),
-  // A steel access ladder fixed to a 4 m wall, with a safety cage from 2.2 m and a roof hatch at the top that
-  // swings open.
+  // A steel access ladder fixed to the 4 m wall of a flat-roofed building, 5.2 m to the top of its stiles: rungs every
+  // 0.3 m on wall brackets, a safety cage of thin flat hoops and bars from 2.3 m, the stiles running on past the
+  // parapet and curving over it as grab rails down to the roof, and a locked anti-climb plate over the bottom rungs
+  // that swings open on its hinge.
   e('fixed ladder', 'workshop', 'ladders', () => {
     const b = m('fixed ladder', { edge: 'sharp' });
-    const Y = '#f2c14e';
-    b.box([2.0, 4.0, 0.3], [0, 2.0, -0.35], { color: '#c8c2b8', round: 0.02 })
-      .box([2.2, 0.2, 1.4], [0, 4.1, -0.2], { color: '#9a9590', round: 0.05 })
-      .box([0.8, 0.06, 0.8], [0, 4.23, 0.05], { color: '#5a5f66', round: 0.1, name: 'hatch', pivot: [0, 4.23, -0.35], mover: { kind: 'swing', axis: 'x', amount: -100 } });
+    const Y = '#f2c14e', W = '#c8c2b8', S = '#7d8288';
+    b.box([2.4, 4.0, 1.2], [0, 2.0, -0.8], { color: W, round: 0.02 })
+      .box([2.4, 0.42, 0.22], [0, 4.21, -0.31], { color: W, round: 0.05 })
+      .box([2.5, 0.06, 0.28], [0, 4.45, -0.31], { color: '#9a9590', round: 0.1 });
     b.pair((s) => {
-      b.stick([s * 0.22, 0, 0], [s * 0.22, 4.9, 0], 0.05, Y);
-      for (const y of [0.4, 1.6, 2.8, 3.9]) b.stick([s * 0.22, y, 0], [s * 0.22, y, -0.2], 0.04, Y);
-      b.stick([s * 0.36, 2.2, 0.0], [s * 0.36, 4.9, 0.0], 0.04, Y);
-      b.stick([s * 0.36, 2.2, 0.55], [s * 0.36, 4.9, 0.55], 0.04, Y);
-      b.arc([0.5, 0.45, 0.05], [s * 0.22, 4.9, 0], { color: Y, rot: [0, 90, 0], arc: 180 });
+      b.stick([s * 0.22, 0, 0], [s * 0.22, 5.2, 0], 0.06, Y);
+      for (const y of [0.5, 1.7, 2.9, 4.1]) b.stick([s * 0.22, y, 0], [s * 0.22, y, -0.2], 0.04, Y).box([0.1, 0.14, 0.012], [s * 0.22, y, -0.2], { color: S, round: 0.1 });
+      // the grab rail over the parapet and down to the roof
+      b.arc([0.65, 0.55, 0.05], [s * 0.22, 5.2, -0.3], { color: Y, rot: [0, 90, 0], tube: 0.077 })
+        .stick([s * 0.22, 5.2, -0.6], [s * 0.22, 4.0, -0.6], 0.05, Y);
     });
     b.each(15, (i) => void b.stick([-0.22, 0.3 + i * 0.3, 0], [0.22, 0.3 + i * 0.3, 0], 0.035, Y));
-    for (const y of [2.2, 3.0, 3.8, 4.6]) b.arc([0.76, 0.6, 0.05], [0, y, 0.0], { color: Y, rot: [90, 0, 0], arc: 180 });
-    b.stick([0, 2.2, 0.6], [0, 4.9, 0.6], 0.04, Y);
-    return b.act({ click: [[A.operate('hatch', 'open'), A.say('Clang!', 1.5)], [A.operate('hatch', 'close'), A.say('Clunk.', 1)]] }).done();
+    // the cage: flat hoops tied to the stiles and seven upright bars
+    for (const y of [2.3, 3.0, 3.7, 4.4, 5.1]) {
+      b.arc([0.77, 1.4, 0.05], [0, y, 0], { color: Y, rot: [90, 0, 0], tube: 0.065 });
+      b.pair((s) => b.stick([s * 0.22, y, 0], [s * 0.37, y, 0], 0.03, Y));
+    }
+    for (const a of [15, 40, 65, 90, 115, 140, 165]) {
+      const r = (a * Math.PI) / 180;
+      b.box([0.04, 2.85, 0.012], [Math.cos(r) * 0.36, 3.7, Math.sin(r) * 0.66], { color: Y, rot: [0, 90 - a, 0], round: 0.2 });
+    }
+    // the locked anti-climb plate over the bottom rungs, hinged on its left
+    b.pair((s) => b.cyl([0.03, 0.08, 0.03], [0.3, 1.3 + s * 0.6, 0.06], { color: S }));
+    b.box([0.56, 1.8, 0.025], [0, 1.3, 0.06], { color: S, round: 0.05, name: 'guard', pivot: [0.3, 1.3, 0.06], mover: { kind: 'swing', axis: 'y', amount: 100 } })
+      .label('AUTHORISED ACCESS ONLY', [0.42, 0.14], [0, 1.65, 0.075], { color: '#d32f2f', depth: 0.004, parent: 'guard' })
+      .box([0.05, 0.07, 0.03], [-0.25, 1.25, 0.085], { color: 'brass', round: 0.3, parent: 'guard' })
+      .arc([0.04, 0.05, 0.008], [-0.25, 1.29, 0.085], { color: 'silver', tube: 0.25, parent: 'guard' });
+    return b.act({ click: [[A.operate('guard', 'open'), A.say('Clang!', 1.5)], [A.operate('guard', 'close'), A.say('Clunk.', 1)]] }).done();
   }),
   // A 1.5 m indoor flag on a stand: the cloth hangs in three folds that ripple when it waves.
   e('flag', 'ideas', 'flags', () => {
@@ -2739,14 +2754,14 @@ export const ENTRIES: CatalogEntry[] = [
     b.stick([0, 0.04, 0.15], [0, 0.14, 0.15], 0.013, '#9aa0a8', { parent: 'shell', edge: 'sharp' }).arc([0.1, 0.05, 0.012], [0, 0.02, 0.08], { color: 'white', rot: [180, 0, 0], parent: 'shell' });
     return b.act({ click: [A.pose('shell', { move: [0, 0.08, 0], rot: [-10, 0, 0], dur: 0.2 }), A.say('Hut! Hut! Hike!', 1.5), A.pose('shell', { move: [0, 0, 0], rot: [0, 0, 0], dur: 0.3 })] }).done();
   }),
-  // A dinner fork standing on its end with a meatball speared on the tines: it twirls.
+  // A 19 cm stainless dinner fork standing on its end, face to the front: one flat lofted blank with a broad
+  // rounded handle that narrows to the neck and flares into the head, and four rounded tines with clean gaps. It
+  // twirls and rings.
   e('fork', 'kitchen', 'cutlery', () => {
     const b = m('fork', { edge: 'sharp' })
-      .box([0.022, 0.11, 0.006], [0, 0.055, 0], { color: 'silver', round: 0.6, name: 'fork' })
-      .box([0.012, 0.03, 0.005], [0, 0.12, 0], { color: 'silver', round: 0.4, parent: 'fork' })
-      .box([0.03, 0.02, 0.005], [0, 0.142, 0], { color: 'silver', round: 0.4, parent: 'fork' });
-    b.each(4, (i) => void b.box([0.005, 0.05, 0.005], [-0.0115 + i * 0.0077, 0.175, 0], { color: 'silver', round: 0.4, parent: 'fork' }));
-    return b.ball(0.03, [0, 0.185, 0], { color: '#7a3a20', edge: 'soft', parent: 'fork' }).act({ click: [A.pose('fork', { rot: [0, 720, 0], dur: 1 }), A.pose('fork', { rot: [0, 0, 0], dur: 0 }), A.say('Ting!', 1)] }).done();
+      .loft([0.026, 0.004, 0.15], [0, 0.075, 0], [[0, 0.62, 1, 0], [0.05, 0.82, 1, 0], [0.3, 0.78, 0.95, 0], [0.55, 0.5, 0.85, 0], [0.66, 0.34, 0.8, 0], [0.74, 0.36, 0.8, 0], [0.86, 0.72, 0.8, 0], [1, 1, 0.8, 0]], { color: 'silver', boxy: 0.85, rot: [-90, 0, 0], name: 'fork', pivot: [0, 0.095, 0] });
+    b.each(4, (i) => void b.box([0.0042, 0.048, 0.0032], [-0.0108 + i * 0.0072, 0.172, 0], { color: 'silver', round: 0.5, parent: 'fork' }));
+    return b.act({ click: [A.pose('fork', { rot: [0, 720, 0], dur: 1 }), A.pose('fork', { rot: [0, 0, 0], dur: 0 }), A.say('Ting!', 1)] }).done();
   }),
   // A counterbalance forklift at real size: counterweight, a seat under the overhead guard, steering wheel, a
   // tilting mast with the carriage and forks carrying a pallet of boxes, which rise up the mast; a beacon flashes.
@@ -4005,19 +4020,27 @@ export const ENTRIES: CatalogEntry[] = [
     b.ball(0.22, [1.2, 0.11, 2.5], { color: 'white', name: 'ball' }).box([7.3, 0.01, 0.12], [0, 0.005, 0.06], { color: 'white', round: 0 });
     return b.act({ click: [A.pose('ball', { move: [0.6, 1.2, -4.0], rot: [720, 0, 0], dur: 0.5 }), A.par(A.pose('net', { move: [0, 0, -0.4], dur: 0.15 }), A.say('GOOOAL!', 2)), A.pose('net', { move: [0, 0, 0], dur: 0.4 }), A.pose('ball', { move: [0, 0, 0], rot: [0, 0, 0], dur: 0.8 })] }).done();
   }),
-  // A silver goblet set with a ruby and a sapphire, red wine in its bowl: it chimes.
-  e('goblet', 'kitchen', 'tableware', () =>
-    m('goblet', { edge: 'sharp' })
-      .cyl([0.09, 0.012, 0.09], [0, 0.006, 0], { color: 'silver', name: 'cup' })
-      .cyl([0.02, 0.08, 0.02], [0, 0.05, 0], { color: 'silver', parent: 'cup' })
-      .ball(0.03, [0, 0.07, 0], { color: 'silver', parent: 'cup' })
-      .cyl([0.06, 0.08, 0.06], [0, 0.13, 0], { color: 'silver', taper: 1.45, parent: 'cup' })
-      .cyl([0.08, 0.006, 0.08], [0, 0.165, 0], { color: '#6a101a', noInk: true, parent: 'cup' })
-      .ball(0.018, [0, 0.12, 0.034], { color: '#c8101a', parent: 'cup' })
-      .ball(0.014, [0.03, 0.12, 0.024], { color: '#2a3a9a', parent: 'cup' })
-      .act({ click: [A.pose('cup', { rot: [0, 0, 8], dur: 0.15 }), A.par(A.say('Clink!', 1), A.effect('sparkle', { dur: 1 })), A.pose('cup', { rot: [0, 0, 0], dur: 0.3 })] })
-      .done(),
-  ),
+  // A silver goblet, 18 cm: a stepped round foot, a slim stem with a knop and collar, and a round U-shaped bowl with
+  // a rolled lip, ringed by a gold band set with six cabochon gems (ruby, sapphire, emerald); red wine in the bowl.
+  // It tips and chimes.
+  e('goblet', 'kitchen', 'tableware', () => {
+    const b = m('goblet', { edge: 'sharp' })
+      .cyl([0.085, 0.01, 0.085], [0, 0.005, 0], { color: 'silver', taper: 0.85, name: 'cup' })
+      .dome([0.066, 0.022, 0.066], [0, 0.021, 0], { color: 'silver', parent: 'cup' })
+      .cyl([0.016, 0.065, 0.016], [0, 0.058, 0], { color: 'silver', parent: 'cup' })
+      .ball([0.03, 0.022, 0.03], [0, 0.06, 0], { color: 'silver', parent: 'cup' })
+      .cyl([0.032, 0.012, 0.032], [0, 0.089, 0], { color: 'silver', taper: 1.4, parent: 'cup' })
+      .ball([0.085, 0.07, 0.085], [0, 0.125, 0], { color: 'silver', parent: 'cup' })
+      .cyl([0.085, 0.05, 0.085], [0, 0.15, 0], { color: 'silver', taper: 1.06, parent: 'cup' })
+      .torus([0.092, 0.092, 0.008], [0, 0.175, 0], { color: 'silver', rot: [90, 0, 0], tube: 0.1, parent: 'cup' })
+      .cyl([0.082, 0.004, 0.082], [0, 0.172, 0], { color: '#6a101a', noInk: true, parent: 'cup' })
+      .torus([0.09, 0.09, 0.01], [0, 0.142, 0], { color: 'gold', rot: [90, 0, 0], tube: 0.12, parent: 'cup' });
+    ['#c8101a', '#2a3a9a', '#1e8a4a', '#c8101a', '#2a3a9a', '#1e8a4a'].forEach((c, i) => {
+      const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+      b.ball([0.013, 0.016, 0.008], [Math.sin(a) * 0.046, 0.142, Math.cos(a) * 0.046], { color: c, rot: [0, (a * 180) / Math.PI, 0], parent: 'cup' });
+    });
+    return b.act({ click: [A.pose('cup', { rot: [0, 0, 8], dur: 0.15 }), A.par(A.say('Clink!', 1), A.effect('sparkle', { dur: 1 })), A.pose('cup', { rot: [0, 0, 0], dur: 0.3 })] }).done();
+  }),
   // Swimming goggles: two tinted eyecups on a nose bridge and a split strap: the strap snaps.
   e('goggles', 'sports', 'protective gear', () => {
     const b = m('goggles');
