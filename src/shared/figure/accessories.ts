@@ -3,6 +3,7 @@
  *   who('pirate', { top: 'white', bottom: 'black', beard: 'black', acc: [hat('pirate'), face('eyepatch'), held('sword')] })
  * Every helper returns an Extra: a function that adds parts to a person (or animal) in its own joint frames.
  */
+import { measure } from './math';
 import type { Figure, Vec3 } from './types';
 import { Parts, person, quadruped, type HairStyle, type PersonDims, type PersonOpts, type QuadOpts } from './kit';
 import { col } from './colors';
@@ -544,7 +545,26 @@ export interface WhoOpts {
   glasses?: string;
   blush?: string;
   acc?: Extra[];
+  /** Arms held in a pose at rest: wave (right hand up), arms_up, point (right arm out), hold (forearms forward,
+   *  carrying), hips (hands on hips), reach (both arms forward), cross (arms folded), salute. */
+  pose?: 'wave' | 'arms_up' | 'point' | 'hold' | 'hips' | 'reach' | 'cross' | 'salute';
+  /** Head size multiplier at any height (big-headed gnomes, cartoon characters). */
+  head?: number;
+  /** Bare legs below shorts or a short skirt (the shins show skin). */
+  shorts?: boolean;
 }
+
+/** Rest arm turns for each who() pose (joint deltas in degrees, right arm values; the left mirrors z and y). */
+const ARM_POSES: Record<NonNullable<WhoOpts['pose']>, { armR: Vec3; foreR: Vec3; armL?: Vec3; foreL?: Vec3 }> = {
+  wave: { armR: [-15, 0, -150], foreR: [-6, 0, 18], armL: [0, 0, 6], foreL: [0, 0, 0] },
+  arms_up: { armR: [0, 0, -160], foreR: [0, 0, -10] },
+  point: { armR: [-25, 0, -87], foreR: [0, 0, -4], armL: [0, 0, 6], foreL: [0, 0, 0] },
+  hold: { armR: [-18, 0, -8], foreR: [-78, 0, 4] },
+  hips: { armR: [-6, 0, -38], foreR: [-10, 0, 110] },
+  reach: { armR: [-82, 0, -6], foreR: [-8, 0, 0] },
+  cross: { armR: [-28, 0, -14], foreR: [-82, 0, 92] },
+  salute: { armR: [-12, 0, -78], foreR: [-30, 0, -118], armL: [0, 0, 6], foreL: [0, 0, 0] },
+};
 
 /** A person: anything not given is picked from the name, so a crowd of different people all look different. */
 export function who(key: string, o: WhoOpts = {}): Figure {
@@ -555,7 +575,7 @@ export function who(key: string, o: WhoOpts = {}): Figure {
   const kid = o.h === 'kid' || o.h === 'baby';
   const po: PersonOpts = {
     height,
-    headScale: o.h === 'baby' ? 1.55 : kid ? 1.22 : 1,
+    headScale: (o.h === 'baby' ? 1.55 : kid ? 1.22 : 1) * (o.head ?? 1),
     skin: col(o.skin ?? pick(SKINS, 1)),
     hair: col(o.hair ?? pick(HAIRS, 5)),
     hairStyle: o.style ?? pick(STYLES, 9),
@@ -563,7 +583,7 @@ export function who(key: string, o: WhoOpts = {}): Figure {
     pants: col(o.bottom ?? pick(BOTTOMS, 17)),
     shoes: col(o.shoes ?? (h % 3 ? '#3b2a1e' : '#2a2726')),
     skirt: o.skirt ? col(o.skirt) : undefined,
-    legs: o.legs ? col(o.legs) : o.skirt ? col(o.skin ?? pick(SKINS, 1)) : undefined,
+    legs: o.legs ? col(o.legs) : o.skirt || o.shorts ? col(o.skin ?? pick(SKINS, 1)) : undefined,
     longSleeves: o.long,
     build: o.build,
     eyes: o.eyes ? col(o.eyes) : undefined,
@@ -572,7 +592,12 @@ export function who(key: string, o: WhoOpts = {}): Figure {
     blush: o.blush ? col(o.blush) : undefined,
     extras: o.acc?.length ? (p, d) => o.acc!.forEach((x) => x(p, d)) : undefined,
   };
-  return person(key, po);
+  const fig = person(key, po);
+  if (!o.pose) return fig;
+  const a = ARM_POSES[o.pose];
+  const mirror = (v: Vec3): Vec3 => [v[0], -v[1], -v[2]];
+  const set: Record<string, Vec3> = { armR: a.armR, foreR: a.foreR, armL: a.armL ?? mirror(a.armR), foreL: a.foreL ?? mirror(a.foreR) };
+  return measure({ ...fig, parts: fig.parts.map((p) => (set[p.name] ? { ...p, rot: set[p.name] } : p)) });
 }
 
 /* ----- animal extras ----- */

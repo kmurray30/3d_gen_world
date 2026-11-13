@@ -70,5 +70,7 @@ export function mountStatic(app: Hono): void {
     }),
   );
   app.get('/w/*', serveStatic({ path: './dist/client/index.html', precompressed: true }));
-  app.get('/atlas', serveStatic({ path: './dist/client/index.html', precompressed: true }));
+  app.get('/town', serveStatic({ path: './dist/client/index.html', precompressed: true }));
+  // the Atlas grew into the Town
+  app.get('/atlas', (c) => c.redirect('/town', 301));
 }

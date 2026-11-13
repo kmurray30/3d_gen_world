@@ -2,9 +2,11 @@
  * The sample set: 27 things drawn by code. People and animals come from the kits; props are short hand-written
  * part lists. `figureFor(word)` maps vocabulary words (and a few synonyms) to these.
  */
+import { pieceFigure } from './pose';
 import type { Figure, Vec3 } from './types';
 import { Parts, bird, dragon, figure, person, quadruped, shadeHex } from './kit';
-import { catalog } from './catalog/index';
+import { catalog } from './catalog/registry';
+import { A, withAct, type ActDef } from './act';
 
 const SKIN = { light: '#f6d2b4', fair: '#f0c39f', tan: '#d9a173', brown: '#a8714a', deep: '#7a4b2e' };
 
@@ -239,6 +241,42 @@ const builders: Record<string, () => Figure> = {
   },
 };
 
+/**
+ * The hand-made samples' acts (the catalog's entries carry their own): two clicks each, a clip the figure really
+ * has and a line that fits it.
+ */
+const near = { rel: 'near', of: 'self', dist: 'close' };
+const BUILTIN_ACTS: Record<string, ActDef> = {
+  man: { click: [[A.face(), A.par(A.anim('wave'), A.say('Hi there!'))], [A.par(A.anim('shrug'), A.say('Dunno.'))]] },
+  woman: { click: [[A.face(), A.par(A.anim('clap'), A.say('Bravo!'))], [A.par(A.anim('dance'), A.say('La la la!'))]] },
+  boy: { click: [[A.face(), A.par(A.anim('jump'), A.say('Whee!'))], [A.par(A.anim('cheer'), A.say('Woo-hoo!'))]] },
+  girl: { click: [[A.face(), A.par(A.anim('tada'), A.say('Ta-da!'))], [A.par(A.anim('laugh'), A.say('Hee hee!'))]] },
+  knight: { click: [[A.face(), A.par(A.anim('bow'), A.say('At your service.'))], [A.par(A.anim('point'), A.say('Onward!'))]] },
+  dog: { click: [[A.face(), A.par(A.anim('wag'), A.say('Woof!'))], [A.par(A.anim('hop'), A.say('Arf arf!'))]] },
+  cat: { click: [[A.face(), A.par(A.anim('look'), A.say('Meow?'))], [A.par(A.anim('shake'), A.say('Mrrrow.'))]] },
+  horse: { click: [[A.par(A.anim('rear'), A.say('Neigh!'))], [A.par(A.anim('graze'), A.say('*munch munch*'))]] },
+  cow: { click: [[A.par(A.anim('graze'), A.say('Moooo.'))], [A.face(), A.par(A.anim('shake'), A.say('Moo!'))]] },
+  pig: { click: [[A.face(), A.par(A.anim('wag'), A.say('Oink oink!'))], [A.par(A.anim('hop'), A.say('Oink!'))]] },
+  sheep: { click: [[A.face(), A.par(A.anim('look'), A.say('Baa!'))], [A.par(A.anim('hop'), A.say('Baa-aa!'))]] },
+  rooster: { click: [[A.par(A.anim('crow'), A.say('Cock-a-doodle-doo!'))], [A.par(A.anim('peck'), A.say('Bawk!'))]] },
+  dragon: { click: [[A.face(), A.par(A.anim('roar'), A.say('ROAR!'))], [A.anim('breathe'), A.effect('fire', { dur: 2 })]] },
+  tree: { click: [[A.anim('shake'), A.spawn('fruit', 'apple', near), A.wait(3), A.remove('fruit', 'fade')], [A.anim('wobble'), A.effect('sparkle', { dur: 1.5 })]] },
+  'pine tree': { click: [[A.anim('shake'), A.effect('snow', { dur: 2 })], [A.anim('wobble')]] },
+  bush: { click: [[A.anim('shake', 2), A.effect('dust', { dur: 1 })], [A.anim('wobble'), A.effect('sparkle', { dur: 1.5 })]] },
+  flower: { click: [[A.anim('pulse'), A.effect('hearts', { dur: 1.5 })], [A.anim('wobble'), A.effect('sparkle', { dur: 1.5 })]] },
+  rock: { click: [[A.anim('wobble')], [A.anim('hop'), A.effect('dust', { dur: 1 })]] },
+  house: { click: [[A.anim('pulse'), A.effect('smoke', { dur: 3 })], [A.anim('wobble'), A.effect('sparkle', { dur: 1.5 })]] },
+  well: { click: [[A.anim('wobble'), A.effect('water_spray', { dur: 1.5 })], [A.effect('sparkle', { dur: 1.5 })]] },
+  fence: { click: [[A.anim('wobble')], [A.anim('shake')]] },
+  barrel: { click: [[A.anim('wobble', 2)], [A.anim('spin')]] },
+  wheelbarrow: { click: [[A.anim('bounce')], [A.anim('wobble')]] },
+  lamppost: { click: [[A.anim('pulse'), A.effect('sparkle', { dur: 2 })], [A.anim('wobble')]] },
+  bench: { click: [[A.anim('wobble')], [A.anim('bounce')]] },
+  table: { click: [[A.anim('bounce')], [A.anim('wobble')]] },
+  apple: { click: [[A.anim('bounce', 2)], [A.anim('spin')]] },
+  sword: { click: [[A.anim('spin'), A.effect('sparkle', { dur: 1 })], [A.anim('pulse')]] },
+};
+
 /** Synonyms that should use one of the sample figures. */
 const ALIASES: Record<string, string> = {
   chicken: 'rooster',
@@ -271,6 +309,15 @@ const cache = new Map<string, Figure>();
 export function getFigure(key: string): Figure | null {
   const hit = cache.get(key);
   if (hit) return hit;
+  // a piece taken off a figure: "yam#slice"
+  const hash = key.indexOf('#');
+  if (hash > 0) {
+    const owner = getFigure(key.slice(0, hash));
+    const piece = owner ? pieceFigure(owner, key.slice(hash + 1)) : null;
+    if (!piece) return null;
+    cache.set(key, piece.fig);
+    return piece.fig;
+  }
   const b = builders[key] ?? catalog().get(key)?.f;
   if (!b) return null;
   let f: Figure;
@@ -283,6 +330,7 @@ export function getFigure(key: string): Figure | null {
   if (![f.heightM, f.halfW, f.halfD].every((v) => Number.isFinite(v) && v > 0)) return null;
   // the catalog builds figures under their own word; make sure the key matches what was asked for
   if (f.key !== key) f = { ...f, key };
+  if (builders[key] && !f.act && BUILTIN_ACTS[key]) f = withAct(f, BUILTIN_ACTS[key]);
   cache.set(key, f);
   return f;
 }
@@ -299,3 +347,8 @@ export function figureFor(word: string): Figure | null {
 }
 
 export { shadeHex };
+
+/** Make a figure known by its key (tests and preview tools that build figures outside the catalog). */
+export function registerFigure(fig: Figure): void {
+  cache.set(fig.key, fig);
+}

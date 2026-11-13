@@ -1,3 +1,5 @@
+import { clipForGesture } from '../../shared/figure/anim';
+import { restFacing } from '../../shared/figure/pose';
 import * as THREE from 'three';
 import type { Entity, PlayerState, SpriteRef, Vec3 } from '../../shared/types';
 import { worldPos } from '../../shared/engine/transform';
@@ -47,6 +49,7 @@ export class SceneView {
   cullRadius = Infinity;
   /** Labels over the nearest things (the Atlas). */
   nameTags: NameTags | null = null;
+  private labelModel: WorldModel | null = null;
   /** The viewer's Look setting; entities with their own `look` ignore it. */
   look: Look = 'sprites';
   private avatarFigure: FigureView | null = null;
@@ -180,6 +183,7 @@ export class SceneView {
   /** Create, update and remove views so the scene mirrors the world's entity list. */
   sync(model: WorldModel, dt = 0, cam: CameraPose = this.lastCam): void {
     this.clock += dt;
+    this.labelModel = model;
     this.lastCam = cam;
     const byId = model.entities;
     const seen = new Set<string>();
@@ -253,6 +257,18 @@ export class SceneView {
           }
         }
         fv.camDistance = camDist;
+        fv.basePos = model.worldPos(e);
+        // in another thing's socket (bread in a toaster): turn with the owner
+        fv.heldFacing = null;
+        fv.seated = false;
+        if (e.parent && e.anchor?.startsWith('@')) {
+          const owner = byId.get(e.parent);
+          const of = owner ? figureFor(owner.word) : null;
+          const sock = of?.sockets?.find((k) => k.name === e.anchor!.slice(1));
+          if (owner && of) fv.heldFacing = restFacing(owner, of) + (sock?.yaw ?? 0);
+          // a person in a seat (a chair, a saddle, a car's driving seat) sits in it
+          fv.seated = sock?.kind === 'seat';
+        }
         fv.update(e, pos, cam.yaw, cam.pitch, this.resolveFlip(e, pos, byId, camState), model.transient.get(e.id)?.sq ?? 1, dt, lookAt, this.groundView);
         continue;
       }
@@ -278,8 +294,6 @@ export class SceneView {
     this.terrain?.update(dt);
     this.effects.syncPersistent(model);
     this.effects.update(dt, (id) => shapeOfEntity(model, id), this.camera);
-    this.bubbles.update(this.camera, model, w, h);
-    this.nameTags?.update(this.camera, model, [...this.figures.keys(), ...this.views.keys()], w, h);
     for (const [id, view] of this.views) {
       if (!seen.has(id)) {
         this.scene.remove(view.root);
@@ -368,6 +382,14 @@ export class SceneView {
     return this.figures.get(id)?.react(clip) ?? null;
   }
 
+  /** A script's gesture (wave, nod, shrug...): a code-drawn figure plays the matching clip if it has one. */
+  gesture(id: string, name: string): void {
+    const fv = this.figures.get(id);
+    if (!fv) return;
+    const clip = clipForGesture(fv.fig, name);
+    if (clip) fv.react(clip);
+  }
+
   /** Move a figure's mouth while its speech bubble is up. */
   talk(id: string, seconds: number): void {
     this.figures.get(id)?.talk(seconds);
@@ -406,6 +428,14 @@ export class SceneView {
     this.camera.position.set(cam.pos[0] + sx, cam.pos[1] + sy, cam.pos[2]);
     this.sky.update(dt, this.camera.position);
     this.camera.rotation.set(cam.pitch, cam.yaw, k ? (Math.random() - 0.5) * k * 0.02 : 0, 'YXZ');
+    // labels follow this frame's camera (after a teleport, last frame's would pin old tags over the new view)
+    if (this.labelModel) {
+      const w = this.canvas.clientWidth || window.innerWidth;
+      const h = this.canvas.clientHeight || window.innerHeight;
+      this.camera.updateMatrixWorld();
+      this.bubbles.update(this.camera, this.labelModel, w, h);
+      this.nameTags?.update(this.camera, this.labelModel, [...this.figures.keys(), ...this.views.keys()], w, h);
+    }
     this.renderer.render(this.scene, this.camera);
   }
 

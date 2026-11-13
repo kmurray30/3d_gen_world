@@ -34,12 +34,17 @@ export class WorldModel {
   /** How far from the centre the player and things may go. */
   radius = WORLD_RADIUS;
 
+  /** How many things the world may hold. */
+  readonly cap: number;
+
   constructor(world: World) {
     this.slug = world.slug;
     this.rev = world.rev;
     this.createdAt = world.createdAt;
     this.player = { pos: [...world.player.pos], yaw: world.player.yaw, pitch: world.player.pitch };
     for (const e of world.entities) this.entities.set(e.id, cloneEntity(e));
+    // a made world bigger than the cap (the town) still has room for what its things make (toast, a dropped slice)
+    this.cap = world.entities.length > MAX_ENTITIES ? world.entities.length + 400 : MAX_ENTITIES;
     this.preset = world.preset;
     this.seed = world.seed;
     this.sky = world.sky ?? 'day';
@@ -101,7 +106,7 @@ export class WorldModel {
   }
 
   add(e: Entity): boolean {
-    if (this.entities.has(e.id) || this.entities.size >= MAX_ENTITIES) return false;
+    if (this.entities.has(e.id) || this.entities.size >= this.cap) return false;
     this.entities.set(e.id, e);
     return true;
   }

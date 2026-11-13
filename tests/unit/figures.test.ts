@@ -1,3 +1,4 @@
+import '../../src/shared/figure/catalog/index';
 import { describe, expect, it } from 'vitest';
 import { FIGURE_KEYS, figureFor, getFigure } from '../../src/shared/figure/items';
 import { Animator, clipNames, reactionsFor, samplePose } from '../../src/shared/figure/anim';

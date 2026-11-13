@@ -1,5 +1,8 @@
 import type { Entity, Vec3 } from '../types';
-import type { AnimAction, EffectAction, MoveAction, OperateAction, ReattachAction, RemoveAction, ResolvedAction, ResolvedBuild, ResolvedDetach, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
+import type { AnimAction, EffectAction, MoveAction, OperateAction, PoseAction, ReattachAction, RemoveAction, ResolvedAction, ResolvedBuild, ResolvedDetach, ResolvedSet, ResolvedSpawn, SayAction } from '../schema';
+import type { Anchor, PartPose } from '../types';
+import { figureOfEntity } from './transform';
+import { findPart } from '../figure/pose';
 import { GESTURE_SECONDS, isGesture } from '../gestures';
 import { DEG, clamp, dir2, easeIn, easeInOut, easeOut, easeOutBack, lerp } from './math';
 import { footprintRadius, renderHeight, massClassFor } from './sizing';
@@ -714,11 +717,101 @@ function reattachTask(action: ReattachAction, engine: Engine): Task {
   );
 }
 
+/**
+ * One part of a code-drawn thing glides to a new pose: turn, shift and size ease there over `dur`; a spin rate
+ * takes effect at once. A part back at rest is dropped from the entity's poses.
+ */
+export function poseTask(action: Pick<PoseAction, 'id' | 'part' | 'rot' | 'move' | 'scale' | 'spin' | 'dur' | 'delay' | 'times'>, engine: Engine): Task {
+  let from: PartPose = {};
+  let to: PartPose = {};
+  let part = action.part;
+  // times: there and back again that many times (each taking dur), ending where it began
+  const times = action.times && action.times > 1 ? Math.round(action.times) : 0;
+  const dur = (action.dur ?? 0.4) * (times || 1);
+  const lerp3 = (a: Vec3 | undefined, b: Vec3 | undefined, k: number): Vec3 => {
+    const p = a ?? [0, 0, 0];
+    const q = b ?? [0, 0, 0];
+    return [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k, p[2] + (q[2] - p[2]) * k];
+  };
+  const write = (e: Entity, p: PartPose) => {
+    const rest = (v?: Vec3) => !v || (Math.abs(v[0]) < 1e-6 && Math.abs(v[1]) < 1e-6 && Math.abs(v[2]) < 1e-6);
+    const out: PartPose = {};
+    if (!rest(p.r)) out.r = p.r;
+    if (!rest(p.t)) out.t = p.t;
+    if (p.s !== undefined && Math.abs(p.s - 1) > 1e-6) out.s = p.s;
+    if (!rest(p.w)) out.w = p.w;
+    if (Object.keys(out).length) {
+      e.pose ??= {};
+      e.pose[part] = out;
+    } else if (e.pose) {
+      delete e.pose[part];
+      if (!Object.keys(e.pose).length) delete e.pose;
+    }
+  };
+  return new Tween(
+    action.id,
+    `pose:${action.part.toLowerCase()}`,
+    dur,
+    (k) => {
+      const e = engine.world.get(action.id);
+      if (!e) return;
+      const t = times ? 0.5 - 0.5 * Math.cos(2 * Math.PI * k * times) : easeInOut(k);
+      write(e, {
+        r: lerp3(from.r, to.r, t),
+        t: lerp3(from.t, to.t, t),
+        s: (from.s ?? 1) + ((to.s ?? 1) - (from.s ?? 1)) * t,
+        w: to.w,
+      });
+    },
+    () => {
+      const e = engine.world.get(action.id);
+      const fig = e ? figureOfEntity(e) : null;
+      const p = fig ? findPart(fig, action.part) : undefined;
+      if (!e || !p) return false;
+      part = p.name;
+      from = structuredClone(e.pose?.[part] ?? {});
+      to = {
+        r: action.rot ?? from.r,
+        t: action.move ?? from.t,
+        s: action.scale ?? from.s,
+        w: action.spin ?? from.w,
+      };
+      engine.emit({ type: 'pose', id: action.id, part });
+      return true;
+    },
+    undefined,
+    action.delay ?? 0,
+  );
+}
+
+/**
+ * Where an attach puts a thing: the target's socket of that name, else a free one of that kind (the second slot
+ * of a toaster when the first is full; "inside" also takes a slot), else the plain anchor (top, held, front,
+ * inside) or the top.
+ */
+function anchorFor(engine: Engine, to: string, where: string | undefined): Anchor {
+  const plain = !where || where === 'top' || where === 'held' || where === 'front' || where === 'inside';
+  const t = engine.world.get(to);
+  const fig = t ? figureOfEntity(t) : null;
+  const sockets = fig?.sockets ?? [];
+  if (where && sockets.length) {
+    const named = sockets.find((k) => k.name === where);
+    if (named) return `@${named.name}`;
+    const used = new Set(engine.world.children(to).map((c) => c.anchor));
+    const kinds = where === 'inside' ? ['inside', 'slot'] : [where];
+    const ofKind = sockets.filter((k) => kinds.includes(k.kind));
+    const s = ofKind.find((k) => !used.has(`@${k.name}`)) ?? ofKind[0];
+    if (s) return `@${s.name}`;
+  }
+  return plain ? ((where ?? 'top') as Anchor) : 'top';
+}
+
 function operateTask(action: OperateAction, engine: Engine): Task {
+  // the step lasts as long as a door takes to swing, so "open, then close" shows the open
   return new Tween(
     action.id,
     undefined,
-    0,
+    0.5,
     () => undefined,
     () => engine.operate(action.id, action.part, action.to),
     undefined,
@@ -794,7 +887,7 @@ export function makeTasks(action: ResolvedAction, _script: Script, engine: Engin
           0,
           () => undefined,
           () => {
-            const ok = engine.world.attach(action.id, action.to, action.where ?? 'top');
+            const ok = engine.world.attach(action.id, action.to, anchorFor(engine, action.to, action.where));
             if (ok) engine.emit({ type: 'attach', id: action.id, to: action.to });
             return ok;
           },
@@ -810,6 +903,8 @@ export function makeTasks(action: ResolvedAction, _script: Script, engine: Engin
       return [reattachTask(action, engine)];
     case 'operate':
       return [operateTask(action, engine)];
+    case 'pose':
+      return [poseTask(action, engine)];
     case 'remove':
       return removeTasks(action, engine);
     case 'say':

@@ -203,6 +203,18 @@ export function house(params: Partial<HouseParams>, _ctx: GenContext, decals: Pa
   return tidy(b.finish('house', { ...p }));
 }
 
+/** A town building (a supermarket, a hospital, a museum hall): the house body without the size cap a command
+ *  gets, up to 90 m on a side, one storey as tall as it needs. */
+export function townBuilding(params: Partial<HouseParams>, decals: Parts['decals']): Structure {
+  const p: HouseParams = { ...DEFAULT_HOUSE, ...params };
+  p.w = Math.max(3, Math.min(90, p.w));
+  p.d = Math.max(3, Math.min(90, p.d));
+  p.stories = Math.max(1, Math.min(3, Math.round(p.stories)));
+  const b = new Parts(decals);
+  houseBody(b, p);
+  return tidy(b.finish('house', { ...p }));
+}
+
 /** A house no one asked the details of: rolls size, roof and colours. */
 export function randomHouse(ctx: GenContext, decals: Parts['decals'], overrides: Partial<HouseParams> = {}): Structure {
   const rng = ctx.rng;

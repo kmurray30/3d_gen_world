@@ -13,7 +13,8 @@ import { getFigure } from '../../../shared/figure/items';
 import { bindPose, sculpt, type Sculpt } from '../../../shared/figure/sculpt';
 import { chainShaderHook, tinted } from '../tint';
 import { drawFace } from './face';
-import { shadeOf, smoothGeometry } from './toon';
+import { smoothGeometry } from './toon';
+import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { labelFace } from './label';
 
 const DEG = Math.PI / 180;
@@ -238,6 +239,76 @@ interface Joint {
   at: Vec3;
 }
 
+/** One separate piece's geometry, in its piece bone's frame, before merging. */
+interface PieceGeo {
+  geo: THREE.BufferGeometry;
+  bone: number;
+  color: THREE.Color;
+  ink: boolean;
+}
+
+const CREASE = (35 * Math.PI) / 180;
+
+/** Normals averaged over every vertex at the same spot: the outline pushes along these, so it stays closed over
+ *  the crisp edges of sharp pieces. */
+function weldedNormals(geo: THREE.BufferGeometry): Float32Array {
+  const pos = geo.attributes.position, nor = geo.attributes.normal;
+  const sum = new Map<string, [number, number, number]>();
+  const keyOf = (i: number) => `${Math.round(pos.getX(i) * 1e4)},${Math.round(pos.getY(i) * 1e4)},${Math.round(pos.getZ(i) * 1e4)}`;
+  for (let i = 0; i < pos.count; i++) {
+    const k = keyOf(i);
+    const a = sum.get(k) ?? [0, 0, 0];
+    a[0] += nor.getX(i), a[1] += nor.getY(i), a[2] += nor.getZ(i);
+    sum.set(k, a);
+  }
+  const out = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const a = sum.get(keyOf(i))!;
+    const l = Math.hypot(a[0], a[1], a[2]) || 1;
+    out.set([a[0] / l, a[1] / l, a[2] / l], i * 3);
+  }
+  return out;
+}
+
+/**
+ * Merge pieces into one rigidly skinned geometry (each vertex fully on its piece's bone), in model space at the
+ * bind pose. With `outline`, the normals are the welded ones and only inked pieces are included.
+ */
+function mergePieces(list: PieceGeo[], bones: THREE.Bone[], outline: boolean): THREE.BufferGeometry | null {
+  const use = outline ? list.filter((x) => x.ink) : list;
+  if (!use.length) return null;
+  const n = use.reduce((k, x) => k + x.geo.attributes.position.count, 0);
+  const position = new Float32Array(n * 3), normal = new Float32Array(n * 3), color = new Float32Array(n * 3);
+  const skinIndex = new Uint16Array(n * 4), skinWeight = new Float32Array(n * 4);
+  const v = new THREE.Vector3();
+  const nm = new THREE.Matrix3();
+  let o = 0;
+  for (const x of use) {
+    const m = bones[x.bone].matrixWorld;
+    nm.getNormalMatrix(m);
+    const pos = x.geo.attributes.position;
+    const nor = outline ? weldedNormals(x.geo) : (x.geo.attributes.normal.array as Float32Array);
+    for (let i = 0; i < pos.count; i++) {
+      v.set(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(m);
+      position.set([v.x, v.y, v.z], (o + i) * 3);
+      v.set(nor[i * 3], nor[i * 3 + 1], nor[i * 3 + 2]).applyMatrix3(nm).normalize();
+      normal.set([v.x, v.y, v.z], (o + i) * 3);
+      color.set([x.color.r, x.color.g, x.color.b], (o + i) * 3);
+      skinIndex[(o + i) * 4] = x.bone;
+      skinWeight[(o + i) * 4] = 1;
+    }
+    o += pos.count;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(position, 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(color, 3));
+  g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndex, 4));
+  g.setAttribute('skinWeight', new THREE.BufferAttribute(skinWeight, 4));
+  g.computeBoundingSphere();
+  return g;
+}
+
 export class CelFigure {
   /** Figure space: feet at 0, +z is the front. */
   readonly group = new THREE.Group();
@@ -245,7 +316,10 @@ export class CelFigure {
   private readonly solids: THREE.Mesh[] = [];
   private readonly mats: THREE.Material[] = [];
   private readonly geos: THREE.BufferGeometry[] = [];
-  private readonly eyes: THREE.Mesh[] = [];
+  /** Eye piece bones (blinking squashes them). */
+  private readonly eyes: THREE.Bone[] = [];
+  /** Switchable lights: their mesh and its lit and unlit materials. */
+  private readonly lights = new Map<string, { mesh: THREE.Mesh; on: THREE.Material; off: THREE.Material }>();
   private face: THREE.MeshBasicMaterial | null = null;
   private expr: Expr = 'neutral';
   private key = '';
@@ -299,8 +373,13 @@ export class CelFigure {
     skin.bind(skeleton);
     line.bind(skeleton);
 
-    // details that were not melted in ride on their bones as smooth pieces
+    // details that were not melted in (thin parts, sharp parts, pieces and movers): all plain ones merged into
+    // one rigidly skinned mesh with its outline (crisp creased normals on sharp parts), glowing ones into an unlit
+    // one; each rides a piece bone of its own, so pieces move, hide and blink by their bones
     const separate = new Set(s.separate);
+    const plain: PieceGeo[] = [];
+    const glow: PieceGeo[] = [];
+    const pieceBones: THREE.Bone[] = [];
     for (const j of this.joints) {
       const p = j.part;
       if (p.only === 'paper' && p.role !== 'face') continue;
@@ -323,42 +402,68 @@ export class CelFigure {
         continue;
       }
       if (!separate.has(p.name)) continue;
-      const holder = new THREE.Object3D();
-      if (p.off) holder.position.set(...p.off);
-      if (p.srot) holder.rotation.set(p.srot[0] * DEG, p.srot[1] * DEG, p.srot[2] * DEG, 'XYZ');
-      j.bone.add(holder);
-      j.holder = holder;
-      const { geo: g, scale } = smoothGeometry(p);
-      this.geos.push(g);
-      const mat = p.role === 'glow' ? tinted(new THREE.MeshBasicMaterial({ color: p.color }), true) : celMaterial(p.color, false);
-      this.mats.push(mat);
-      const mesh = new THREE.Mesh(g, mat);
-      mesh.scale.set(...scale);
-      mesh.userData.entityId = entityId;
-      holder.add(mesh);
-      this.solids.push(mesh);
-      if (Math.max(...p.size) < fig.heightM * 0.06) this.nearOnly.push(mesh);
-      if (p.role === 'eye') {
-        mesh.userData.baseY = mesh.scale.y;
-        this.eyes.push(mesh);
+      const sharp = (p.edge ?? fig.edge) === 'sharp';
+      const built = smoothGeometry(p);
+      let g = built.geo;
+      g.scale(...built.scale);
+      if (sharp) {
+        const c = toCreasedNormals(g, CREASE);
+        if (c !== g) g.dispose();
+        g = c;
       }
-      if (p.role === 'label' && p.text) {
-        const face = labelFace(p.text, p.color, p.size);
-        this.mats.push(face.material as THREE.Material);
-        holder.add(face);
+      if ((p.role === 'label' && p.text) || p.mover?.kind === 'light') {
+        // printed cards and switchable lights keep a mesh of their own (a texture; a material that changes)
+        const holder = new THREE.Object3D();
+        if (p.off) holder.position.set(...p.off);
+        if (p.srot) holder.rotation.set(p.srot[0] * DEG, p.srot[1] * DEG, p.srot[2] * DEG, 'XYZ');
+        j.bone.add(holder);
+        j.holder = holder;
+        this.geos.push(g);
+        const lit = celMaterial(p.color, false);
+        const mat = p.mover?.kind === 'light' ? tinted(new THREE.MeshBasicMaterial({ color: p.color }), true) : lit;
+        this.mats.push(lit, mat);
+        const mesh = new THREE.Mesh(g, p.mover?.kind === 'light' && !p.mover.on ? lit : mat);
+        mesh.userData.entityId = entityId;
+        holder.add(mesh);
+        this.solids.push(mesh);
+        if (p.mover?.kind === 'light') this.lights.set(p.name, { mesh, on: mat, off: lit });
+        if (p.role === 'label' && p.text) {
+          const face = labelFace(p.text, p.color, p.size);
+          this.mats.push(face.material as THREE.Material);
+          holder.add(face);
+        }
+        continue;
       }
-      if (!p.noInk && p.role !== 'glow') {
-        const omat = tinted(new THREE.MeshBasicMaterial({ color: shadeOf(p.color, 0.3), side: THREE.BackSide }));
-        this.mats.push(omat);
-        const shell = new THREE.Mesh(g, omat);
-        this.nearOnly.push(shell);
-        shell.scale.set(scale[0] * (1 + (2 * ink) / Math.max(0.01, p.size[0])), scale[1] * (1 + (2 * ink) / Math.max(0.01, p.size[1])), scale[2] * (1 + (2 * ink) / Math.max(0.01, p.size[2])));
-        holder.add(shell);
-      }
-      if (p.scale !== undefined) {
-        holder.scale.setScalar(Math.max(1e-4, p.scale));
-        holder.visible = p.scale > 0.001;
-      }
+      const pb = new THREE.Bone();
+      pb.name = `${p.name}#piece`;
+      if (p.off) pb.position.set(...p.off);
+      if (p.srot) pb.rotation.set(p.srot[0] * DEG, p.srot[1] * DEG, p.srot[2] * DEG, 'XYZ');
+      j.bone.add(pb);
+      const entry: PieceGeo = { geo: g, bone: pieceBones.length, color: new THREE.Color(p.color), ink: !p.noInk && p.role !== 'glow' && p.role !== 'eye' };
+      pieceBones.push(pb);
+      if (p.role === 'eye') this.eyes.push(pb);
+      (p.role === 'glow' ? glow : plain).push(entry);
+    }
+    if (pieceBones.length) {
+      this.group.updateMatrixWorld(true);
+      const skeleton = new THREE.Skeleton(pieceBones);
+      const add = (geo: THREE.BufferGeometry | null, mat: THREE.Material, kind: 'solid' | 'line') => {
+        if (!geo) return;
+        this.geos.push(geo);
+        this.mats.push(mat);
+        const mesh = new THREE.SkinnedMesh(geo, mat);
+        mesh.frustumCulled = false;
+        this.group.add(mesh);
+        mesh.bind(skeleton);
+        if (kind === 'solid') {
+          mesh.userData.entityId = entityId;
+          this.solids.push(mesh);
+        } else this.nearOnly.push(mesh);
+      };
+      add(mergePieces(plain, pieceBones, false), celMaterial('#ffffff', true), 'solid');
+      add(mergePieces(plain, pieceBones, true), outlineMaterial(ink), 'line');
+      add(mergePieces(glow, pieceBones, false), tinted(new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true }), true), 'solid');
+      for (const x of [...plain, ...glow]) x.geo.dispose();
     }
   }
 
@@ -388,14 +493,9 @@ export class CelFigure {
       j.bone.rotation.set((j.rest[0] + (d?.[0] ?? 0)) * DEG, (j.rest[1] + (d?.[1] ?? 0)) * DEG, (j.rest[2] + (d?.[2] ?? 0)) * DEG, 'XYZ');
       const t = pose.t?.[j.part.name];
       j.bone.position.set(j.at[0] + (t?.[0] ?? 0), j.at[1] + (t?.[1] ?? 0), j.at[2] + (t?.[2] ?? 0));
-      if (j.holder) {
-        const k = pose.sc?.[j.part.name];
-        if (k !== undefined || j.part.scale !== undefined) {
-          const size = k ?? j.part.scale ?? 1;
-          j.holder.scale.setScalar(Math.max(1e-4, size));
-          j.holder.visible = size > 0.001;
-        }
-      }
+      // a part's size (and a hidden or taken-off part) scales its joint: the part and what hangs off it
+      const k = pose.sc?.[j.part.name] ?? j.part.scale;
+      j.bone.scale.setScalar(k === undefined ? 1 : Math.max(1e-4, k));
     }
     if (expr !== this.expr) {
       this.expr = expr;
@@ -404,8 +504,19 @@ export class CelFigure {
         this.face.needsUpdate = true;
       }
       const blink = expr === 'blink';
-      for (const e of this.eyes) e.scale.y = (e.userData.baseY as number) * (blink ? 0.15 : 1);
+      for (const b of this.eyes) b.scale.y = blink ? 0.15 : 1;
     }
+  }
+
+  /** Switch a light part on or off (lamps, screens, headlights). */
+  setLit(part: string, on: boolean): void {
+    const l = this.lights.get(part);
+    if (l) l.mesh.material = on ? l.on : l.off;
+  }
+
+  /** Which light parts it has. */
+  get lightParts(): string[] {
+    return [...this.lights.keys()];
   }
 
   dispose(): void {

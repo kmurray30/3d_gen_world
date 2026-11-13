@@ -11,7 +11,7 @@ import { injectTint, tinted } from './tint';
 
 const LIGHT_DIR = new THREE.Vector3(0.45, 0.8, 0.55).normalize();
 /** The painted map covers this square (metres either side of the centre); the hills beyond are plain rim green. */
-const PAINT_HALF = 84;
+const PAINT_HALF_DEFAULT = 84;
 
 function rng(seed: number): () => number {
   let a = seed >>> 0;
@@ -36,16 +36,20 @@ export class TerrainView {
   readonly group = new THREE.Group();
   private readonly water: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
   private readonly disposables: Array<{ dispose(): void }> = [];
+  /** How far from the centre the ground is painted (a town paints all of itself). */
+  private readonly paintHalf: number;
 
   constructor(
     readonly field: TerrainField,
     coarse: boolean,
   ) {
+    this.paintHalf = field.spec.paintHalf ?? PAINT_HALF_DEFAULT;
     const { mesh, geo } = this.buildMesh(coarse);
     this.group.add(mesh);
     this.disposables.push(geo, mesh.material as THREE.Material);
-    // the plateau beyond the grid, out to the fog
-    const far = new THREE.Mesh(new THREE.RingGeometry(field.size - 12, 420, 64, 1).rotateX(-Math.PI / 2), tinted(new THREE.MeshBasicMaterial({ color: new THREE.Color(`rgb(${RIM.join(',')})`).multiplyScalar(0.95) })));
+    // the plateau beyond the grid, out to the fog (always wider than the grid: a ring whose outer edge is inside
+    // its inner one turns into a ceiling over a big town)
+    const far = new THREE.Mesh(new THREE.RingGeometry(field.size - 12, Math.max(420, field.size + 300), 96, 1).rotateX(-Math.PI / 2), tinted(new THREE.MeshBasicMaterial({ color: new THREE.Color(`rgb(${RIM.join(',')})`).multiplyScalar(0.95) })));
     far.position.y = field.edge - 0.02;
     this.group.add(far);
     this.disposables.push(far.geometry, far.material);
@@ -76,8 +80,8 @@ export class TerrainView {
         pos[k * 3] = x;
         pos[k * 3 + 1] = f.heights[k];
         pos[k * 3 + 2] = z;
-        uv[k * 2] = (x + PAINT_HALF) / (2 * PAINT_HALF);
-        uv[k * 2 + 1] = (z + PAINT_HALF) / (2 * PAINT_HALF);
+        uv[k * 2] = (x + this.paintHalf) / (2 * this.paintHalf);
+        uv[k * 2 + 1] = (z + this.paintHalf) / (2 * this.paintHalf);
         const [nx, ny, nz] = f.normal(x, z);
         nrm.set(nx, ny, nz);
         const lit = nrm.dot(LIGHT_DIR);
@@ -109,7 +113,9 @@ export class TerrainView {
     geo.setIndex(new THREE.BufferAttribute(idx, 1));
     geo.computeBoundingSphere();
 
-    const paint = this.paint(coarse ? 1024 : 2048);
+    // a big town needs more pixels to keep its streets and markings crisp
+    const big = this.paintHalf > 120;
+    const paint = this.paint(coarse ? (big ? 2048 : 1024) : big ? 4096 : 2048);
     const detail = detailTile();
     this.disposables.push(paint, detail);
     const mat = new THREE.MeshBasicMaterial({ map: paint, vertexColors: true });
@@ -124,7 +130,7 @@ export class TerrainView {
         shader.fragmentShader.replace(
           '#include <map_fragment>',
           `#include <map_fragment>
-          float outside = smoothstep(${(PAINT_HALF - 3).toFixed(1)}, ${PAINT_HALF.toFixed(1)}, max(abs(vWPos.x), abs(vWPos.z)));
+          float outside = smoothstep(${(this.paintHalf - 3).toFixed(1)}, ${this.paintHalf.toFixed(1)}, max(abs(vWPos.x), abs(vWPos.z)));
           diffuseColor.rgb = mix(diffuseColor.rgb, uRim, outside);
           diffuseColor.rgb *= texture2D(uDetail, vWPos.xz / 3.2).rgb;
           float shore = 1.0 - smoothstep(0.02, 0.07, abs(vWPos.y - uWater));
@@ -143,7 +149,7 @@ export class TerrainView {
     const f = this.field;
     const spec = f.spec;
     const low = 320;
-    const half = PAINT_HALF;
+    const half = this.paintHalf;
     const lowCanvas = document.createElement('canvas');
     lowCanvas.width = lowCanvas.height = low;
     const lctx = lowCanvas.getContext('2d')!;
@@ -214,6 +220,85 @@ export class TerrainView {
         }
       }
     };
+    // painted ground: car parks, fields, pitches, sand, tiles
+    for (const sf of spec.surfaces ?? []) {
+      const [cx, cy] = P(sf.x, sf.z);
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate((-(sf.rot ?? 0) * Math.PI) / 180);
+      const w = sf.hw * 2 * m, d = sf.hd * 2 * m;
+      if (sf.edge) {
+        ctx.fillStyle = sf.edge;
+        ctx.fillRect(-w / 2 - 0.3 * m, -d / 2 - 0.3 * m, w + 0.6 * m, d + 0.6 * m);
+      }
+      ctx.fillStyle = sf.color;
+      ctx.fillRect(-w / 2, -d / 2, w, d);
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = Math.max(1, 0.14 * m);
+      if (sf.marks === 'bays') {
+        // parking bays: a line every 2.6 m across the width, open at the front
+        for (let x = -w / 2; x <= w / 2 + 1; x += 2.6 * m) {
+          ctx.beginPath();
+          ctx.moveTo(x, -d / 2);
+          ctx.lineTo(x, d / 2 - 0.8 * m);
+          ctx.stroke();
+        }
+      } else if (sf.marks === 'pitch') {
+        ctx.strokeRect(-w / 2 + m, -d / 2 + m, w - 2 * m, d - 2 * m);
+        ctx.beginPath();
+        ctx.moveTo(-w / 2 + m, 0);
+        ctx.lineTo(w / 2 - m, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 0, Math.min(w, d) * 0.15, 0, Math.PI * 2);
+        ctx.stroke();
+      } else if (sf.marks === 'runway') {
+        ctx.lineWidth = Math.max(1, 0.5 * m);
+        ctx.setLineDash([8 * m, 6 * m]);
+        ctx.beginPath();
+        if (w > d) {
+          ctx.moveTo(-w / 2 + 3 * m, 0);
+          ctx.lineTo(w / 2 - 3 * m, 0);
+        } else {
+          ctx.moveTo(0, -d / 2 + 3 * m);
+          ctx.lineTo(0, d / 2 - 3 * m);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else if (sf.marks === 'tiles') {
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+        ctx.lineWidth = Math.max(1, 0.05 * m);
+        for (let x = -w / 2; x <= w / 2; x += m) {
+          ctx.beginPath();
+          ctx.moveTo(x, -d / 2);
+          ctx.lineTo(x, d / 2);
+          ctx.stroke();
+        }
+        for (let y = -d / 2; y <= d / 2; y += m) {
+          ctx.beginPath();
+          ctx.moveTo(-w / 2, y);
+          ctx.lineTo(w / 2, y);
+          ctx.stroke();
+        }
+      } else if (sf.marks === 'furrows') {
+        ctx.strokeStyle = 'rgba(70,45,20,0.35)';
+        ctx.lineWidth = Math.max(1, 0.25 * m);
+        for (let x = -w / 2 + 0.6 * m; x < w / 2; x += 1.2 * m) {
+          ctx.beginPath();
+          ctx.moveTo(x, -d / 2);
+          ctx.lineTo(x, d / 2);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+    // streets: kerbs, asphalt, a dashed centre line
+    for (const st of spec.streets ?? []) stroke(st.pts, st.width + 3.2, '#c9c2b4');
+    for (const st of spec.streets ?? []) stroke(st.pts, st.width + 0.3, '#8e8a82');
+    for (const st of spec.streets ?? []) stroke(st.pts, st.width, '#5d5f63');
+    ctx.setLineDash([2.5 * m, 2.5 * m]);
+    for (const st of spec.streets ?? []) if (st.width >= 7) stroke(st.pts, 0.18, '#f2d45c');
+    ctx.setLineDash([]);
     for (const road of spec.roads) {
       stroke(road.pts, road.width + 0.35, '#8a6a3a');
       stroke(road.pts, road.width, '#d8b97f');

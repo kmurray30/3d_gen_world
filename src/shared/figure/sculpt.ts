@@ -17,7 +17,7 @@
  * No Three.js here: the result is plain typed arrays, built in milliseconds, unit tested in node.
  */
 import type { FigPart, Figure, Vec3 } from './types';
-import { apply, euler, mul, solve, transpose, type M3 } from './math';
+import { apply, euler, loftPower, loftSection, mul, solve, transpose, type M3 } from './math';
 import { hexNum } from './colors';
 
 export interface Sculpt {
@@ -98,6 +98,7 @@ function partSdf(p: FigPart): Sdf {
       };
     }
     case 'cyl': {
+      if (p.segs && p.segs >= 3 && p.segs <= 16) return prismSdf(p);
       // capped cone with an elliptical section: bottom radius r1, top r2, half height hh
       const r1 = w / 2, r2 = (w / 2) * (p.taper ?? 1), hh = h / 2, sz = w / d;
       const fix = Math.min(1, d / w);
@@ -125,7 +126,69 @@ function partSdf(p: FigPart): Sdf {
         return Math.min(Math.max(wx, wy), 0) + Math.hypot(Math.max(wx, 0), Math.max(wy, 0));
       };
     }
+    case 'dome': {
+      // the top half of an ellipsoid whose equator is the flat base at y = -h/2
+      const ball = partSdf({ ...p, shape: 'ball', size: [w, h * 2, d] });
+      return (x, y, z) => Math.max(ball(x, y + h / 2, z), -(y + h / 2));
+    }
+    case 'arc': {
+      // a capped torus (iq): the ring in x-y, kept within arc/2 either side of +y
+      const r = (p.tube ?? 0.25) * (w / 2), R = w / 2 - r, sy = w / h, sz = (2 * r) / d;
+      const an = (Math.min(359, Math.max(10, p.arc ?? 180)) * Math.PI) / 360;
+      const sx = Math.sin(an), cy = Math.cos(an);
+      const fix = Math.min(1, h / w, d / (2 * r));
+      return (x, y, z) => {
+        const px = Math.abs(x), py = y * sy, pz = z * sz;
+        const k = cy * px > sx * py ? px * sx + py * cy : Math.hypot(px, py);
+        return (Math.sqrt(Math.max(0, px * px + py * py + pz * pz + R * R - 2 * R * k)) - r) * fix;
+      };
+    }
+    case 'loft': {
+      // a body along z through superellipse cross-sections: an approximate distance (exact enough to mesh and
+      // shade, since sections change slowly along the body)
+      const n = loftPower(p), L = d / 2;
+      const SECTIONS = 48;
+      const table = Array.from({ length: SECTIONS + 1 }, (_, i) => loftSection(p, i / SECTIONS));
+      return (x, y, z) => {
+        const t = Math.max(0, Math.min(1, z / d + 0.5)) * SECTIONS;
+        const i = Math.min(SECTIONS - 1, Math.floor(t)), f = t - i;
+        const A = table[i], B = table[i + 1];
+        const a = A.w + (B.w - A.w) * f, b = A.h + (B.h - A.h) * f, c = A.y + (B.y - A.y) * f;
+        const u = Math.abs(x) / a, v = Math.abs(y - c) / b;
+        const rr = Math.pow(Math.pow(u, n) + Math.pow(v, n), 1 / n);
+        let ds = (rr - 1) * Math.min(a, b);
+        if (p.cut === 'bottom') ds = Math.max(ds, y - c);
+        if (p.cut === 'top') ds = Math.max(ds, c - y);
+        const dz = Math.abs(z) - L;
+        return Math.min(Math.max(ds, dz), 0) + Math.hypot(Math.max(ds, 0), Math.max(dz, 0));
+      };
+    }
   }
+}
+
+/** A prism or pyramid with `segs` flat sides (elliptical section like the cylinder's, tapered by `taper`); an
+ *  edge's midpoint faces +x, the same way the outline points are laid out. */
+function prismSdf(p: FigPart): Sdf {
+  const [w, h, d] = p.size;
+  const n = p.segs!;
+  const sector = (Math.PI * 2) / n, half = Math.PI / n;
+  const r1 = w / 2, r2 = (w / 2) * (p.taper ?? 1), hh = h / 2, sz = w / d;
+  const slope = Math.cos(Math.atan2(Math.abs(r1 - r2) * Math.cos(half), h));
+  const fix = Math.min(1, d / w);
+  return (x, y, z) => {
+    const zz = z * sz;
+    const r = r1 + (r2 - r1) * Math.max(0, Math.min(1, y / h + 0.5));
+    const len = Math.hypot(x, zz);
+    let a = Math.atan2(zz, x);
+    a -= Math.round(a / sector) * sector;
+    const qx = len * Math.cos(a), qy = Math.abs(len * Math.sin(a));
+    const ap = r * Math.cos(half), he = r * Math.sin(half);
+    const ex = qx - ap, ey = Math.max(qy - he, 0);
+    // inside the sector a point short of the edge is always within the edge's span, so its distance is ex
+    const d2 = (ex > 0 ? Math.hypot(ex, ey) : ex) * slope;
+    const dy = Math.abs(y) - hh;
+    return (Math.min(Math.max(d2, dy), 0) + Math.hypot(Math.max(d2, 0), Math.max(dy, 0))) * fix;
+  };
 }
 
 export function triangleSdf(px: number, py: number, P: Array<[number, number]>): number {
@@ -173,22 +236,45 @@ export interface SculptOptions {
   detail?: number;
   /** Melt every visible part into the skin, thickening thin ones to show at grid size (for preview sheets). */
   preview?: boolean;
+  /** Preview only: sculpt in this pose (joint turns and moves, part sizes) instead of the bind pose. */
+  pose?: { j?: Record<string, Vec3>; t?: Record<string, Vec3>; sc?: Record<string, number> };
+}
+
+/** A part kept as its own piece rather than melted into the skin: sharp-edged parts, pieces that come off, and
+ *  parts that move on their own (a melted door would stretch the skin when it swings). */
+export function standsApart(p: FigPart, fig: Figure): boolean {
+  if ((p.edge ?? fig.edge) === 'sharp' || p.piece || p.mover) return true;
+  // what hangs off a piece or a mover moves with it (a door's handle, a lid's knob), so it cannot melt either
+  for (let q = p.parent ? fig.parts.find((x) => x.name === p.parent) : undefined; q; q = q.parent ? fig.parts.find((x) => x.name === q!.parent) : undefined) {
+    if (q.piece || q.mover) return true;
+  }
+  return false;
 }
 
 /** Which parts melt into the skin. */
-function melts(p: FigPart, cell: number): boolean {
+function melts(p: FigPart, cell: number, fig: Figure): boolean {
   if (p.scale === 0 || p.role === 'eye' || p.role === 'glow' || p.role === 'face' || p.role === 'label' || p.only === 'paper') return false;
+  if (standsApart(p, fig)) return false;
   return Math.min(...p.size) >= cell * 2.2;
 }
 
 export function sculpt(fig: Figure, opts: SculptOptions = {}): Sculpt {
-  const rest = solve(fig, { j: bindPose(fig) });
+  const rest = solve(fig, opts.pose ? { j: opts.pose.j, t: opts.pose.t } : { j: bindPose(fig) });
+  // a pose can hide a part (and everything hanging off it) or resize it
+  const sizeOf = (name: string): number => {
+    let k = 1;
+    for (let p: FigPart | undefined = fig.parts.find((q) => q.name === name); p; p = p.parent ? fig.parts.find((q) => q.name === p!.parent) : undefined) k *= opts.pose?.sc?.[p.name] ?? 1;
+    return k;
+  };
   // grid over the figure's bounds
   const all: Shape[] = [];
   let lo: Vec3 = [Infinity, Infinity, Infinity];
   let hi: Vec3 = [-Infinity, -Infinity, -Infinity];
-  fig.parts.forEach((p, index) => {
-    if (p.only === 'paper' || p.role === 'face' || p.scale === 0) return;
+  fig.parts.forEach((p0, index) => {
+    if (p0.only === 'paper' || p0.role === 'face' || p0.scale === 0) return;
+    const k = opts.pose ? sizeOf(p0.name) : 1;
+    if (k < 1e-3) return;
+    const p = k === 1 ? p0 : { ...p0, size: p0.size.map((v) => v * k) as Vec3 };
     const f = rest.get(p.name)!;
     const R = mul(f.R, euler(p.srot));
     const o: Vec3 = (() => {
@@ -214,9 +300,10 @@ export function sculpt(fig: Figure, opts: SculptOptions = {}): Sculpt {
   });
   const span = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
   const cell = span / (opts.resolution ?? (fig.rig === 'prop' ? 64 : fig.rig === 'dragon' ? 120 : 84) * (opts.detail ?? 1));
-  const melted = opts.preview ? all : all.filter((s) => melts(s.part, cell));
+  const melted = opts.preview ? all : all.filter((s) => melts(s.part, cell, fig));
   if (opts.preview) for (const s of melted) s.grow = Math.max(0, (cell * 1.6 - Math.min(...s.part.size)) / 2);
-  const separate = fig.parts.filter((p) => !melted.some((s) => s.part === p)).map((p) => p.name);
+  const meltedNames = new Set(melted.map((s) => s.part.name));
+  const separate = fig.parts.filter((p) => !meltedNames.has(p.name)).map((p) => p.name);
   const pad = 3;
   const org: Vec3 = [lo[0] - pad * cell, lo[1] - pad * cell, lo[2] - pad * cell];
   const nx = Math.ceil((hi[0] - lo[0]) / cell) + pad * 2 + 1;
@@ -257,7 +344,9 @@ export function sculpt(fig: Figure, opts: SculptOptions = {}): Sculpt {
     const pa = c.part.parent ? byName.get(c.part.parent) : undefined;
     if (!pa) continue;
     const thin = Math.min(Math.min(...c.part.size), Math.min(...pa.part.size));
-    const k = clamp(thin * (organic ? 0.45 : 0.2), cell * 1.2, H * (organic ? 0.07 : 0.03));
+    const kb = c.part.blend ?? 1;
+    if (kb <= 0) continue;
+    const k = clamp(thin * (organic ? 0.45 : 0.2), cell * 1.2, H * (organic ? 0.07 : 0.03)) * kb;
     const J = rest.get(c.part.name)!.T;
     // the fillet reaches a little past the joint; skin is shared over a smaller ball (about half the limb's
     // thickness from the joint), or a raised arm would drag the side of the body up with it

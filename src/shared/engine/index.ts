@@ -1,5 +1,11 @@
 import type { Entity, Vec3, World } from '../types';
-import type { ResolvedBuild, ResolvedSpawn, ResolvedStep } from '../schema';
+import { StepSchema, type Action, type ResolvedAction, type ResolvedBuild, type ResolvedSpawn, type ResolvedStep, type Step, type WordResolution } from '../schema';
+import { figureOfEntity } from './transform';
+import { getFigure } from '../figure/items';
+import { pieceFigure, restFacing } from '../figure/pose';
+import { reactionFor } from '../figure/anim';
+import type { Figure } from '../figure/types';
+import { apply as applyM, solve as solveFigure } from '../figure/math';
 import { makeRng } from './math';
 import { footprintRadius, massClassFor, renderHeight } from './sizing';
 import { findPiece, type Rig } from '../rig';
@@ -33,7 +39,10 @@ export type EngineEvent =
   | { type: 'stateChange'; id: string; key: string; value: boolean | number | string }
   | { type: 'scriptDone'; id: string }
   | { type: 'sky'; time: string }
-  | { type: 'poke'; id: string; part?: string }
+  /** A click or tap. `clip` is the reaction a code-drawn figure plays (none when it runs its own act). */
+  | { type: 'poke'; id: string; part?: string; clip?: string }
+  /** A part of a code-drawn thing starts moving to a new pose. */
+  | { type: 'pose'; id: string; part: string }
   /** A whole-body move or gesture starting (for its sound). */
   | { type: 'anim'; id: string; name: string; times: number }
   | { type: 'warn'; msg: string };
@@ -55,6 +64,9 @@ export class Engine {
   private readonly pokeUntil = new Map<string, number>();
   /** How a drawing comes apart, when its rig is loaded (the client supplies it; pieces need it). */
   rigs: (file: string) => Rig | undefined = () => undefined;
+  /** What a word spawned by an act looks like and how big it is. By default from its code-drawn figure; the
+   *  server can supply the vocabulary's. */
+  resolveWord: (word: string) => WordResolution | null = (word) => resolveFromFigure(word);
 
   constructor(world: World, seed = 1) {
     this.world = new WorldModel(world);
@@ -102,6 +114,21 @@ export class Engine {
     const piece = rig && part ? rig.pieces.find((p) => p.id === part) : undefined;
     if (piece && this.pokePiece(e, piece.id, piece.kind, !!piece.detach, toward, sid)) {
       this.emit({ type: 'poke', id, part });
+      return true;
+    }
+    // a code-drawn thing does its act (the next one in its cycle); without one, a reaction that fits it, with
+    // words that fit the reaction
+    const fig = figureOfEntity(e);
+    if (fig) {
+      if (this.act(id)) {
+        this.emit({ type: 'poke', id });
+        return true;
+      }
+      const r = reactionFor(fig, this.rng);
+      const living = e.kind === 'animal' || e.kind === 'human' || e.kind === 'humanoid';
+      if (living) this.faceFor(id, 'player', 3.5, sid);
+      if (r.line) this.run([{ op: 'say', id, text: r.line, dur: 1.8 }], `${sid}_say`);
+      this.emit({ type: 'poke', id, clip: r.clip });
       return true;
     }
     if (e.structure) {
@@ -192,6 +219,7 @@ export class Engine {
    */
   operate(id: string, part: string, to?: string): boolean {
     const e = this.world.get(id);
+    if (e && !e.structure) return this.operateFigure(e, part, to);
     const s = e?.structure;
     if (!e || !s) return false;
     const found = findMovers(s, part);
@@ -221,6 +249,183 @@ export class Engine {
   }
 
   /**
+   * Work a code-drawn thing's movers: "open" the fridge door, "on" the propeller, "out" the drawer, "toggle" the
+   * lamp. A name reaches every mover it starts (door -> doorL, doorR; wheels -> wheel1..4) or one of its kind
+   * (light, propeller); "all" reaches them all. False when nothing matched.
+   */
+  private operateFigure(e: Entity, part: string, to?: string): boolean {
+    const fig = figureOfEntity(e);
+    if (!fig) return false;
+    const want = part.toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const stem = want.replace(/s$/, '');
+    const all = fig.parts.filter((p) => p.mover);
+    let found = all.filter((p) => p.name.toLowerCase() === want);
+    if (!found.length) found = all.filter((p) => p.name.toLowerCase().startsWith(stem));
+    if (!found.length) found = all.filter((p) => p.mover!.kind === stem || (stem === 'propeller' || stem === 'fan' || stem === 'rotor' || stem === 'engine' || stem === 'motor' ? p.mover!.kind === 'spin' : stem === 'lamp' || stem === 'lights' ? p.mover!.kind === 'light' : false));
+    if (!found.length && (stem === 'all' || stem === 'it' || stem === 'everything')) found = all;
+    if (!found.length) return false;
+    const stateOf = (p: (typeof all)[number]) => (typeof e.state[`op_${p.name}`] === 'boolean' ? (e.state[`op_${p.name}`] as boolean) : !!p.mover!.on);
+    const current = found.every(stateOf);
+    const t = (to ?? 'toggle').toLowerCase();
+    const ON = ['open', 'on', 'start', 'go', 'run', 'spin', 'out', 'lit', 'light', 'extend', 'pull', 'unlock'];
+    const OFF = ['close', 'closed', 'shut', 'off', 'stop', 'in', 'dark', 'retract', 'push', 'lock'];
+    // up and down follow which way the part moves: a lever that slides down is "on" when down
+    const goesDown = found.every((p) => (p.mover!.amount ?? 1) < 0);
+    const UP = ['up', 'raise', 'lift'], DOWN = ['down', 'lower'];
+    const v = ON.includes(t) ? true : OFF.includes(t) ? false : UP.includes(t) ? !goesDown : DOWN.includes(t) ? goesDown : !current;
+    const steps: ResolvedAction[] = [];
+    for (const p of found) {
+      if (stateOf(p) === v) continue;
+      e.state[`op_${p.name}`] = v;
+      this.emit({ type: 'stateChange', id: e.id, key: `op_${p.name}`, value: v });
+      const m = p.mover!;
+      const ax = m.axis ?? (m.kind === 'slide' ? 'z' : m.kind === 'spin' ? 'z' : 'x');
+      const vec = (k: number): Vec3 => [ax === 'x' ? k : 0, ax === 'y' ? k : 0, ax === 'z' ? k : 0];
+      const amount = m.amount ?? (m.kind === 'swing' ? 100 : m.kind === 'spin' ? 720 : m.kind === 'slide' ? 0.3 : 0);
+      if (m.kind === 'swing') steps.push({ op: 'pose', id: e.id, part: p.name, rot: vec(v ? amount : 0), dur: 0.5 });
+      else if (m.kind === 'slide') steps.push({ op: 'pose', id: e.id, part: p.name, move: vec(v ? amount : 0), dur: 0.4 });
+      else if (m.kind === 'spin') steps.push({ op: 'pose', id: e.id, part: p.name, spin: vec(v ? amount : 0), dur: 0 });
+    }
+    // every part moves at once (a Ferris wheel's cabins), in scripts of ten side by side
+    for (let i = 0; i < Math.min(steps.length, 40); i += 10) this.run([{ op: 'par', do: steps.slice(i, i + 10) }], `rule_operate_${this.nextKey()}`);
+    return true;
+  }
+
+  /**
+   * Run a code-drawn thing's act for a click: the next entry of its click cycle. False when it has none.
+   */
+  act(id: string): boolean {
+    const e = this.world.get(id);
+    const fig = e ? figureOfEntity(e) : null;
+    const cycle = fig?.act?.click;
+    if (!e || !cycle?.length) return false;
+    const n = typeof e.state.act_n === 'number' ? e.state.act_n : 0;
+    e.state.act_n = (n + 1) % cycle.length;
+    let steps = this.prepareAct(e, cycle[n % cycle.length]);
+    // a living thing looks at you while it acts and then goes back to what it was doing: an act's own
+    // "face the player" becomes that look instead of turning it toward you for good
+    if (e.kind === 'animal' || e.kind === 'human' || e.kind === 'humanoid') {
+      const keep = (st: ResolvedStep): ResolvedStep | null => {
+        if (st.op === 'par') {
+          const inner = st.do.map((x) => keep(x as ResolvedStep)).filter((x): x is ResolvedStep => !!x);
+          return inner.length ? ({ ...st, do: inner } as ResolvedStep) : null;
+        }
+        if (st.op !== 'set' || st.id !== id || st.face !== 'player') return st;
+        const { face: _face, ...rest } = st;
+        return Object.keys(rest).some((k) => !['op', 'id', 'delay', 'dur'].includes(k)) ? (rest as ResolvedStep) : null;
+      };
+      steps = steps.map(keep).filter((x): x is ResolvedStep => !!x);
+      this.faceFor(id, 'player', 4.5, `act_face_${id}_${this.nextKey()}`);
+    }
+    this.run(steps, `act_${id}_${this.nextKey()}`);
+    return true;
+  }
+
+  /** Run a code-drawn thing's act setup (once): what a demo world shows it with (bread in the toaster). */
+  setupAct(id: string): boolean {
+    const e = this.world.get(id);
+    const fig = e ? figureOfEntity(e) : null;
+    const setup = fig?.act?.setup;
+    if (!e || !setup?.length || e.state.act_setup === true) return false;
+    e.state.act_setup = true;
+    this.run(this.prepareAct(e, setup), `act_setup_${id}_${this.nextKey()}`);
+    return true;
+  }
+
+  /**
+   * An act's steps made runnable for one thing: `self` becomes its id, `self.<socket>` whatever sits in that
+   * socket (a step on it repeats for each), refs of things it spawns or takes off get fresh ids, and spawned
+   * words are resolved. Steps naming something that is not there are dropped.
+   */
+  prepareAct(e: Entity, steps: Step[]): ResolvedStep[] {
+    const refs = new Map<string, string>();
+    const ids = (v: string): string[] => {
+      if (v === 'self') return [e.id];
+      if (v === 'player' || v === 'me') return ['player'];
+      if (v.startsWith('self.')) return this.world.children(e.id).filter((c) => c.anchor === `@${v.slice(5)}`).map((c) => c.id);
+      const r = refs.get(v);
+      if (r) return [r];
+      return this.world.has(v) ? [v] : [];
+    };
+    const place = <P extends { of?: string }>(p: P): P => {
+      if (!p || typeof p !== 'object' || typeof p.of !== 'string') return p;
+      const to = ids(p.of)[0];
+      return { ...p, of: to ?? 'player' };
+    };
+    const one = (a: Action): ResolvedAction[] => {
+      const x = structuredClone(a) as Record<string, unknown> & { op: string };
+      if (x.op === 'spawn') {
+        const res = this.resolveWord(String(x.word));
+        if (!res) return [];
+        const id = this.uniqueId(`${e.id}_${String(x.ref)}`);
+        refs.set(String(x.ref), id);
+        return [{ ...(x as object), at: place((x.at ?? { rel: 'near', of: 'self' }) as { of?: string }), ref: String(x.ref), id, res } as ResolvedAction];
+      }
+      if (x.op === 'detach') {
+        const owner = ids(String(x.id))[0];
+        if (!owner) return [];
+        const newId = this.uniqueId(`${owner}_${String(x.part)}`);
+        if (typeof x.ref === 'string') refs.set(x.ref, newId);
+        return [{ ...(x as object), id: owner, newId } as ResolvedAction];
+      }
+      if (x.at && typeof x.at === 'object') x.at = place(x.at as { of?: string });
+      if (x.to && typeof x.to === 'object') x.to = place(x.to as { of?: string });
+      if (typeof x.face === 'string' && x.face !== 'player') x.face = ids(x.face)[0] ?? 'player';
+      if (x.op === 'attach' && typeof x.to === 'string') {
+        const t = ids(x.to)[0];
+        if (!t) return [];
+        x.to = t;
+      }
+      if (x.op === 'set' && typeof x.word === 'string') {
+        // turning into another thing: resolve the word now, like the server does for scripts
+        const res = this.resolveWord(x.word);
+        if (res) x.res = res;
+        else delete x.word;
+      }
+      if (typeof x.id !== 'string') return [x as unknown as ResolvedAction];
+      return ids(x.id).map((id) => ({ ...(x as object), id }) as ResolvedAction);
+    };
+    const out: ResolvedStep[] = [];
+    for (const raw of steps) {
+      // the same parsing scripts from the model get: defaults filled in, numbers clamped, nonsense dropped
+      const parsed = StepSchema.safeParse(raw);
+      if (!parsed.success) {
+        this.emit({ type: 'warn', msg: `skipped a step of ${e.word}'s act: ${parsed.error.issues[0]?.message ?? 'invalid'}` });
+        continue;
+      }
+      const s = parsed.data;
+      if (s.op === 'par') {
+        const all = s.do.flatMap(one).slice(0, 10);
+        if (all.length) out.push({ op: 'par', do: all });
+      } else {
+        const all = one(s);
+        if (all.length === 1) out.push(all[0]);
+        else if (all.length > 1) out.push({ op: 'par', do: all.slice(0, 10) });
+      }
+    }
+    return out;
+  }
+
+  /** Turn a living thing to look at someone for a while, then let it go back to how it stood. */
+  private faceFor(id: string, who: string, seconds: number, sid: string): void {
+    const e = this.world.get(id);
+    if (!e) return;
+    const before = e.facing;
+    e.facing = who;
+    this.run([{ op: 'wait', dur: seconds }], `${sid}_face`);
+    const until = this.time + seconds;
+    const off = this.on((ev) => {
+      if (ev.type !== 'scriptDone' || ev.id !== `${sid}_face`) return;
+      const now = this.world.get(id);
+      if (now && now.facing === who && this.time >= until - 0.05) {
+        if (before) now.facing = before;
+        else delete now.facing;
+      }
+      off();
+    });
+  }
+
+  /**
    * Take a piece off a rigged drawing or a structure: it becomes its own entity (drawn from the same picture, or
    * built from the same parts) at the spot it was, and its owner shows without it. Returns the new id, or null
    * when there is no such piece.
@@ -228,6 +433,8 @@ export class Engine {
   detachPiece(id: string, part: string, newId = `${id}_${part}`): string | null {
     const e = this.world.get(id);
     if (e?.structure) return this.detachStructurePiece(e, e.structure, part, newId);
+    const fig = e ? figureOfEntity(e) : null;
+    if (e && fig) return this.detachFigurePiece(e, fig, part, newId);
     if (!e?.sprite.file) return null;
     const rig = this.rigs(e.sprite.file);
     const piece = rig ? findPiece(rig, part) : undefined;
@@ -267,6 +474,48 @@ export class Engine {
     this.emit({ type: 'stateChange', id: e.id, key: `off_${piece.id}`, value: true });
     this.emit({ type: 'spawn', id: pieceEntity.id });
     return pieceEntity.id;
+  }
+
+  /** A code-drawn thing's piece (the slice of a yam, a cork, a hat) comes off as a figure of its own, where it was. */
+  private detachFigurePiece(e: Entity, fig: Figure, part: string, newId: string): string | null {
+    const p = fig.parts.find((q) => q.name === part) ?? fig.parts.find((q) => q.name.toLowerCase().startsWith(part.toLowerCase()));
+    if (!p || e.state[`off_${p.name}`] === true || !p.parent) return null;
+    const piece = pieceFigure(fig, p.name);
+    if (!piece) return null;
+    // the piece's origin in the owner's figure space, posed as the owner is now, then into the world
+    const o = solveFigure(fig).get(p.name)!;
+    const lift = piece.origin[1] - o.T[1];
+    const at = this.world.worldPos(e);
+    const a = restFacing(e, fig) * DEG;
+    const k = e.scale;
+    const lx = piece.origin[0], lz = piece.origin[2];
+    const pos: Vec3 = [at[0] + (lx * Math.cos(a) + lz * Math.sin(a)) * k, at[1] + (o.T[1] + lift) * k, at[2] + (-lx * Math.sin(a) + lz * Math.cos(a)) * k];
+    void applyM;
+    const word = piece.fig.key;
+    const pe: Entity = {
+      id: this.world.has(newId) ? this.uniqueId(newId) : newId,
+      word,
+      label: p.name,
+      sprite: { file: null, w: 1, h: 1 },
+      pos,
+      flip: e.flip,
+      scale: e.scale,
+      heightM: piece.fig.heightM,
+      tilt: 0,
+      state: { piece_of: e.id, piece: p.name },
+      effects: [],
+      kind: 'object',
+      solid: false,
+      massClass: massClassFor('object', piece.fig.heightM),
+      huge: false,
+      createdAt: this.time,
+      ...(e.yaw !== undefined ? { yaw: e.yaw } : {}),
+    };
+    if (!this.world.add(pe)) return null;
+    e.state[`off_${p.name}`] = true;
+    this.emit({ type: 'stateChange', id: e.id, key: `off_${p.name}`, value: true });
+    this.emit({ type: 'spawn', id: pe.id });
+    return pe.id;
   }
 
   /** A structure's named piece (roof, chimney, door, lantern) comes off as a structure of its own. */
@@ -504,3 +753,11 @@ export class Engine {
 export { WorldModel } from './world';
 export type { Script } from './scheduler';
 export type { Bump } from './collide';
+
+/** A word's look and size from its code-drawn figure (for things an act spawns). */
+export function resolveFromFigure(word: string): WordResolution | null {
+  const fig = getFigure(word);
+  if (!fig) return null;
+  const kind = fig.rig === 'biped' ? (fig.group === 'fantasy' ? 'humanoid' : 'human') : fig.rig === 'prop' ? 'object' : 'animal';
+  return { word, sprite: { file: null, w: 1, h: 1 }, kind, heightM: fig.heightM, solid: kind !== 'object' || fig.heightM > 0.9, huge: fig.heightM >= 12, placeholder: false };
+}

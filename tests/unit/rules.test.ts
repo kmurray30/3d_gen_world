@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { EngineEvent } from '../../src/shared/engine/index';
 import { footprintRadius } from '../../src/shared/engine/sizing';
 import { PLAYER_RADIUS } from '../../src/shared/types';
+import { figureOfEntity } from '../../src/shared/engine/transform';
+import { restFacing } from '../../src/shared/figure/pose';
 import { makeEngine, meadowWorld, res, spawn, tick } from '../helpers';
 
 describe('collisions and rules', () => {
@@ -11,8 +13,14 @@ describe('collisions and rules', () => {
     engine.world.player.pos = [house.pos[0] - 0.2, 0, house.pos[2]];
     const bumps = engine.collidePlayer();
     expect(bumps.some((b) => b.id === 'house_1' && b.blocked)).toBe(true);
-    const d = Math.hypot(engine.world.player.pos[0] - house.pos[0], engine.world.player.pos[2] - house.pos[2]);
-    expect(d).toBeCloseTo(footprintRadius(house) + PLAYER_RADIUS, 4);
+    // a code-drawn house is a rectangle as big as the house: the player ends up just outside its side
+    const fig = figureOfEntity(house)!;
+    const a = (restFacing(house, fig) * Math.PI) / 180;
+    const wx = engine.world.player.pos[0] - house.pos[0], wz = engine.world.player.pos[2] - house.pos[2];
+    const lx = wx * Math.cos(a) - wz * Math.sin(a), lz = wx * Math.sin(a) + wz * Math.cos(a);
+    const out = Math.hypot(Math.max(0, Math.abs(lx) - fig.halfW * house.scale), Math.max(0, Math.abs(lz) - fig.halfD * house.scale));
+    expect(out).toBeCloseTo(PLAYER_RADIUS, 4);
+    void footprintRadius;
     const flower = engine.world.get('flower_1')!;
     engine.world.player.pos = [flower.pos[0] + 0.1, 0, flower.pos[2]];
     const b2 = engine.collidePlayer();

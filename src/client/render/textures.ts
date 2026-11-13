@@ -84,6 +84,12 @@ export class TextureStore {
       hit.last = ++this.tick;
       return hit.tex;
     }
+    if (text.startsWith('@map:') && townMap) {
+      const tex = new THREE.CanvasTexture(drawTownMap(townMap, text));
+      finishTexture(tex);
+      this.slots.set(key, { tex, bytes: 1024 * 666 * 4, last: ++this.tick });
+      return tex;
+    }
     const h = 128;
     const w = Math.max(128, Math.min(768, Math.round(h * (0.55 * Math.max(4, text.length) + 0.8))));
     const canvas = document.createElement('canvas');
@@ -247,4 +253,184 @@ export function makeGroundTexture(): THREE.Texture {
   tex.repeat.set(60, 60);
   tex.anisotropy = 4;
   return tex;
+}
+
+
+/* ----- the town's standing maps ----- */
+
+import type { TownMap } from '../../shared/city/town';
+
+let townMap: TownMap | null = null;
+/** The town's layout, for its standing maps (set when the town loads). */
+export function setTownMap(m: TownMap | null): void {
+  townMap = m;
+}
+
+const ZONE_COLORS: Record<string, string> = { downtown: '#f0a46a', civic: '#c98ad6', residential: '#f6dc7a', parkland: '#7cc66a', industry: '#a9adb3', transport: '#8f97d6', waterfront: '#79cde0', farmland: '#d8b46a', wild: '#5aa553', fantasy: '#b48ae6', sky: '#a8d8f5' };
+
+const ZONE_NAMES: Record<string, string> = { downtown: 'Downtown', civic: 'Civic', residential: 'Homes', parkland: 'Parks', industry: 'Industry', transport: 'Transport', waterfront: 'Waterfront', farmland: 'Farmland', wild: 'Wilds', fantasy: 'Fantasy', sky: 'Sky' };
+
+/**
+ * "@map:x,z,yaw": a mall-style standing map. On the left the whole town turned so the way you face when reading
+ * it is up, you are here marked; on the right a directory of every place, by district, in the map's colours.
+ */
+function drawTownMap(m: TownMap, text: string): HTMLCanvasElement {
+  const [hx, hz, hyaw] = text.slice(5).split(',').map(Number);
+  const W = 1024, H = 666;
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#f4ecd8';
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = '#2b2b2b';
+  ctx.lineWidth = 10;
+  ctx.strokeRect(5, 5, W - 10, H - 10);
+  const font = (wt: number, px: number) => `${wt} ${px}px "Trebuchet MS", "Segoe UI", system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = font(800, 30);
+  ctx.fillStyle = '#2b2b2b';
+  ctx.fillText('EVERYTOWN', W / 2, 34);
+  // fit the lots' extent, turned: "up" on the map is the way the reader faces, (-sin yaw, -cos yaw) in the world
+  const a = (hyaw * Math.PI) / 180;
+  const fwd = [-Math.sin(a), -Math.cos(a)], right = [Math.cos(a), -Math.sin(a)];
+  const P = (x: number, z: number): [number, number] => [x * right[0] + z * right[1], -(x * fwd[0] + z * fwd[1])];
+  let lo = [Infinity, Infinity], hi = [-Infinity, -Infinity];
+  for (const l of m.lots) for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const p = P(l.x + (sx * l.w) / 2, l.z + (sz * l.d) / 2);
+    lo = [Math.min(lo[0], p[0]), Math.min(lo[1], p[1])];
+    hi = [Math.max(hi[0], p[0]), Math.max(hi[1], p[1])];
+  }
+  // the map gets the room its shape needs (up to 62% of the width); the directory takes the rest
+  const top = 64, pad = 22;
+  const boxH = H - top - pad;
+  const k = Math.min((W * 0.62 - pad * 2) / (hi[0] - lo[0]), boxH / (hi[1] - lo[1]));
+  const mapW = (hi[0] - lo[0]) * k;
+  const ox = pad + 6 - lo[0] * k, oy = top + (boxH - (hi[1] - lo[1]) * k) / 2 - lo[1] * k;
+  const S = (x: number, z: number): [number, number] => {
+    const p = P(x, z);
+    return [ox + p[0] * k, oy + p[1] * k];
+  };
+  ctx.lineCap = 'round';
+  for (const st of m.streets) {
+    ctx.strokeStyle = '#8e8a82';
+    ctx.lineWidth = Math.max(2, st.width * k);
+    ctx.beginPath();
+    st.pts.forEach(([x, z], i) => {
+      const [sx, sy] = S(x, z);
+      if (i) ctx.lineTo(sx, sy);
+      else ctx.moveTo(sx, sy);
+    });
+    ctx.stroke();
+  }
+  for (const l of m.lots) {
+    const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sz]) => S(l.x + (sx * l.w) / 2, l.z + (sz * l.d) / 2));
+    ctx.fillStyle = ZONE_COLORS[l.zone] ?? '#dddddd';
+    ctx.globalAlpha = l.minor ? 0.55 : 1;
+    ctx.strokeStyle = '#5a4a3a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    corners.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // names only where they fit inside their own lot, so nothing piles up; the directory names the rest
+  for (const l of m.lots) {
+    if (l.minor) continue;
+    const [x, y] = S(l.x, l.z);
+    const corners = [[-1, -1], [1, 1], [1, -1], [-1, 1]].map(([sx, sz]) => S(l.x + (sx * l.w) / 2, l.z + (sz * l.d) / 2));
+    const wpx = Math.max(...corners.map((p) => p[0])) - Math.min(...corners.map((p) => p[0]));
+    const hpx = Math.max(...corners.map((p) => p[1])) - Math.min(...corners.map((p) => p[1]));
+    for (let size = 13; size >= 8; size--) {
+      ctx.font = font(700, size);
+      if (ctx.measureText(l.title).width < wpx - 4 && size < hpx - 2) {
+        ctx.fillStyle = '#2b2b2b';
+        ctx.fillText(l.title, x, y);
+        break;
+      }
+    }
+  }
+  const [px, py] = S(m.plaza.x, m.plaza.z);
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#5a4a3a';
+  ctx.beginPath();
+  ctx.arc(px, py, Math.max(6, m.plaza.r * k), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.font = font(700, 11);
+  ctx.fillStyle = '#2b2b2b';
+  ctx.fillText('Plaza', px, py);
+  // you are here
+  const [yx, yy] = S(hx, hz);
+  ctx.fillStyle = '#e0473b';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(yx, yy, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.font = font(800, 18);
+  const tag = 'YOU ARE HERE';
+  const tw = ctx.measureText(tag).width + 14;
+  const tx = Math.min(pad + mapW - tw / 2, Math.max(pad + tw / 2, yx)), ty = Math.max(top + 12, yy - 24);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(tx - tw / 2, ty - 12, tw, 24);
+  ctx.fillStyle = '#e0473b';
+  ctx.fillText(tag, tx, ty + 1);
+
+  // the directory: every place by district, in columns
+  const x0 = pad + mapW + 34, x1 = W - pad;
+  ctx.strokeStyle = '#2b2b2b';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x0 - 16, top);
+  ctx.lineTo(x0 - 16, H - pad);
+  ctx.stroke();
+  const byZone = new Map<string, string[]>();
+  for (const l of m.lots) if (!l.minor) byZone.set(l.zone, [...(byZone.get(l.zone) ?? []), l.title]);
+  const zones = Object.keys(ZONE_NAMES).filter((z) => byZone.has(z));
+  const rows = zones.reduce((n, z) => n + 1.5 + new Set(byZone.get(z)).size, 0);
+  // as many columns as it takes to fit, text shrinking a little before adding one
+  let cols = 1, line = 16;
+  for (; cols < 4; cols++) {
+    line = Math.min(16, ((H - top - pad) * cols) / (rows + cols * 1.5));
+    if (line >= 11.5) break;
+  }
+  const colW = (x1 - x0) / cols;
+  let col = 0, y = top + line / 2;
+  ctx.textAlign = 'left';
+  for (const z of zones) {
+    const names = [...new Set(byZone.get(z))].sort();
+    if (y + line * 2.5 > H - pad && col < cols - 1) {
+      col++;
+      y = top + line / 2;
+    }
+    const cx = x0 + col * colW;
+    ctx.fillStyle = ZONE_COLORS[z] ?? '#ddd';
+    ctx.fillRect(cx, y - line * 0.42, line * 0.9, line * 0.84);
+    ctx.strokeStyle = '#5a4a3a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx, y - line * 0.42, line * 0.9, line * 0.84);
+    ctx.font = font(800, line * 0.95);
+    ctx.fillStyle = '#2b2b2b';
+    ctx.fillText(ZONE_NAMES[z].toUpperCase(), cx + line * 1.2, y + 1);
+    y += line * 1.25;
+    ctx.font = font(600, line * 0.82);
+    for (const nm of names) {
+      if (y + line > H - pad && col < cols - 1) {
+        col++;
+        y = top + line / 2;
+      }
+      let t = nm;
+      while (t.length > 4 && ctx.measureText(t).width > colW - line * 1.4) t = t.slice(0, -2) + '…';
+      ctx.fillText(t, x0 + col * colW + line * 0.6, y);
+      y += line;
+    }
+    y += line * 0.25;
+  }
+  ctx.textAlign = 'center';
+  return c;
 }

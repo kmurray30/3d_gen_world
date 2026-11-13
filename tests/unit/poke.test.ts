@@ -3,6 +3,8 @@ import type { EngineEvent } from '../../src/shared/engine/index';
 import { generate } from '../../src/shared/structure/index';
 import { structureEntity } from '../../src/shared/structure/entity';
 import { makeEngine, meadowWorld, spawn, tick } from '../helpers';
+import { REACTION_LINES } from '../../src/shared/figure/anim';
+import { getFigure, registerFigure } from '../../src/shared/figure/items';
 
 const decals = (word: string) => (word === 'door' ? { file: 'door.webp', w: 300, h: 600 } : null);
 
@@ -41,7 +43,7 @@ describe('poking things', () => {
     expect(e.state.door_open).toBe(true);
   });
 
-  it('animals turn to you and yelp; people greet; objects wobble', () => {
+  it('code-drawn things react with a clip and a line that fits it, and look at you; plain drawings wobble', () => {
     const engine = makeEngine(meadowWorld());
     engine.run([spawn('dog_1', 'dog', { rel: 'front' }, {}, 'animal', 0.6), spawn('man_1', 'man', { rel: 'left' }, {}, 'human', 1.7), spawn('cup_1', 'cup', { rel: 'right' }, {}, 'object', 0.12)]);
     tick(engine, 1);
@@ -56,11 +58,24 @@ describe('poking things', () => {
     expect(events.some((ev) => ev.type === 'say' && ev.id === 'dog_1')).toBe(true);
     expect(events.some((ev) => ev.type === 'say' && ev.id === 'man_1' && ev.text.length > 1)).toBe(true);
     expect(engine.world.trans('cup_1').ofs[0] !== 0 || engine.world.trans('cup_1').ofs[1] !== 0 || engine.world.get('cup_1')!.tilt !== 0).toBe(true);
-    tick(engine, 2);
-    const dog = engine.world.get('dog_1')!;
-    const dx = engine.world.player.pos[0] - dog.pos[0];
-    const dz = engine.world.player.pos[2] - dog.pos[2];
-    const n = [Math.sin((dog.yaw! * Math.PI) / 180), Math.cos((dog.yaw! * Math.PI) / 180)];
-    expect((n[0] * dx + n[1] * dz) / Math.hypot(dx, dz)).toBeGreaterThan(0.95); // turned to face the player
+    // the man's act: he waves and says a line that goes with a wave, at the same time
+    const manSay = events.find((ev) => ev.type === 'say' && ev.id === 'man_1') as Extract<EngineEvent, { type: 'say' }>;
+    expect(events.some((ev) => ev.type === 'anim' && ev.id === 'man_1' && ev.name === 'wave')).toBe(true);
+    expect(REACTION_LINES.wave).toContain(manSay.text);
+    // something with no act of its own reacts with a clip, and what it says belongs to that clip
+    registerFigure({ ...getFigure('man')!, key: 'plain man', act: undefined });
+    engine.run([spawn('pm_1', 'plain man', { rel: 'behind' }, {}, 'human', 1.7)]);
+    tick(engine, 1);
+    expect(engine.poke('pm_1')).toBe(true);
+    tick(engine, 0.3);
+    const pmPoke = events.find((ev) => ev.type === 'poke' && ev.id === 'pm_1') as Extract<EngineEvent, { type: 'poke' }>;
+    const pmSay = events.find((ev) => ev.type === 'say' && ev.id === 'pm_1') as Extract<EngineEvent, { type: 'say' }>;
+    expect(pmPoke.clip).toBeTruthy();
+    expect(REACTION_LINES[pmPoke.clip!]).toContain(pmSay.text);
+    // living things look at you for a while (front toward you, whatever way they were standing), then let go
+    expect(engine.world.get('dog_1')!.facing).toBe('player');
+    tick(engine, 4);
+    expect(engine.world.get('dog_1')!.facing).toBeUndefined();
+    expect(engine.world.get('dog_1')!.yaw).toBe(90);
   });
 });

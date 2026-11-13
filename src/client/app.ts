@@ -1,3 +1,6 @@
+import { setTownMap } from './render/textures';
+import type { TownMap } from '../shared/city/town';
+import '../shared/figure/catalog/index';
 import type { TimeOfDay, World } from '../shared/types';
 import { TIMES_OF_DAY } from '../shared/types';
 import { Engine } from '../shared/engine/index';
@@ -58,16 +61,17 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   let world!: World;
   let created = false;
   let fresh = false;
-  // the Atlas: every thing, laid out as a world to explore; shared and read-only
-  const atlas = location.pathname === '/atlas';
+  // the Town: every thing, real size, where you would find it; shared and read-only
+  const atlas = location.pathname === '/town' || location.pathname === '/atlas';
   try {
     // the bare address asks where to go: a demo, a fresh meadow, the Atlas, or the last world
     const q = new URLSearchParams(location.search);
     if (atlas) {
-      hud.setStatus('Laying out the Atlas...');
-      const r = await fetch('/api/atlas');
-      if (!r.ok) throw new Error(`could not load the Atlas (${r.status})`);
-      world = ((await r.json()) as { world: World }).world;
+      hud.setStatus('Building the town...');
+      const r = await fetch('/api/town');
+      if (!r.ok) throw new Error(`could not load the town (${r.status})`);
+      world = ((await r.json()) as { world: World & { town?: TownMap } }).world;
+      setTownMap((world as World & { town?: TownMap }).town ?? null);
       hud.setStatus('');
     } else if (!/^\/w\//.test(location.pathname) && !q.get('preset') && q.get('new') !== '1') {
       const last = lastWorld();
@@ -80,8 +84,8 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
       } else if (choice === 'meadow') {
         history.replaceState(null, '', `/w/${await createWorld()}${location.search}`);
         fresh = true;
-      } else if (choice === 'atlas') {
-        location.assign('/atlas');
+      } else if (choice === 'town') {
+        location.assign('/town');
         return;
       }
     }
@@ -103,13 +107,14 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     onError: (msg) => hud.toast(msg, 'error'),
   });
   store.readOnly = atlas;
-  // figures breathe and blink by themselves; engine fidgets for thousands of distant things would be wasted work
-  if (atlas) engine.idle.enabled = false;
+  // figures breathe and blink by themselves; in the town only the people out walking (and near you) wander
+  if (atlas) engine.idle.filter = (e) => e.state.wander === true && Math.hypot(e.pos[0] - engine.world.player.pos[0], e.pos[2] - engine.world.player.pos[2]) < 60;
   const scene = new SceneView(canvas, config.spriteVersion, hudRoot);
   if (atlas) {
     // thousands of things: draw only what is near, sculpt lighter models, and fog the distance
-    scene.cullRadius = coarse ? 38 : 56;
-    scene.scene.fog = new THREE.Fog(scene.scene.fog!.color, scene.cullRadius * 0.45, scene.cullRadius * 0.98);
+    scene.cullRadius = coarse ? 42 : 64;
+    // buildings show out to 1.6x that; the fog closes in just beyond them
+    scene.scene.fog = new THREE.Fog(scene.scene.fog!.color, scene.cullRadius * 0.5, scene.cullRadius * 1.6);
     setSculptDetail(coarse ? 0.45 : 0.6);
     scene.nameTags = new NameTags(hudRoot, coarse ? 5.5 : 7.5, coarse ? 14 : 24);
   }
@@ -126,7 +131,7 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
   scene.setAvatar(config.avatar ?? { word: 'you', sprite: defaultSprite('human'), heightM: 1.5 });
   if (!atlas) recordVisit(slug, engine.world.size);
   if (atlas) {
-    hud.toast('The Atlas: every thing there is, sorted into districts along the paths. Walk around, click things to make them react. L switches the look.', 'info', 9000);
+    hud.toast('Welcome to Everytown: every thing there is, real size, where you would find it. Shops downtown, the zoo and parks east, houses west, the airport and works north, the harbour south. Signposts and maps show the way; click anything to see what it does.', 'info', 11000);
   } else if (created || takeFreshFlag(slug)) {
     hud.toast(
       world.preset === 'gallery'
@@ -292,7 +297,12 @@ export async function startApp(canvas: HTMLCanvasElement, hudRoot: HTMLElement):
     else if (ev.type === 'effect') scene.effects.start(ev.key, ev.name, { entityId: ev.id, pos: ev.pos, dur: ev.dur, loop: ev.loop });
     else if (ev.type === 'effectStop') scene.effects.stop(ev.key);
     else if (ev.type === 'remove') scene.effects.stopEntity(ev.id);
-    else if (ev.type === 'poke') scene.react(ev.id);
+    // a click: the reaction the engine picked (its line was said with it); things running their own act move by it
+    else if (ev.type === 'poke') {
+      if (ev.clip) scene.react(ev.id, ev.clip);
+    }
+    // gestures and whole-body moves from scripts and acts: code-drawn figures act them out with a clip
+    else if (ev.type === 'anim') scene.gesture(ev.id, ev.name);
     else if (ev.type === 'sky') refreshViewLabels();
   });
   if (new URLSearchParams(location.search).get('dev') === '1') {

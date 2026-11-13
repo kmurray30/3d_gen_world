@@ -1,6 +1,15 @@
 import type { Entity, Vec3 } from '../types';
 import { renderHeight } from './sizing';
 import { structureTopAt } from '../structure/collide';
+import { getFigure } from '../figure/items';
+import { socketOffset } from '../figure/pose';
+import type { Figure } from '../figure/types';
+
+/** The code-drawn figure an entity shows as (null for buildings, forced sprites and words without one). */
+export function figureOfEntity(e: Entity): Figure | null {
+  if (e.structure || e.look === 'sprite') return null;
+  return getFigure(e.word);
+}
 
 export type EntityLookup = (id: string) => Entity | undefined;
 
@@ -8,7 +17,21 @@ export type EntityLookup = (id: string) => Entity | undefined;
  * Anchor offset of a child relative to its parent's feet point. On a structure, "top" is the surface under the
  * child's own offset (a cat lands on the roof slope, not at the chimney's height).
  */
-export function anchorOffset(parent: Entity, anchor: Entity['anchor'], childRel?: Vec3): Vec3 {
+export function anchorOffset(parent: Entity, anchor: Entity['anchor'], childRel?: Vec3, child?: Entity): Vec3 {
+  if (anchor && anchor.startsWith('@')) {
+    // a socket of a code-drawn parent: the slot of a toaster, the seat of a chair
+    const fig = figureOfEntity(parent);
+    const off = fig ? socketOffset(parent, fig, anchor.slice(1)) : null;
+    if (off) {
+      // a slot takes things in most of the way (bread sticks out of a toaster); hooks hang things below them
+      const kind = fig!.sockets!.find((s) => s.name === anchor.slice(1))!.kind;
+      const h = child ? renderHeight(child) : 0;
+      if (kind === 'slot') off[1] -= h * 0.6;
+      else if (kind === 'hook') off[1] -= h;
+      return off;
+    }
+    return [0, renderHeight(parent), 0];
+  }
   switch (anchor) {
     case 'top':
       if (parent.structure && childRel) {
@@ -34,7 +57,7 @@ export function worldPos(e: Entity, lookup: EntityLookup): Vec3 {
   for (let depth = 0; depth < 6 && cur.parent; depth++) {
     const parent = lookup(cur.parent);
     if (!parent) break;
-    const [ax, ay, az] = anchorOffset(parent, cur.anchor, cur.pos);
+    const [ax, ay, az] = anchorOffset(parent, cur.anchor, cur.pos, cur);
     x += parent.pos[0] + ax;
     y += parent.pos[1] + ay;
     z += parent.pos[2] + az;

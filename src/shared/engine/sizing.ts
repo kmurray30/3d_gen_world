@@ -2,7 +2,8 @@ import type { Entity, Kind, MassClass, SpriteRef } from '../types';
 import type { Structure } from '../structure/types';
 
 export const HEIGHT_MIN_M = 0.1;
-export const HEIGHT_MAX_M = 12;
+/** Code-drawn things are their real size (a jet, a tower); sprite words are clamped lower by the manifest. */
+export const HEIGHT_MAX_M = 120;
 export const HUGE_FROM_M = 12;
 
 export const DEFAULT_HEIGHT_M: Record<Kind, number> = { object: 0.5, human: 1.7, humanoid: 1.7, animal: 0.6, other: 1.0 };

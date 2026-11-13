@@ -13,9 +13,11 @@
  * about its centre. A `name` makes a part something clips can move (lid, wheel, door, top, head...); `parent`
  * makes it ride on another named part, and `pivot` is where it turns (a lid's hinge; default its centre).
  */
-import type { FigPart, Figure, Rig, Shape, Vec3 } from './types';
+import type { FigAct, FigPart, Figure, Mover, Rig, Shape, Socket, SocketKind, Vec3 } from './types';
 import { Parts, figure } from './kit';
-import { apply, solve, transpose } from './math';
+import { apply, euler, measure, mul, solve, transpose } from './math';
+import { normalizeAct, type ActDef } from './act';
+import { toEuler } from './pose';
 
 import { C, col } from './colors';
 export { C };
@@ -41,6 +43,23 @@ export interface PartOpts {
   /** Rest size multiplier of the solid (0 = hidden until a clip grows it). */
   scale?: number;
   only?: 'paper' | 'toon';
+  /** Cel model: 'sharp' for crisp edges and flat faces, 'soft' to melt into its neighbours (see FigPart.edge). */
+  edge?: 'sharp' | 'soft';
+  /** Fillet where it melts into its parent, times the default (0 = a clean seam). */
+  blend?: number;
+  /** A separate piece that can come off or move cleanly (see FigPart.piece). */
+  piece?: boolean;
+  /** Something can operate it: { kind: 'swing' | 'spin' | 'slide' | 'light', axis, amount, on }. Give it a
+   *  `pivot` at its hinge for swings. */
+  mover?: Mover;
+  /** arc: degrees of ring (default 180, an arch). */
+  arc?: number;
+  /** loft: how square its sections are (0 round .. 1 boxy). */
+  boxy?: number;
+  /** loft: keep only the bottom (hull) or top half of each section. */
+  cut?: 'top' | 'bottom';
+  /** label: card thickness in metres (default 0.02). */
+  depth?: number;
 }
 
 export type Size = Vec3 | number;
@@ -49,12 +68,16 @@ const sz = (s: Size): Vec3 => (typeof s === 'number' ? [s, s, s] : s);
 export interface ModelOpts {
   view?: 'front' | 'side';
   rig?: Rig;
+  /** Default edge style of every part (sharp for buildings, furniture, machines, boxes, books, electronics). */
+  edge?: 'sharp' | 'soft';
 }
 
 export class M {
   readonly parts = new Parts();
   private count = 0;
   private readonly abs = new Map<string, Vec3>();
+  private readonly sockets: Socket[] = [];
+  private actDef: FigAct | undefined;
 
   constructor(
     readonly key: string,
@@ -62,7 +85,7 @@ export class M {
   ) {}
 
   /** Any solid. Most authors use the shorthands below. */
-  part(shape: Shape, size: Size, at: Vec3, o: PartOpts = {}): this {
+  part(shape: Shape, size: Size, at: Vec3, o: PartOpts = {}, extra: Partial<FigPart> = {}): this {
     const name = o.name ?? `${shape}${this.count++}`;
     const pivot = o.pivot ?? at;
     let jointAt: Vec3 = pivot;
@@ -95,6 +118,14 @@ export class M {
       role: o.glow ? 'glow' : o.eye ? 'eye' : undefined,
       scale: o.scale,
       only: o.only,
+      ...(o.edge ? { edge: o.edge } : {}),
+      ...(o.blend !== undefined ? { blend: o.blend } : {}),
+      ...(o.piece ? { piece: true } : {}),
+      ...(o.mover ? { mover: o.mover } : {}),
+      ...(o.arc !== undefined ? { arc: o.arc } : {}),
+      ...(o.boxy !== undefined ? { boxy: o.boxy } : {}),
+      ...(o.cut ? { cut: o.cut } : {}),
+      ...extra,
     };
     this.parts.add(p);
     this.abs.set(name, at);
@@ -127,6 +158,34 @@ export class M {
   wedge(size: Size, at: Vec3, o?: PartOpts): this {
     return this.part('wedge', size, at, o);
   }
+  /** Prism with `sides` flat sides standing up (a hex nut, an octagonal stop sign lying flat, a pencil): size
+   *  [across, height, across]. Taper it with o.taper. */
+  prism(size: Size, at: Vec3, sides: number, o?: PartOpts): this {
+    return this.part('cyl', size, at, { ...o, segs: Math.max(3, Math.min(16, Math.round(sides))) });
+  }
+  /** Pyramid with `sides` sides (default 4) pointing up: size [base across, height, base across]. */
+  pyramid(size: Size, at: Vec3, sides = 4, o?: PartOpts): this {
+    return this.part('cyl', size, at, { ...o, taper: o?.taper ?? 0, segs: Math.max(3, Math.min(16, Math.round(sides))) });
+  }
+  /** The top half of an ellipsoid, flat side down: size [width, height, depth] (a cupola, a cap, a jelly). */
+  dome(size: Size, at: Vec3, o?: PartOpts): this {
+    return this.part('dome', size, at, o);
+  }
+  /** Part of a ring in the x-y plane, centred on +y: size [outer width, outer height, thickness]; o.arc degrees
+   *  (180 = an arch, 270 = a horseshoe), o.tube the thickness as a fraction of the radius. Turn it with rot. */
+  arc(size: Size, at: Vec3, o?: PartOpts): this {
+    return this.part('arc', size, at, { tube: 0.25, arc: 180, ...o });
+  }
+  /**
+   * A smooth body along z (its length) through cross-sections: a fuselage, a boat hull, a car body, a fish, a
+   * submarine, a bottle lying down. size [max width, max height, length]; profile: [t, width, height, centre y]
+   * from the back (t = 0) to the front (t = 1), as fractions of size (centre y -0.5..0.5). o.boxy squares the
+   * sections, o.cut keeps only the bottom (a hull) or top half.
+   *   .loft([3.6, 3.8, 38], [0, 2.4, 0], [[0, 0.1, 0.25, 0.2], [0.15, 0.8, 0.9, 0.05], [0.5, 1, 1, 0], [0.92, 0.85, 0.85, 0], [1, 0.2, 0.3, -0.05]])
+   */
+  loft(size: Size, at: Vec3, profile: Array<[number, number, number, number?]>, o?: PartOpts): this {
+    return this.part('loft', size, at, o, { profile });
+  }
 
   /** A rounded rod from a to b (legs, handles, branches, poles). */
   rod(a: Vec3, b: Vec3, thick: number, color?: string, o?: PartOpts): this {
@@ -148,24 +207,32 @@ export class M {
     return this.part(shape, [thick, L, thick], mid, { ...o, color: color ?? o.color, rot: [rx, 0, rz] });
   }
 
-  /** A card with text printed on its front: size [width, height] (thickness 2 cm). */
+  /** A card with text printed on its front: size [width, height] (thickness o.depth, default 2 cm). */
   label(text: string, size: [number, number], at: Vec3, o: PartOpts = {}): this {
     const name = o.name ?? `label${this.count++}`;
-    this.part('box', [size[0], size[1], 0.02], at, { round: 0.1, ...o, name });
+    this.part('box', [size[0], size[1], o.depth ?? 0.02], at, { round: 0.1, ...o, name });
     const p = this.parts.list[this.parts.list.length - 1];
     p.role = 'label';
     p.text = text;
     return this;
   }
 
-  /** A five-pointed star standing up, facing +z: size = point-to-point diameter. */
+  /** A five-pointed star standing up, facing +z: size = point-to-point diameter. o.rot turns the whole star
+   *  (rot [90, 0, 0] lays it flat, face up). */
   star(size: number, at: Vec3, o: PartOpts = {}): this {
     const th = o.round ?? size * 0.12;
-    this.part('cyl', [size * 0.42, th, size * 0.42], at, { ...o, rot: [90, 0, 0], segs: 5, name: o.name });
+    const R = euler(o.rot);
+    const place = (local: Vec3, rot: Vec3): [Vec3, Vec3] => {
+      const p = apply(R, local);
+      return [[at[0] + p[0], at[1] + p[1], at[2] + p[2]], o.rot ? toEuler(mul(R, euler(rot))) : rot];
+    };
+    const [c, cr] = place([0, 0, 0], [90, 0, 0]);
+    this.part('cyl', [size * 0.42, th, size * 0.42], c, { ...o, rot: cr, segs: 5, name: o.name });
     for (let i = 0; i < 5; i++) {
       const a = (i / 5) * Math.PI * 2;
       const r = size * 0.3;
-      this.part('cyl', [size * 0.24, size * 0.3, th], [at[0] + Math.sin(a) * r, at[1] + Math.cos(a) * r, at[2]], { ...o, name: undefined, taper: 0, segs: 3, rot: [0, 0, (-a * 180) / Math.PI] });
+      const [pp, pr] = place([Math.sin(a) * r, Math.cos(a) * r, 0], [0, 0, (-a * 180) / Math.PI]);
+      this.part('cyl', [size * 0.24, size * 0.3, th], pp, { ...o, name: undefined, taper: 0, segs: 3, rot: pr });
     }
     return this;
   }
@@ -190,10 +257,39 @@ export class M {
     return this;
   }
 
+  /**
+   * Where other things go: name it ('slot', 'seat', 'top', 'shelf2'), give its spot in figure space and its kind
+   * (slot, inside, top, seat, hand, hook, mouth). o.part makes it ride a moving part (a drawer's inside, a
+   * toaster's lever carriage); o.size is about the biggest thing that fits; o.yaw turns what sits there.
+   */
+  socket(name: string, at: Vec3, kind: SocketKind, o: { part?: string; size?: number; yaw?: number } = {}): this {
+    let local = at;
+    if (o.part) {
+      const frames = solve({ key: this.key, view: 'front', rig: 'prop', parts: this.parts.list, heightM: 1, halfW: 1, halfD: 1, group: 'things' });
+      const pf = frames.get(o.part);
+      if (!pf) throw new Error(`${this.key}: socket ${name} rides on "${o.part}", which is not defined yet`);
+      local = apply(transpose(pf.R), [at[0] - pf.T[0], at[1] - pf.T[1], at[2] - pf.T[2]]);
+    }
+    this.sockets.push({ name, kind, at: local, ...(o.part ? { part: o.part } : {}), ...(o.size !== undefined ? { size: o.size } : {}), ...(o.yaw !== undefined ? { yaw: o.yaw } : {}) });
+    return this;
+  }
+
+  /** What it does when clicked (see act.ts): { setup?, click: steps, or a list of step lists that alternate }. */
+  act(def: ActDef): this {
+    this.actDef = normalizeAct(def);
+    return this;
+  }
+
   done(): Figure {
     if (!this.parts.list.length) throw new Error(`${this.key}: no parts`);
     const rig = this.opts.rig ?? 'prop';
-    return figure(this.key, rig === 'prop' ? 'things' : 'animals', rig, this.opts.view ?? 'front', this.parts);
+    const f = figure(this.key, rig === 'prop' ? 'things' : 'animals', rig, this.opts.view ?? 'front', this.parts);
+    return {
+      ...f,
+      ...(this.opts.edge ? { edge: this.opts.edge } : {}),
+      ...(this.sockets.length ? { sockets: this.sockets } : {}),
+      ...(this.actDef ? { act: this.actDef } : {}),
+    };
   }
 }
 
@@ -212,3 +308,32 @@ export function around(n: number, r: number, start = 0): Array<[number, number]>
 
 export { col };
 
+
+/* ----- the same extras for figures built by kits (who, beast, bird, fish...) ----- */
+
+/** Add sockets to a finished figure; `at` in figure space (with `part`, it rides that part). */
+export function withSockets(fig: Figure, list: Array<{ name: string; at: Vec3; kind: SocketKind; part?: string; size?: number; yaw?: number }>): Figure {
+  const frames = solve(fig);
+  const sockets = list.map((s) => {
+    const pf = s.part ? frames.get(s.part) : undefined;
+    if (s.part && !pf) throw new Error(`${fig.key}: socket ${s.name} rides on "${s.part}", which it does not have`);
+    const at = pf ? apply(transpose(pf.R), [s.at[0] - pf.T[0], s.at[1] - pf.T[1], s.at[2] - pf.T[2]]) : s.at;
+    return { ...s, at };
+  });
+  return { ...fig, sockets: [...(fig.sockets ?? []), ...sockets] };
+}
+
+/** Make named parts operable, pieces, or sharp (by name; a name ending in * matches every part starting so). */
+export function withParts(fig: Figure, names: string[], o: { mover?: Mover; piece?: boolean; edge?: 'sharp' | 'soft'; blend?: number }): Figure {
+  const hit = (n: string) => names.some((w) => (w.endsWith('*') ? n.startsWith(w.slice(0, -1)) : n === w));
+  const parts = fig.parts.map((p) => (hit(p.name) ? { ...p, ...o } : p));
+  if (!parts.some((p, i) => p !== fig.parts[i])) throw new Error(`${fig.key}: none of ${names.join(', ')} are parts of it`);
+  return measure({ ...fig, parts });
+}
+
+/** Set a figure's default edge style (sharp for hard man-made things). */
+export function withEdge(fig: Figure, edge: 'sharp' | 'soft'): Figure {
+  return { ...fig, edge };
+}
+
+export { A, withAct } from './act';

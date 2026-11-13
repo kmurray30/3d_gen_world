@@ -1,3 +1,5 @@
+import { figureOfEntity } from './transform';
+import { restFacing } from '../figure/pose';
 import type { Vec3 } from '../types';
 import { PLAYER_RADIUS } from '../types';
 import { blocksPlayer, footprintRadius } from './sizing';
@@ -27,6 +29,41 @@ export function resolvePlayerCollisions(world: WorldModel, pos: Vec3): Bump[] {
     if (e.hidden || e.parent || e.structure) continue;
     // things on the meadow only bump a player on the meadow; a player up on a roof walks over them
     if (Math.abs(e.pos[1] - pos[1]) > 0.5) continue;
+    // a code-drawn thing has its real outline: a rectangle as long and wide as it is, turned the way it faces
+    const fig = figureOfEntity(e);
+    if (fig) {
+      const hx = fig.halfW * e.scale, hz = fig.halfD * e.scale;
+      if (Math.hypot(pos[0] - e.pos[0], pos[2] - e.pos[2]) > Math.hypot(hx, hz) + PLAYER_RADIUS) continue;
+      const a = (restFacing(e, fig) * Math.PI) / 180;
+      const c = Math.cos(a), s = Math.sin(a);
+      const wx = pos[0] - e.pos[0], wz = pos[2] - e.pos[2];
+      const lx = wx * c - wz * s, lz = wx * s + wz * c;
+      const cx = Math.max(-hx, Math.min(hx, lx)), cz = Math.max(-hz, Math.min(hz, lz));
+      let nx = lx - cx, nz = lz - cz;
+      let d = Math.hypot(nx, nz);
+      let depth: number;
+      if (d < 1e-6) {
+        // inside: out along the nearer side
+        const ox = hx - Math.abs(lx), oz = hz - Math.abs(lz);
+        if (ox < oz) [nx, nz, depth] = [Math.sign(lx) || 1, 0, ox + PLAYER_RADIUS];
+        else [nx, nz, depth] = [0, Math.sign(lz) || 1, oz + PLAYER_RADIUS];
+        d = 0;
+      } else {
+        if (d >= PLAYER_RADIUS) continue;
+        nx /= d;
+        nz /= d;
+        depth = PLAYER_RADIUS - d;
+      }
+      // back to world axes
+      const wnx = nx * c + nz * s, wnz = -nx * s + nz * c;
+      const blocked = blocksPlayer(e);
+      bumps.push({ id: e.id, nx: wnx, nz: wnz, depth, blocked });
+      if (blocked) {
+        pos[0] += wnx * depth;
+        pos[2] += wnz * depth;
+      }
+      continue;
+    }
     const r = footprintRadius(e) + PLAYER_RADIUS;
     const dx = pos[0] - e.pos[0];
     const dz = pos[2] - e.pos[2];

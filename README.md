@@ -50,15 +50,29 @@ and walks and runs with real leg and arm motion in paper and 3D.
 paper cutout, the origami, the 3D model and the sculpted cel model. Click or tap one to make it react. The dragons hover
 over their row, and three more circle high overhead, one in each code-drawn style.
 
-**The Atlas.** The start screen (or Worlds) opens the Atlas at `/atlas`: every word in the vocabulary,
-thousands of things, laid out as a place to walk through. Districts (Town Square, Food Hall, Garage, Wild
-Park, Seaside, Sky & Space, Fantasy Grove and twenty more) sit in rows along footpaths north of a plaza with
-a fountain. Each district has a signboard, and inside it every group (fruit, power tools, dog breeds) has its
-own sign: small things on display tables, bigger ones standing in rows, fish swimming over a pond, planets
-and stars floating overhead. Name tags float over the nearest things. Tiny things are shown bigger and huge
-ones smaller so everything reads at walking distance. The Atlas opens in the cel look, is shared and
-read-only (commands work but are not saved, and Reset reloads it), and only draws what is within about 55 m
-(38 m on phones); beyond about 16 m models drop their outlines, faces and tiny details.
+**Everytown.** The start screen (or Worlds) opens Everytown at `/town` (`/atlas` redirects there): every
+word in the vocabulary, thousands of things, each where you would find it in the real world. Every word is
+tagged with the places it could be found (`src/shared/city/tags.json`, 73 kinds of place from
+`src/shared/city/places.ts`); the town then gets as many of each place as its things need (a second grocery
+store when one is full) and fills them: medicine on pharmacy shelves, tanks and jets at the military base,
+fruit on grocery tables, lions in zoo pens, boats moored at piers in the sea, the toaster and fridge in a
+kitchen. Shops and halls have walls, shelves, tables, glass cases, tanks and a counter with staff; lots
+(zoo, farm, airport, base) are fenced with a named gate; every house has two or three rooms and a backyard.
+Districts (downtown, civic, homes, parks, industry, transport, waterfront, farmland, the wilds, fantasy) sit
+in bands round a plaza with a fountain. Signposts at the junctions point the way with distances, and
+standing maps (at the plaza and in every district) show the whole town turned the way you face, a red
+"you are here" dot and a directory of every place. People walk the streets. Things are at true scale side by
+side (a person fits in a bus, a plane, a ship); only giants over 80 m are shown smaller (or as models in
+the observatory and the miniature park) and specks under 3 cm bigger. Name tags float over the nearest
+things. Everytown opens in the cel look, is shared and read-only (commands work but are not saved, and
+Reset reloads it), and only draws what is within about 64 m (42 m on phones).
+
+**Clicking things.** Every model has one act out of the box, run when you click it: the toaster starts
+with two slices of bread in its slots, a click pushes the lever down and pops up toast, the next one burnt
+toast; a yam's cut slice comes off and goes back; a biplane's propeller starts and stops; a fridge door
+swings open; a person does something that suits them and says a line that matches it. Acts are written in
+the same step language the model uses for commands, so a player's "I put a fork in the toaster" uses the
+same slots, hinges and pieces (see Acts below).
 
 **Village.** Worlds -> "+ New village" (or `?preset=village`) generates a new village from a random
 seed: rolling hills, a river with a bridge where the road crosses it, a lake with a lighthouse on its
@@ -123,18 +137,34 @@ close up and from the side), `scripts/shots-anims.mjs` (reaction clips) and
 
 ## The catalog: a figure for every word
 
-`src/shared/figure/catalog/` holds a code-drawn figure for (nearly) every vocabulary word, filed under an
-Atlas district and a group. Each entry is a few lines in a small builder language
-(`src/shared/figure/dsl.ts`): balls, rounded boxes, cylinders and cones, capsules, rings, prisms, rods
-between two points, text cards, stars and hearts, mirrored pairs, and named moving parts (`wheel`, `rotor`,
-`fan`, `door`, `lid`). People come from `who()` with hats, face items, clothes, wings and ~70 held things
-(`src/shared/figure/accessories.ts`); animals from kits for four-legged beasts (with horns, antlers, trunks,
-manes, spots, stripes, shells), birds, fish, bugs, snakes and dragons. The guide for writing entries is
+`src/shared/figure/catalog/` holds a code-drawn figure for (nearly) every vocabulary word. Each entry is a
+few lines in a small builder language (`src/shared/figure/dsl.ts`): balls, rounded boxes, cylinders and
+cones, capsules, rings, prisms and pyramids with any number of sides, domes, arcs, lofts (a shape swept
+through superellipse sections, for hulls, fuselages, bottles and car bodies), rods between two points, text
+cards, stars and hearts, and mirrored pairs. Every part can be soft (melted into the skin with a fillet) or
+sharp (its own crisp-edged piece: blades, bricks, machines), and entries are drawn at true size next to a
+person. People come from `who()` with stances (holding, pointing, hands on hips, arms crossed, saluting),
+hats, face items, clothes, wings and ~70 held things (`src/shared/figure/accessories.ts`); animals from kits
+for four-legged beasts, birds, fish, bugs, snakes and dragons. The guide for writing entries is
 `docs/catalog-authoring.md`.
 
+**Parts that move, pieces, sockets.** A part can be a `mover` (a door or lid that swings, a wheel or
+propeller that spins, a drawer or lever that slides, a lamp or screen that lights), a `piece` that comes off
+as a thing of its own (a yam's slice, a hat, a ship's lifeboat) and goes back, and a figure can have
+`sockets`: named places where other things go (a toaster's two slots, a fridge's shelf, a person's hands, a
+saddle, a hook). The engine knows them all: `operate` turns movers on and off by name or kind ("start the
+engine"), `pose` turns or shifts any part, `attach ... where: "slot"` puts a thing in a socket, and the
+model is told each nearby thing's moving parts and sockets, so commands can use them.
+
+**Acts.** Each entry's `act` is a list of clicks, each a list of steps in the engine's own step language
+(`say`, `anim`, `pose`, `operate`, `spawn`, `attach`, `detach`, `set`, `morph`, `effect`, `wait`, `par`...),
+with `self`, `self.<socket>` (whatever sits in it) and refs. An optional `setup` runs once when the thing is
+placed (bread into the toaster), so worlds start lived in. Acts are checked headlessly:
+
 ```
-npx tsx scripts/check-catalog.ts objects-01                       # every assigned word builds and sculpts
-npx tsx scripts/preview-catalog.ts objects-01 0 48 /tmp/sheet.png    # numbered contact sheet, no browser
+npx tsx scripts/check-catalog.ts objects-01                       # every word builds, sculpts, and every click of its act does something
+npx tsx scripts/preview-catalog.ts objects-01 0 48 /tmp/sheet.png    # numbered contact sheet with a person for scale
+npx tsx scripts/preview-act.ts objects-10 toaster /tmp/toaster.png   # a strip of the act, click by click
 ```
 
 The preview renders sculpted models with a small software rasterizer to PNG. Entries are code, so the

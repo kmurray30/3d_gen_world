@@ -60,6 +60,28 @@ const breathe = (t: number): Record<string, Vec3> => ({
 const BIPED: Clip[] = [
   { name: 'idle', dur: 1, loop: true, fn: (t) => ({ j: breathe(t) }) },
   {
+    name: 'nod', dur: 1.2, expr: ['happy', 'neutral'],
+    fn: (t) => {
+      const e = env(t, 1.2, 0.15);
+      return { j: { ...breathe(t), head: [16 * e * pos(S(t * PI2 * 1.6)), 0, 0] } };
+    },
+  },
+  {
+    name: 'shake_head', dur: 1.3, expr: ['sad', 'angry', 'neutral'],
+    fn: (t) => {
+      const e = env(t, 1.3, 0.15);
+      return { j: { ...breathe(t), head: [0, 24 * e * S(t * PI2 * 2), 0] } };
+    },
+  },
+  {
+    name: 'cry', dur: 2.4, expr: ['sad'],
+    fn: (t) => {
+      const e = env(t, 2.4, 0.3);
+      const sob = S(t * PI2 * 2.5);
+      return { j: { armL: [-55 * e, 0, 18 * e], armR: [-55 * e, 0, -18 * e], foreL: [-95 * e, 0, -25 * e], foreR: [-95 * e, 0, 25 * e], head: [14 * e + 4 * sob * e, 0, 0], torso: [8 * e + 2 * sob * e, 0, 0] } };
+    },
+  },
+  {
     name: 'walk', dur: 1 / 1.7, loop: true,
     fn: (t, k) => {
       const f = t * PI2 * 1.7;
@@ -199,6 +221,35 @@ const BIPED: Clip[] = [
     fn: (t) => {
       const e = env(t, 2.2, 0.3);
       return { j: { ...breathe(t), armL: [-40 * e, 0, 3], armR: [-40 * e, 0, -3], foreL: [-80 * e, 0, -55 * e], foreR: [-80 * e, 0, 55 * e], head: [0, 0, 14 * e + 4 * S(t * 3) * e], torso: [0, 0, 5 * S(t * 2.5) * e] } };
+    },
+  },
+  {
+    // the right fist out in front, thumb up, with a little nod
+    name: 'thumbs_up', dur: 1.8, expr: ['happy', 'wink'],
+    fn: (t) => {
+      const e = env(t, 1.8, 0.25);
+      return { j: { ...breathe(t), armR: [-52 * e, 0, -8 * e], foreR: [-84 * e, 0, 14 * e], head: [-6 * e + 4 * S(t * 6) * e, 0, 5 * e], torso: [0, -6 * e, 0] } };
+    },
+  },
+  {
+    name: 'hands_on_hips', dur: 2.0, expr: ['determined', 'angry', 'happy'],
+    fn: (t) => {
+      const e = env(t, 2.0, 0.3);
+      return { j: { ...breathe(t), armR: [-6 * e, 0, -32 * e], foreR: [-10 * e, 0, 110 * e], armL: [-6 * e, 0, 32 * e], foreL: [-10 * e, 0, -110 * e], torso: [-5 * e, 0, 0], head: [-6 * e, 0, 6 * e * S(t * 2)] } };
+    },
+  },
+  {
+    name: 'salute', dur: 1.8, expr: ['determined'],
+    fn: (t) => {
+      const e = env(t, 1.8, 0.2);
+      return { j: { armR: [-12 * e, 0, -72 * e], foreR: [-30 * e, 0, -118 * e], torso: [-3 * e, 0, 0], head: [-4 * e, 0, 0] } };
+    },
+  },
+  {
+    name: 'wink', dur: 1.2, expr: ['wink'],
+    fn: (t) => {
+      const e = env(t, 1.2, 0.2);
+      return { j: { ...breathe(t), head: [-4 * e, 8 * e, 12 * e], torso: [0, 0, 3 * e] } };
     },
   },
   {
@@ -608,6 +659,10 @@ export class Animator {
   private speedNow = 0;
   /** Resting expression when nothing else is going on. */
   mood: Expr = 'neutral';
+  /** Joints an act or a script is holding this frame (a part pose): a gesture leaves their stance alone. */
+  held: readonly string[] | null = null;
+  /** A person's arm stance (a held tray, crossed arms) as turns from arms hanging down. */
+  private readonly stance: Record<string, Vec3> = {};
 
   constructor(
     readonly fig: Figure,
@@ -615,6 +670,16 @@ export class Animator {
   ) {
     this.baseT = rng() * 10;
     this.blinkIn = 1 + rng() * 3;
+    if (fig.rig === 'biped') {
+      // the person kit hangs arms at [0, 0, +-6]; whatever an author turned beyond that is the stance
+      const hang: Record<string, Vec3> = { armL: [0, 0, 6], armR: [0, 0, -6], foreL: [0, 0, 0], foreR: [0, 0, 0] };
+      for (const p of fig.parts) {
+        const h = hang[p.name];
+        if (!h || !p.rot) continue;
+        const d: Vec3 = [p.rot[0] - h[0], p.rot[1] - h[1], p.rot[2] - h[2]];
+        if (Math.abs(d[0]) + Math.abs(d[1]) + Math.abs(d[2]) > 10) this.stance[p.name] = d;
+      }
+    }
   }
 
   get reacting(): string | null {
@@ -682,6 +747,23 @@ export class Animator {
       const r = samplePose(this.fig, this.react.name, this.react.t);
       const w = smooth(0, 0.15, this.react.t) * (1 - smooth(this.react.dur - 0.2, this.react.dur, this.react.t));
       p = blend(p, r, this.fig.rig === 'prop' ? 1 : w);
+      // gestures are made for hanging arms: an arm the gesture moves first lets go of its stance (a waiter waves
+      // with the tray hand lowered, not twisted through it), unless an act is holding that arm itself
+      if (w > 0) {
+        for (const s of ['L', 'R']) {
+          const moves = [`arm${s}`, `fore${s}`, `hand${s}`].some((n) => {
+            const v = r.j[n];
+            return !!v && Math.abs(v[0]) + Math.abs(v[1]) + Math.abs(v[2]) > 3;
+          });
+          if (!moves) continue;
+          for (const n of [`arm${s}`, `fore${s}`]) {
+            const st = this.stance[n];
+            if (!st || this.held?.includes(n)) continue;
+            const cur = p.j[n] ?? [0, 0, 0];
+            p = { ...p, j: { ...p.j, [n]: [cur[0] - st[0] * w, cur[1] - st[1] * w, cur[2] - st[2] * w] } };
+          }
+        }
+      }
     }
     return p;
   }
@@ -693,4 +775,82 @@ export class Animator {
     if (this.blinkLeft > 0 && e !== 'sleepy' && e !== 'laugh' && e !== 'wink' && e !== 'love') return 'blink';
     return e;
   }
+}
+
+
+/**
+ * Words a figure says when it plays a reaction, so the line fits what it does (a wave says hello, a shrug says it
+ * doesn't know). Animals make sounds or just a mark.
+ */
+export const REACTION_LINES: Record<string, string[]> = {
+  wave: ['Hi there!', 'Hello!', 'Hey, you!'],
+  cheer: ['Woo-hoo!', 'Yay!', 'Hooray!'],
+  tada: ['Ta-da!', 'Here I am!'],
+  point: ['Look over there!', 'See that?', 'That way!'],
+  shrug: ['Dunno.', 'Who knows?', 'No idea.'],
+  jump: ['Whee!', 'Boing!', 'Up I go!'],
+  dance: ['Let\'s dance!', '♪ La la la ♪', 'Groovy!'],
+  think: ['Hmm...', 'Let me think.', 'Interesting...'],
+  scared: ['Eek!', 'Yikes!', 'Don\'t scare me!'],
+  clap: ['Bravo!', 'Well done!', 'Encore!'],
+  bow: ['At your service.', 'Thank you, thank you.', 'Good day.'],
+  facepalm: ['Oh no...', 'Not again.', 'Why me?'],
+  stomp: ['Hmph!', 'I\'m cross!', 'Grr!'],
+  laugh: ['Haha!', 'Hehe, that tickles!', 'Too funny!'],
+  love: ['Aww!', 'I love it!', 'So sweet!'],
+  yawn: ['*yawn*', 'So sleepy...', 'Is it bedtime?'],
+  nod: ['Yes, yes.', 'Mm-hm.', 'Indeed.'],
+  shake_head: ['No, no.', 'Nope.', 'Not today.'],
+  cry: ['Waah!', '*sniff*', 'Boo hoo...'],
+  thumbs_up: ['Nice!', 'Looking good!', 'Great job!'],
+  hands_on_hips: ['Well, well.', 'Now then!', 'Hmm, what\'s all this?'],
+  salute: ['Yes, sir!', 'Reporting for duty!', 'At ease.'],
+  wink: ['Psst!', 'Our little secret.', 'Hey there.'],
+  // animals
+  wag: ['♥', '!'],
+  hop: ['!', '!?'],
+  look: ['?', '...?'],
+  rear: ['!!'],
+  roar: ['ROAR!'],
+  hiss: ['Hsss!'],
+  crow: ['!'],
+};
+
+const DOG_LIKE = /dog|puppy|wolf|fox|coyote|hound|terrier|retriever|poodle|collie|spaniel|husky|beagle|pug|corgi|labrador|dachshund|chihuahua|shepherd|bulldog|dalmatian/;
+const CAT_LIKE = /cat|kitten|lion|tiger|leopard|cheetah|panther|jaguar|lynx|cougar/;
+
+/** A reaction for a click, and the line that goes with it (none for things that do not talk). */
+export function reactionFor(fig: Figure, rng: () => number = Math.random): { clip: string; line?: string } {
+  const list = reactionsFor(fig);
+  const clip = list[Math.floor(rng() * list.length)] ?? 'jiggle';
+  let lines: string[] | undefined = REACTION_LINES[clip];
+  if (fig.rig === 'quad') {
+    // a few animals have voices of their own
+    if (DOG_LIKE.test(fig.key)) lines = clip === 'wag' ? ['Woof! ♥', 'Arf!'] : ['Woof!', 'Ruff!'];
+    else if (CAT_LIKE.test(fig.key)) lines = /lion|tiger|leopard|cheetah|panther|jaguar/.test(fig.key) ? ['Roar!', 'Grr...'] : ['Meow!', 'Purr...'];
+    else if (/cow|bull|calf|ox|yak/.test(fig.key)) lines = ['Moo!'];
+    else if (/sheep|lamb|goat/.test(fig.key)) lines = ['Baa!'];
+    else if (/pig|hog|boar/.test(fig.key)) lines = ['Oink!'];
+    else if (/horse|pony|donkey|zebra|mule/.test(fig.key)) lines = ['Neigh!'];
+  } else if (fig.rig === 'bird') {
+    lines = /rooster|chicken|hen/.test(fig.key) ? ['Cock-a-doodle-doo!', 'Cluck!'] : /duck|goose/.test(fig.key) ? ['Quack!', 'Honk!'] : /owl/.test(fig.key) ? ['Hoo hoo!'] : /crow|raven/.test(fig.key) ? ['Caw!'] : ['Tweet!', 'Chirp!'];
+  } else if (fig.rig === 'prop' || fig.rig === 'fish' || fig.rig === 'bug') {
+    lines = undefined;
+  }
+  return { clip, line: lines ? lines[Math.floor(rng() * lines.length)] : undefined };
+}
+
+/** The clip a figure plays for an engine gesture or whole-body move, if it has one. */
+export function clipForGesture(fig: Figure, name: string): string | null {
+  const MAP: Record<string, string> = {
+    cover_eyes: 'facepalm', arms_up: 'cheer', gasp: 'scared', look_around: 'look',
+    // the figure kits without these clips get the nearest they have
+    ...(fig.rig === 'biped' ? {} : { thumbs_up: 'tada', hands_on_hips: 'stomp', wink: 'love', salute: 'nod' }),
+    hop: fig.rig === 'biped' ? 'jump' : 'hop',
+  };
+  const want = MAP[name] ?? name;
+  const have = new Set(clipNames(fig.rig));
+  if (have.has(want)) return want;
+  if (name === 'look_around' && have.has('think')) return 'think';
+  return null;
 }

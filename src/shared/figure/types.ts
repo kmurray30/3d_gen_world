@@ -7,12 +7,59 @@
  * Figure space: metres, feet on y = 0, +y up, +z is the figure's front (it faces you at yaw 0), +x is the
  * figure's left (your right when it faces you). Rotations are Euler degrees in XYZ order, like Three.js.
  */
+import type { Step } from '../schema';
+
 export type Vec3 = [number, number, number];
 
-/** ball: ellipsoid; capsule: rounded rod along y; box: (rounded) box; cyl: cylinder, tapered by `taper` (0 = cone);
- *  torus: ring in the x-y plane (a wheel seen from the front); wedge: triangular prism, triangle in x-y, ridge
- *  along z (a gable roof). */
-export type Shape = 'ball' | 'capsule' | 'box' | 'cyl' | 'torus' | 'wedge';
+/** ball: ellipsoid; capsule: rounded rod along y; box: (rounded) box; cyl: cylinder, tapered by `taper` (0 = cone),
+ *  with `segs` sides a prism or pyramid; torus: ring in the x-y plane (a wheel seen from the front); wedge:
+ *  triangular prism, triangle in x-y, ridge along z (a gable roof); dome: the top half of an ellipsoid, flat side
+ *  down (a cupola, a cap, a jelly); arc: part of a torus, centred on +y (an arch, a horseshoe, a handle); loft: a
+ *  smooth body along z through cross-sections (a fuselage, a boat hull, a car body, a fish, a bottle on its side). */
+export type Shape = 'ball' | 'capsule' | 'box' | 'cyl' | 'torus' | 'wedge' | 'dome' | 'arc' | 'loft';
+
+/**
+ * A part something can operate (`operate` in a script): swing turns it about its joint by `amount` degrees (doors,
+ * lids, levers, flaps; default 100), spin keeps turning it at `amount` degrees a second (propellers, fans, wheels,
+ * turntables; default 720), slide moves it `amount` metres (drawers, plungers, a toaster's lever; default 0.3),
+ * light makes it glow (lamps, screens, headlights). `axis` is in the part's own joint frame; a negative amount
+ * goes the other way. `on` starts it open / spinning / out / lit.
+ */
+export interface Mover {
+  kind: 'swing' | 'spin' | 'slide' | 'light';
+  axis?: 'x' | 'y' | 'z';
+  amount?: number;
+  on?: boolean;
+}
+
+/**
+ * Where other things go on or in a figure: slot (slides down into it, sticking out: a toaster, a piggy bank, a
+ * card reader), inside (hidden in it: a fridge, an oven, a box, a pocket), top (set on it: a table top, a shelf, a
+ * plate, a counter), seat (someone sits: a chair, a saddle, a car seat), hand (held: a person's hands, a claw),
+ * hook (hangs from it), mouth (in its mouth). `at` is the spot in figure space at rest; with `part` it rides
+ * along when that part moves. `size` is about the largest thing that fits, in metres. `yaw` turns what sits there.
+ */
+export type SocketKind = 'slot' | 'inside' | 'top' | 'seat' | 'hand' | 'hook' | 'mouth';
+export interface Socket {
+  name: string;
+  kind: SocketKind;
+  /** In the frame of `part`'s joint when it has one, else figure space (the builder converts). */
+  at: Vec3;
+  part?: string;
+  size?: number;
+  yaw?: number;
+}
+
+/**
+ * What the thing does when clicked, written in the same step language as every scripted scene (and as anything
+ * the player asks for): `self` is the thing itself, refs name things the act spawns, and `self.<socket>` is
+ * whatever sits in that socket. `setup` runs once when the thing is placed in a demo world (bread put in the
+ * toaster). Each click runs the next entry of `click`, round and round.
+ */
+export interface FigAct {
+  setup?: Step[];
+  click: Step[][];
+}
 
 export interface FigPart {
   name: string;
@@ -61,6 +108,25 @@ export interface FigPart {
   only?: 'paper' | 'toon';
   /** No ink outline / no toon outline. */
   noInk?: boolean;
+  /** arc: how much of the ring there is, in degrees, centred on +y (180 = an arch, 270 = a horseshoe). */
+  arc?: number;
+  /** loft: cross-sections from the back (t = 0, at -z) to the front (t = 1): [t, width, height, centre y], the
+   *  last three as fractions of the size (centre y from -0.5 to 0.5, default 0). At least two sections. */
+  profile?: Array<[number, number, number, number?]>;
+  /** loft: how square the cross-sections are, 0 (round) to 1 (a rounded box). */
+  boxy?: number;
+  /** loft: keep only the bottom half of every section (a boat hull) or the top half (a car roof, a shell). */
+  cut?: 'top' | 'bottom';
+  /** The cel model: 'sharp' keeps crisp edges and flat faces (a book, a crate, a phone, a building, a blade);
+   *  'soft' melts it into its neighbours with rounded seams. Default: the figure's `edge`, else soft. */
+  edge?: 'sharp' | 'soft';
+  /** Fillet where this part melts into its parent, times the default (0 = a clean seam, 2 = extra smooth). */
+  blend?: number;
+  /** A separate piece: never melted into the body, so it can come off or move (a slice cut from a yam, a cork,
+   *  a removable lid, a sword in a stone). `detach` and `pose` move it cleanly. */
+  piece?: boolean;
+  /** Something can operate it: see Mover. Movers are separate pieces too. */
+  mover?: Mover;
 }
 
 export type Rig = 'biped' | 'quad' | 'bird' | 'dragon' | 'fish' | 'bug' | 'snake' | 'prop';
@@ -96,4 +162,8 @@ export interface Figure {
   group: 'people' | 'animals' | 'fantasy' | 'nature' | 'village' | 'things';
   /** Paper: round things (trees, rocks, barrels) stand as two crossed cutouts so they never go edge-on. */
   paperCross?: boolean;
+  /** Default edge style of its parts in the cel model (see FigPart.edge). */
+  edge?: 'sharp' | 'soft';
+  sockets?: Socket[];
+  act?: FigAct;
 }

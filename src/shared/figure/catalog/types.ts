@@ -44,6 +44,12 @@ export interface CatalogEntry {
   g: string;
   /** Builds the figure (called lazily, once). */
   f: () => Figure;
+  /** A prop that only exists for acts (a slice of bread for the toaster, burnt toast): not a vocabulary word,
+   *  never placed in the city on its own. */
+  extra?: boolean;
 }
 
 export const e = (key: string, d: District, g: string, f: () => Figure): CatalogEntry => ({ key, d, g, f });
+
+/** An act-only prop (see CatalogEntry.extra): only when no vocabulary word fits. */
+export const x = (key: string, f: () => Figure): CatalogEntry => ({ key, d: 'ideas', g: 'act props', f, extra: true });

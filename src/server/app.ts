@@ -1,3 +1,4 @@
+import '../shared/figure/catalog/index';
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
 import { checkPasscode, isAuthed, issueCookie, requireAuth, type AuthConfig } from './auth';
@@ -6,7 +7,9 @@ import type { LlmProvider } from './llm/provider';
 import { RateLimiter, clientIp } from './ratelimit';
 import { commandRoutes } from './routes/command';
 import { worldsRoutes } from './routes/worlds';
-import { atlasWorld, type AtlasWord } from '../shared/engine/atlas';
+import { townWorld } from '../shared/city/town';
+import { extraWords, type TownWord, type Tag } from '../shared/city/items';
+import TOWN_TAGS from '../shared/city/tags.json';
 import { compress } from 'hono/compress';
 import { mountStatic } from './static';
 import { HeuristicClassifier, type StructureClassifier } from './llm/classify';
@@ -26,6 +29,8 @@ export interface AppDeps {
   classifier?: StructureClassifier;
   /** Vocabulary word drawn as the player's own cutout in third person. */
   avatarWord?: string;
+  /** Build the town right after start (the real server), not when first asked for (tests). */
+  prebuildTown?: boolean;
 }
 
 export function createApp(deps: AppDeps): Hono {
@@ -63,29 +68,38 @@ export function createApp(deps: AppDeps): Hono {
 
   app.use('/api/worlds/*', requireAuth(deps.auth));
   app.use('/api/worlds', requireAuth(deps.auth));
-  app.use('/api/atlas', requireAuth(deps.auth));
-  app.use('/api/atlas', compress());
+  for (const path of ['/api/town', '/api/atlas']) {
+    app.use(path, requireAuth(deps.auth));
+    app.use(path, compress());
+  }
 
-  // The Atlas: every word laid out as a world to explore. Built once (deterministic) and cached; read-only.
-  let atlasJson: string | null = null;
-  app.get('/api/atlas', (c) => {
-    if (!atlasJson) {
-      const words: AtlasWord[] = [];
-      for (const [kind, list] of Object.entries(deps.vocab.byType()) as Array<[AtlasWord['kind'], string[]]>) for (const word of list) words.push({ word, kind, hm: deps.vocab.entry(word).heightM });
-      const sprite = (word: string, kind: AtlasWord['kind']) => {
-        const hit = deps.vocab.resolveWord(word, kind);
-        return hit ? deps.vocab.entry(hit).sprite : null;
-      };
-      const decal = (word: string) => {
-        const hit = deps.vocab.resolveWord(word);
-        return hit ? deps.vocab.entry(hit).sprite : null;
-      };
-      atlasJson = JSON.stringify({ world: atlasWorld(words, sprite, decal, 0) });
-    }
-    c.header('Content-Type', 'application/json');
-    c.header('Cache-Control', 'no-cache');
-    return c.body(atlasJson);
-  });
+  // The Town: every word, real size, where you would find it. Built once (deterministic, a few seconds) and
+  // cached; read-only. Built in the background as soon as the server is up, so the first visitor does not wait.
+  let townJson: string | null = null;
+  const buildTown = (): string => {
+    if (townJson) return townJson;
+    const words: TownWord[] = [];
+    for (const [kind, list] of Object.entries(deps.vocab.byType()) as Array<[TownWord['kind'], string[]]>) for (const word of list) words.push({ word, kind, hm: deps.vocab.entry(word).heightM });
+    words.push(...extraWords(new Set(words.map((w) => w.word))));
+    const sprite = (word: string, kind: TownWord['kind']) => {
+      const hit = deps.vocab.resolveWord(word, kind);
+      return hit ? deps.vocab.entry(hit).sprite : null;
+    };
+    const decal = (word: string) => {
+      const hit = deps.vocab.resolveWord(word);
+      return hit ? deps.vocab.entry(hit).sprite : null;
+    };
+    townJson = JSON.stringify({ world: townWorld(words, TOWN_TAGS as Record<string, Tag>, sprite, decal, 0) });
+    return townJson;
+  };
+  if (deps.prebuildTown) setTimeout(() => buildTown(), 50).unref?.();
+  for (const path of ['/api/town', '/api/atlas']) {
+    app.get(path, (c) => {
+      c.header('Content-Type', 'application/json');
+      c.header('Cache-Control', 'no-cache');
+      return c.body(buildTown());
+    });
+  }
 
   // Command budget: per-IP and per-world rate limits, then the global daily cap.
   app.use('/api/worlds/:slug/command', async (c, next) => {

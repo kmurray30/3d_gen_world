@@ -15,6 +15,7 @@ import { PaperFigure } from './paper';
 import type { GroundView } from '../sprites';
 import { ToonFigure } from './toon';
 import { CelFigure, sculptFor, unwantSculpt } from './cel';
+import { applyOverrides, partOverrides } from '../../../shared/figure/pose';
 
 export type FigureStyle = 'paper' | 'origami' | 'toon' | 'cel';
 const DEG = Math.PI / 180;
@@ -36,6 +37,16 @@ export class FigureView {
   private celPending = false;
   /** Set by the scene each frame: nearer figures get their sculpted models first. */
   camDistance = 0;
+  /** Set by the scene each frame: where the entity itself is, without the transient shakes and nudges of the
+   *  rendered position. Walking is read from this, or a wobble would look like steps and turn the figure. */
+  basePos: Vec3 | null = null;
+  /** Set by the scene for a thing sitting in another's socket: it turns with its owner (degrees), else null. */
+  heldFacing: number | null = null;
+  /** In a seat socket: a person sits (hips and knees bent, lowered onto the seat) and does not walk. */
+  seated = false;
+  private hipDrop: number | null = null;
+  /** Seconds since the view was made (spinning parts turn by it). */
+  private clock = 0;
   private last: Vec3 | null = null;
   private speed = 0;
   private dir: [number, number] | null = null;
@@ -94,6 +105,25 @@ export class FigureView {
   }
 
   /** Display scale: the figure's own height times the entity's size multiplier. */
+  /** Thighs forward, shins down, and the body lowered so the hips rest on the seat it is anchored to. */
+  private sit(pose: { j: Record<string, Vec3>; root: Vec3 }): void {
+    if (this.hipDrop === null) {
+      // the hip joint's height above the feet, from the parts' rest offsets
+      const byName = new Map(this.fig.parts.map((p) => [p.name, p]));
+      let y = 0;
+      for (let p = byName.get('legL'); p; p = p.parent ? byName.get(p.parent) : undefined) y += p.at[1];
+      const r = (byName.get('legL')?.size[0] ?? 0.12) / 2;
+      this.hipDrop = Math.max(0, y - r * 0.8);
+    }
+    for (const s of ['L', 'R']) {
+      const leg = pose.j[`leg${s}`] ?? [0, 0, 0];
+      const shin = pose.j[`shin${s}`] ?? [0, 0, 0];
+      pose.j[`leg${s}`] = [leg[0] - 88, leg[1], leg[2]];
+      pose.j[`shin${s}`] = [shin[0] + 88, shin[1], shin[2]];
+    }
+    pose.root = [pose.root[0], pose.root[1] - this.hipDrop, pose.root[2]];
+  }
+
   private scaleOf(e: Entity): number {
     return e.scale;
   }
@@ -115,20 +145,31 @@ export class FigureView {
     this.root.position.set(pos[0], pos[1], pos[2]);
     this.root.visible = !e.hidden;
     // ground speed from how far the entity moved since last frame (smoothed so a stop does not flicker)
+    const at: Vec3 = orbit ? pos : (this.basePos ?? pos);
     if (this.last && dt > 0) {
-      const dx = pos[0] - this.last[0];
-      const dz = pos[2] - this.last[2];
+      const dx = at[0] - this.last[0];
+      const dz = at[2] - this.last[2];
       const v = Math.hypot(dx, dz) / dt;
       this.speed += (Math.min(v, 12) - this.speed) * Math.min(1, dt * 10);
       if (Math.hypot(dx, dz) > 1e-4) this.dir = [dx, dz];
     }
-    this.last = [...pos];
+    this.last = [...at];
     // off the ground (a dragon in the sky) flying figures hover and fly instead of standing and walking
     const groundY = ground ? ground.height(pos[0], pos[2]) : 0;
     this.animator.setAirborne(pos[1] - groundY > 0.35);
-    this.animator.setSpeed(this.speed);
+    this.animator.setSpeed(this.seated ? 0 : this.speed);
     this.animator.update(dt);
-    const pose = this.animator.pose();
+    this.clock += dt;
+    // the entity's own part poses (a door left open, a spinning propeller, a piece taken off) on top of the clip
+    this.animator.held = e.pose ? Object.keys(e.pose) : null;
+    const clip = this.animator.pose();
+    const pose = { ...clip, j: { ...clip.j }, t: clip.t ? { ...clip.t } : undefined, sc: clip.sc ? { ...clip.sc } : undefined };
+    applyOverrides(pose, partOverrides(e, this.clock, this.fig));
+    if (this.seated && this.fig.rig === 'biped') this.sit(pose);
+    if (this.toon instanceof CelFigure) for (const name of this.toon.lightParts) {
+      const st = e.state[`op_${name}`];
+      this.toon.setLit(name, typeof st === 'boolean' ? st : !!this.fig.parts.find((p) => p.name === name)?.mover?.on);
+    }
     const expr = this.animator.expression();
     const s = this.scaleOf(e);
     const alpha = e.alpha ?? 1;
@@ -176,7 +217,8 @@ export class FigureView {
       this.toon.update(pose, expr);
       if (this.toon instanceof CelFigure) this.toon.setFar(this.camDistance > Math.max(16, 8 * this.fig.heightM * s));
       const moving = this.speed > 0.15 && this.dir;
-      if (moving) this.wantFacing = Math.atan2(this.dir![0], this.dir![1]) / DEG;
+      if (this.heldFacing !== null) this.wantFacing = this.heldFacing;
+      else if (moving) this.wantFacing = Math.atan2(this.dir![0], this.dir![1]) / DEG;
       else if (lookAt) this.wantFacing = Math.atan2(lookAt[0] - pos[0], lookAt[1] - pos[2]) / DEG;
       else if (this.facing === null || (this.followYaw && (yawDeg !== this.seenYaw || flip !== this.seenFlip))) {
         this.wantFacing = this.fig.view === 'front' ? yawDeg : yawDeg + (flip ? 90 : -90);

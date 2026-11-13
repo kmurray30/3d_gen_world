@@ -10,6 +10,8 @@
  */
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { loftPower, loftSection, superCircle } from '../../../shared/figure/math';
 import type { Expr, Pose } from '../../../shared/figure/anim';
 import type { FigPart, Figure, Vec3 } from '../../../shared/figure/types';
 import { drawFace } from './face';
@@ -61,6 +63,71 @@ function wedgeGeometry(w: number, h: number, d: number, apex = 0): THREE.BufferG
   return g;
 }
 
+/** The top half of a unit ball (diameter 1), flat base at y = -0.25, top at +0.25 (scale y by twice the height). */
+function domeGeometry(segs: number, rings: number): THREE.BufferGeometry {
+  const top = new THREE.SphereGeometry(0.5, segs, rings, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, -0.25, 0);
+  const base = new THREE.CircleGeometry(0.5, segs).rotateX(Math.PI / 2).translate(0, -0.25, 0);
+  const g = mergeGeometries([top.toNonIndexed(), base.toNonIndexed()])!;
+  top.dispose();
+  base.dispose();
+  return g;
+}
+
+/** Part of a torus centred on +y, with rounded ends. */
+function arcGeometry(p: FigPart, radial: number, tubular: number): { geo: THREE.BufferGeometry; scale: Vec3 } {
+  const [w, h, d] = p.size;
+  const r = (p.tube ?? 0.25) * (w / 2);
+  const R = w / 2 - r;
+  const arc = (Math.min(359, Math.max(10, p.arc ?? 180)) * Math.PI) / 180;
+  const ring = new THREE.TorusGeometry(R, r, radial, tubular, arc).rotateZ(Math.PI / 2 - arc / 2);
+  const ends = [Math.PI / 2 - arc / 2, Math.PI / 2 + arc / 2].map((a) => new THREE.SphereGeometry(r, radial, Math.max(3, radial - 2)).translate(Math.cos(a) * R, Math.sin(a) * R, 0).toNonIndexed());
+  const g = mergeGeometries([ring.toNonIndexed(), ...ends])!;
+  ring.dispose();
+  return { geo: g, scale: [1, h / w, d / (2 * r)] };
+}
+
+/** A loft: rings of superellipse sections along z, closed at both ends. */
+function loftGeometry(p: FigPart, stations: number, around: number): THREE.BufferGeometry {
+  const d = p.size[2];
+  const n = loftPower(p);
+  const pos: number[] = [];
+  for (let i = 0; i <= stations; i++) {
+    const t = i / stations;
+    const s = loftSection(p, t);
+    const z = (t - 0.5) * d;
+    for (let k = 0; k < around; k++) {
+      const a = (k / around) * Math.PI * 2;
+      const [cx, cy] = superCircle(Math.cos(a), Math.sin(a), n);
+      let y = s.y + cy * s.h;
+      if (p.cut === 'bottom') y = Math.min(y, s.y);
+      if (p.cut === 'top') y = Math.max(y, s.y);
+      pos.push(cx * s.w, y, z);
+    }
+  }
+  const idx: number[] = [];
+  for (let i = 0; i < stations; i++)
+    for (let k = 0; k < around; k++) {
+      const a = i * around + k, b = i * around + ((k + 1) % around), c = (i + 1) * around + k, e = (i + 1) * around + ((k + 1) % around);
+      idx.push(a, c, b, b, c, e);
+    }
+  // end caps: a fan to each end section's centre
+  for (const [ring, t, flip] of [[0, 0, true], [stations, 1, false]] as Array<[number, number, boolean]>) {
+    const s = loftSection(p, t);
+    const ci = pos.length / 3;
+    pos.push(0, p.cut === 'bottom' ? s.y - s.h / 2 : p.cut === 'top' ? s.y + s.h / 2 : s.y, (t - 0.5) * d);
+    for (let k = 0; k < around; k++) {
+      const a = ring * around + k, b = ring * around + ((k + 1) % around);
+      if (flip) idx.push(ci, a, b);
+      else idx.push(ci, b, a);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
 /** Geometry for a part at its actual size, plus the extra scale that sizes it. */
 export function smoothGeometry(p: FigPart): { geo: THREE.BufferGeometry; scale: Vec3 } {
   const [w, h, d] = p.size;
@@ -85,6 +152,12 @@ export function smoothGeometry(p: FigPart): { geo: THREE.BufferGeometry; scale: 
     }
     case 'wedge':
       return { geo: wedgeGeometry(w, h, d, p.apex), scale: [1, 1, 1] };
+    case 'dome':
+      return { geo: domeGeometry(28, 10), scale: [w, h * 2, d] };
+    case 'arc':
+      return arcGeometry(p, 10, 28);
+    case 'loft':
+      return { geo: loftGeometry(p, 32, 24), scale: [1, 1, 1] };
   }
 }
 
@@ -124,6 +197,19 @@ function foldedGeometry(p: FigPart): { geo: THREE.BufferGeometry; scale: Vec3 } 
     }
     case 'wedge':
       geo = wedgeGeometry(w, h, d, p.apex);
+      break;
+    case 'dome':
+      geo = domeGeometry(7, 2);
+      scale = [w, h * 2, d];
+      break;
+    case 'arc': {
+      const a = arcGeometry(p, 3, 7);
+      geo = a.geo;
+      scale = a.scale;
+      break;
+    }
+    case 'loft':
+      geo = loftGeometry(p, 6, 6);
       break;
   }
   const flat = geo.index ? geo.toNonIndexed() : geo;

@@ -1,3 +1,4 @@
+import { getFigure } from '../shared/figure/items';
 import fs from 'node:fs';
 import type { Kind } from '../shared/types';
 import type { WordResolution } from '../shared/schema';
@@ -150,13 +151,16 @@ export class Vocab {
 
   entry(word: string): WordResolution {
     const m = this.words[word];
+    // a word with a code-drawn figure is the figure's real size (the vocabulary's heights are rough)
+    const fig = getFigure(word);
+    const heightM = fig ? Math.round(fig.heightM * 1000) / 1000 : m.hm;
     return {
       word,
       sprite: m.f ? { file: m.f, w: m.w, h: m.h } : { file: null, w: m.w, h: m.h },
       kind: m.t,
-      heightM: m.hm,
+      heightM,
       solid: m.solid,
-      huge: m.huge,
+      huge: fig ? heightM >= 12 : m.huge,
       placeholder: false,
     };
   }

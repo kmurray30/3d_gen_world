@@ -19,7 +19,8 @@ describe('the catalog', () => {
     const bad: string[] = [];
     for (const [chunk, list] of Object.entries(CHUNKS))
       for (const en of list) {
-        if (!manifest[en.key]) bad.push(`${chunk}/${en.key}: not a vocabulary word`);
+        // act-only extras (the slices a toaster starts with) need not be vocabulary words
+        if (!manifest[en.key] && !en.extra) bad.push(`${chunk}/${en.key}: not a vocabulary word`);
         if (!(en.d in DISTRICTS)) bad.push(`${chunk}/${en.key}: district ${en.d}`);
         try {
           const f = en.f();

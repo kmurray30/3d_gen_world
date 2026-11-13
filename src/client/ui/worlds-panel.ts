@@ -36,7 +36,7 @@ export class WorldsPanel {
         <button type="button" class="primary new-world">+ New world</button>
         <button type="button" class="primary new-village" title="A meadow with houses, a fenced yard, a gingerbread house, a witch's hut, a lighthouse and a bunker to explore">+ New village</button>
         <button type="button" class="primary new-gallery" title="Every code-drawn thing as its sprite, a paper cutout and 3D, side by side">+ Visuals demo</button>
-        <button type="button" class="primary open-atlas" title="Every thing there is, sorted into districts">The Atlas</button>
+        <button type="button" class="primary open-atlas" title="Every thing there is, real size, where you'd find it">Everytown</button>
       </div>
       <div class="world-list"></div>
       <form class="open-form" autocomplete="off">
@@ -71,7 +71,7 @@ export class WorldsPanel {
     el.querySelector('.new-world')!.addEventListener('click', () => void busy('Creating a world...', () => this.handlers.onNew()));
     el.querySelector('.new-village')!.addEventListener('click', () => void busy('Building the village...', () => this.handlers.onNew('village')));
     el.querySelector('.new-gallery')!.addEventListener('click', () => void busy('Setting up the gallery...', () => this.handlers.onNew('gallery')));
-    el.querySelector('.open-atlas')!.addEventListener('click', () => location.assign('/atlas'));
+    el.querySelector('.open-atlas')!.addEventListener('click', () => location.assign('/town'));
     el.querySelector('.open-form')!.addEventListener('submit', (e) => {
       e.preventDefault();
       const input = (e.target as HTMLFormElement).elements.namedItem('ref') as HTMLInputElement;

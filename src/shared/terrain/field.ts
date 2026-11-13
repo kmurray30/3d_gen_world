@@ -66,6 +66,26 @@ export interface TerrainSpec {
   ponds: PondSpec[];
   /** Footpaths: painted on the ground, no height change. */
   paths: PathSpec[];
+  /** Town streets: asphalt with kerbs and a dashed centre line, painted, no height change. */
+  streets?: PathSpec[];
+  /** Painted ground: car parks, fields, sports pitches, beach sand, plaza tiles. Rectangles (half sizes, yaw). */
+  surfaces?: SurfaceSpec[];
+  /** How far from the centre the ground is painted (default 84 m). */
+  paintHalf?: number;
+}
+
+export interface SurfaceSpec {
+  x: number;
+  z: number;
+  hw: number;
+  hd: number;
+  /** Degrees, same convention as entity yaw. */
+  rot?: number;
+  color: string;
+  /** A darker edge line (kerb, fence line) in this colour. */
+  edge?: string;
+  /** Painted lines: parking bays across the width, a pitch's markings, a runway's dashes. */
+  marks?: 'bays' | 'pitch' | 'runway' | 'tiles' | 'furrows';
 }
 
 const BANK = 2.6;

@@ -135,10 +135,77 @@ export function shapePoints(p: FigPart): Vec3[] {
     case 'wedge':
       for (const z of [-d / 2, d / 2]) pts.push([-w / 2, -h / 2, z], [w / 2, -h / 2, z], [(p.apex ?? 0) * w, h / 2, z]);
       break;
+    case 'dome':
+      for (let i = 0; i <= 6; i++) {
+        const th = (i / 6) * (Math.PI / 2);
+        const n = i === 0 ? 1 : 18;
+        for (let k = 0; k < n; k++) {
+          const ph = (k / n) * Math.PI * 2;
+          pts.push([(Math.sin(th) * Math.cos(ph) * w) / 2, -h / 2 + Math.cos(th) * h, (Math.sin(th) * Math.sin(ph) * d) / 2]);
+        }
+      }
+      break;
+    case 'arc': {
+      const half = ((p.arc ?? 180) * Math.PI) / 360;
+      const tube = p.tube ?? 0.25;
+      for (let k = 0; k <= 24; k++) {
+        const a = -half + (k / 24) * half * 2;
+        for (const f of [1, 1 - tube * 2]) for (const s of [-1, 1]) pts.push([(Math.sin(a) * w * f) / 2, (Math.cos(a) * h * f) / 2, (s * d) / 2]);
+      }
+      break;
+    }
+    case 'loft': {
+      for (let i = 0; i <= 16; i++) {
+        const t = i / 16;
+        const s = loftSection(p, t);
+        const z = (t - 0.5) * d;
+        for (let k = 0; k < 16; k++) {
+          const a = (k / 16) * Math.PI * 2;
+          const [cx, cy] = superCircle(Math.cos(a), Math.sin(a), loftPower(p));
+          let y = s.y + cy * s.h;
+          if (p.cut === 'bottom') y = Math.min(y, s.y);
+          if (p.cut === 'top') y = Math.max(y, s.y);
+          pts.push([cx * s.w, y, z]);
+        }
+      }
+      break;
+    }
   }
   const off = p.off ?? [0, 0, 0];
   const R = euler(p.srot);
   return pts.map((q) => add(off, apply(R, q)));
+}
+
+/** Loft cross-section at t (0 = back, 1 = front): half width, half height and centre y, in metres, interpolated
+ *  smoothly (Catmull-Rom) through the profile. */
+export function loftSection(p: FigPart, t: number): { w: number; h: number; y: number } {
+  const prof = (p.profile && p.profile.length >= 2 ? p.profile : [[0, 1, 1, 0], [1, 1, 1, 0]]) as Array<[number, number, number, number?]>;
+  const [W, H] = p.size;
+  const tt = Math.max(prof[0][0], Math.min(prof[prof.length - 1][0], t));
+  let i = 0;
+  while (i < prof.length - 2 && tt > prof[i + 1][0]) i++;
+  const a = prof[i], b = prof[i + 1];
+  const pa = prof[Math.max(0, i - 1)], pb = prof[Math.min(prof.length - 1, i + 2)];
+  const u = b[0] > a[0] ? (tt - a[0]) / (b[0] - a[0]) : 0;
+  const cr = (k: 1 | 2 | 3) => {
+    const v0 = (pa[k] ?? 0) as number, v1 = (a[k] ?? 0) as number, v2 = (b[k] ?? 0) as number, v3 = (pb[k] ?? 0) as number;
+    const u2 = u * u, u3 = u2 * u;
+    const v = 0.5 * (2 * v1 + (-v0 + v2) * u + (2 * v0 - 5 * v1 + 4 * v2 - v3) * u2 + (-v0 + 3 * v1 - 3 * v2 + v3) * u3);
+    // stay between the two neighbouring sections (no overshoot into negative sizes)
+    return Math.max(Math.min(v1, v2), Math.min(Math.max(v1, v2), v));
+  };
+  return { w: Math.max(1e-4, (cr(1) * W) / 2), h: Math.max(1e-4, (cr(2) * H) / 2), y: cr(3) * H };
+}
+
+/** Superellipse exponent for a loft's cross-section (2 = ellipse, higher = squarer). */
+export function loftPower(p: FigPart): number {
+  return 2 + Math.max(0, Math.min(1, p.boxy ?? 0)) * 6;
+}
+
+/** A point on the unit superellipse in the direction (c, s). */
+export function superCircle(c: number, s: number, n: number): [number, number] {
+  const r = Math.pow(Math.pow(Math.abs(c), n) + Math.pow(Math.abs(s), n), -1 / n);
+  return [c * r, s * r];
 }
 
 /** Convex hull of 2D points, counter-clockwise (Andrew's monotone chain). */

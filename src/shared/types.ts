@@ -8,7 +8,18 @@ import type { TerrainSpec } from './terrain/field';
 
 export type Kind = 'object' | 'human' | 'humanoid' | 'animal' | 'other';
 export type MassClass = 'light' | 'medium' | 'heavy' | 'animal' | 'person';
-export type Anchor = 'top' | 'front' | 'held' | 'inside';
+/** Where a child rides on its parent: on top, in hand, in front, inside, or at one of a code-drawn parent's
+ *  sockets ('@slot', '@seat'). */
+export type Anchor = 'top' | 'front' | 'held' | 'inside' | `@${string}`;
+
+/** A code-drawn thing's part moved away from its rest pose (see the `pose` step): turn in degrees, shift in
+ *  metres, size multiplier, and spin in degrees a second. */
+export interface PartPose {
+  r?: Vec3;
+  t?: Vec3;
+  s?: number;
+  w?: Vec3;
+}
 export type Vec3 = [number, number, number];
 
 /** Which image to draw. `file` null means "no sprite": draw a placeholder card with the label. */
@@ -62,6 +73,8 @@ export interface Entity {
   /** Force how this thing is drawn when it has a code-drawn figure (the gallery shows all three side by side);
    *  undefined follows the viewer's Look setting. */
   look?: 'sprite' | 'paper' | 'origami' | 'toon' | 'cel';
+  /** Code-drawn things: parts moved away from their rest pose (a door left open, a propeller spinning). */
+  pose?: Record<string, PartPose>;
 }
 
 export interface PlayerState {

@@ -120,7 +120,28 @@ export const AnimSchema = z.object({
   times: num(1, 10, 1).optional(),
   delay,
 });
-export const AttachSchema = z.object({ op: z.literal('attach'), id, to: id, where: z.enum(['top', 'held']).optional().catch(undefined), delay });
+/** Put a thing on, in or with another: where is 'top', 'held', or one of the target's sockets ('slot', 'seat'...). */
+export const AttachSchema = z.object({ op: z.literal('attach'), id, to: id, where: z.string().trim().min(1).max(32).optional().catch(undefined), delay });
+const turn = num(-1080, 1080, 0);
+const shift = num(-30, 30, 0);
+/**
+ * Move one named part of a code-drawn thing: turn it (degrees about its own x, y, z, from its rest pose), shift it
+ * (metres in its parent's frame), resize it (0 hides it and what hangs off it) or keep it spinning (degrees a
+ * second). Values are where it goes, not steps: rot [0,0,0] puts it back. dur is how long it takes to get there.
+ */
+export const PoseSchema = z.object({
+  op: z.literal('pose'),
+  id,
+  part: z.string().trim().min(1).max(32),
+  rot: z.tuple([turn, turn, turn]).optional().catch(undefined),
+  move: z.tuple([shift, shift, shift]).optional().catch(undefined),
+  scale: num(0, 10, 1).optional(),
+  spin: z.tuple([turn, turn, turn]).optional().catch(undefined),
+  /** Out to the pose and back this many times (a wag, a peck, a flap), ending where it started; dur is each one. */
+  times: num(1, 20, 1).optional(),
+  dur,
+  delay,
+});
 export const DropSchema = z.object({ op: z.literal('drop'), id, delay });
 /** A piece comes off and becomes its own thing (a hat knocked off, a wheel falling off); ref names the piece. */
 export const DetachSchema = z.object({ op: z.literal('detach'), id, part: z.string().trim().min(1).max(32), ref: z.string().trim().min(1).max(32).optional(), delay });
@@ -155,6 +176,7 @@ export const ActionSchema = z.discriminatedUnion('op', [
   DetachSchema,
   ReattachSchema,
   OperateSchema,
+  PoseSchema,
   RemoveSchema,
   SaySchema,
   EffectSchema,
@@ -173,6 +195,7 @@ export type AnimAction = z.infer<typeof AnimSchema>;
 export type DetachAction = z.infer<typeof DetachSchema>;
 export type ReattachAction = z.infer<typeof ReattachSchema>;
 export type OperateAction = z.infer<typeof OperateSchema>;
+export type PoseAction = z.infer<typeof PoseSchema>;
 export type AttachAction = z.infer<typeof AttachSchema>;
 export type DropAction = z.infer<typeof DropSchema>;
 export type RemoveAction = z.infer<typeof RemoveSchema>;
@@ -230,6 +253,9 @@ export const CompactEntitySchema = z.object({
   /** Pieces it is made of that a command can name (hat, arm_r, tail...), and which have come off. */
   parts: z.array(z.string().max(32)).max(32).optional(),
   off: z.array(z.string().max(32)).max(32).optional(),
+  /** Code-drawn things: parts that can be operated (door, propeller, drawer, lamp) and where things go (slot, seat). */
+  movers: z.array(z.string().max(32)).max(16).optional(),
+  sockets: z.array(z.string().max(32)).max(12).optional(),
 });
 export const CompactWorldSchema = z.object({
   player: z.object({ pos: z.tuple([z.number(), z.number(), z.number()]), yaw: z.number() }),

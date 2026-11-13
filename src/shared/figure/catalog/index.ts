@@ -1,5 +1,6 @@
 /** Every catalog chunk, keyed by word. */
 import type { CatalogEntry } from './types';
+import { addEntries, catalog } from './registry';
 import { ENTRIES as c0 } from './people-a';
 import { ENTRIES as c1 } from './people-b';
 import { ENTRIES as c2 } from './people-c';
@@ -36,12 +37,7 @@ export const CHUNKS: Record<string, CatalogEntry[]> = {
   'objects-10': c15,
 };
 
-let byKey: Map<string, CatalogEntry> | null = null;
+for (const list of Object.values(CHUNKS)) addEntries(list);
 
 /** All entries by word (the first entry wins if a word appears twice). */
-export function catalog(): Map<string, CatalogEntry> {
-  if (byKey) return byKey;
-  byKey = new Map();
-  for (const list of Object.values(CHUNKS)) for (const en of list) if (!byKey.has(en.key)) byKey.set(en.key, en);
-  return byKey;
-}
+export { catalog };

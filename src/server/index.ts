@@ -32,6 +32,7 @@ const app = createApp({
   log: !env.isProd || process.env.LOG_REQUESTS === '1',
   classifier,
   avatarWord: env.avatarWord,
+  prebuildTown: true,
 });
 
 serve({ fetch: app.fetch, port: env.port, hostname: '0.0.0.0' }, (info) => {

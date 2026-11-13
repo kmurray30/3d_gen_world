@@ -18,6 +18,8 @@ export class Idle {
   private readonly home = new Map<string, Vec3>();
   readonly lastScripted = new Map<string, number>();
   enabled = true;
+  /** Only things this lets through get idle life (the town: the people walking about). */
+  filter: ((e: Entity) => boolean) | null = null;
 
   constructor(private readonly engine: Engine) {}
 
@@ -31,7 +33,7 @@ export class Idle {
     const now = engine.time;
     let started = 0;
     for (const e of engine.world.entities.values()) {
-      if (!this.living(e)) continue;
+      if (!this.living(e) || (this.filter && !this.filter(e))) continue;
       if (!this.home.has(e.id)) this.home.set(e.id, [...e.pos]);
       const due = this.next.get(e.id);
       if (due === undefined) {
@@ -45,7 +47,7 @@ export class Idle {
       started++;
       const roll = engine.rng();
       // things placed on display (the gallery) keep their pose and only fidget
-      if (e.state.stay) this.fidget(e);
+      if (e.state.stay && !e.state.wander) this.fidget(e);
       else if (roll < 0.4) this.turn(e);
       else if (roll < 0.75) this.wander(e);
       else this.fidget(e);

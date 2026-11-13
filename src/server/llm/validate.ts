@@ -182,6 +182,14 @@ export class CommandValidator {
         }
         return { ...a, id };
       }
+      case 'pose': {
+        const id = this.mapId(a.id);
+        if (!id || id === 'player') {
+          errors.push(`pose: unknown id "${a.id}"`);
+          return null;
+        }
+        return { ...a, id };
+      }
       case 'reattach': {
         const id = this.mapId(a.id);
         if (!id || id === 'player') {
