@@ -1,7 +1,7 @@
 import type { Entity, Vec3, World } from '../types';
 import { StepSchema, type Action, type ResolvedAction, type ResolvedBuild, type ResolvedSpawn, type ResolvedStep, type Step, type WordResolution } from '../schema';
-import { figureOfEntity } from './transform';
-import { getFigure } from '../figure/items';
+import { figureOfEntity, isSolidFigure } from './transform';
+import { getFigure, figureFor } from '../figure/items';
 import { findPart, pieceFigure, restFacing } from '../figure/pose';
 import { reactionFor } from '../figure/anim';
 import type { Figure } from '../figure/types';
@@ -16,7 +16,7 @@ import { FallTask, makeTasks } from './tasks';
 import { WorldModel } from './world';
 import { Rules } from './rules';
 import { Idle } from './idle';
-import { yawFacing } from './facing';
+import { yawFacing, faceViewer, visibleYaw, flipFor } from './facing';
 import { YawTask } from './tasks';
 import { resolvePlayerCollisions, resolvePlayerVsStructures, type Bump } from './collide';
 import { structureRadius } from '../structure/collide';
@@ -319,13 +319,14 @@ export class Engine {
     if (going && this.scheduler.scripts.has(going)) return true;
     const n = typeof e.state.act_n === 'number' ? e.state.act_n : 0;
     e.state.act_n = (n + 1) % cycle.length;
-    // an act plays where the thing stands: a "face the player" step in it is dropped, so nothing ends up turned
+    // an act plays where the thing stands and ends facing the way it began: a "face" step on itself (the player
+    // or anything else) is dropped
     const keep = (st: ResolvedStep): ResolvedStep | null => {
       if (st.op === 'par') {
         const inner = st.do.map((x) => keep(x as ResolvedStep)).filter((x): x is ResolvedStep => !!x);
         return inner.length ? ({ ...st, do: inner } as ResolvedStep) : null;
       }
-      if (st.op !== 'set' || st.id !== id || st.face !== 'player') return st;
+      if (st.op !== 'set' || st.id !== id || st.face === undefined) return st;
       const { face: _face, ...rest } = st;
       return Object.keys(rest).some((k) => !['op', 'id', 'delay', 'dur'].includes(k)) ? (rest as ResolvedStep) : null;
     };
@@ -682,7 +683,6 @@ export class Engine {
       sprite: { ...res.sprite },
       pos: placement.pos,
       flip: false,
-      facing: action.face,
       scale,
       heightM: res.heightM,
       tilt: 0,
@@ -703,8 +703,51 @@ export class Engine {
       this.emit({ type: 'warn', msg: `world is full (${this.world.size})` });
       return null;
     }
+    if (action.face) this.faceOnce(e, action.face, true);
     this.emit({ type: 'spawn', id: e.id });
     return e;
+  }
+
+  /**
+   * The Look went flat (paper cutouts, pictures): a cutout stands in the plane of its yaw, so a yaw a solid model
+   * left (facing where it walked) can stand it edge-on or show its back. Keep the way each thing faces, and turn
+   * its plane so it reads from where the player stands.
+   */
+  flattenFacings(): void {
+    const p = this.world.player.pos;
+    for (const e of this.world.list()) {
+      if (e.structure || e.parent) continue;
+      const fig = figureFor(e.word);
+      if (!fig) continue;
+      const f = restFacing(e, fig) * DEG;
+      const plane = fig.view === 'side' ? restFacing(e, fig) + 90 : restFacing(e, fig);
+      const yaw = faceViewer(visibleYaw(plane, e.pos, p, 0.6), e.pos, p);
+      e.yaw = Math.round(yaw);
+      if (fig.view === 'side') e.flip = flipFor(yaw, Math.sin(f), Math.cos(f));
+    }
+  }
+
+  /**
+   * "Face the player" (or a thing) from a command. A solid model turns once toward it and then stays that way: it
+   * does not keep turning to follow the camera. A flat cutout or picture keeps the target and mirrors toward it.
+   */
+  faceOnce(e: Entity, face: string, now = false): void {
+    if (!isSolidFigure(e)) {
+      e.facing = face;
+      return;
+    }
+    delete e.facing;
+    const t = face === 'player' || face === 'me' ? this.world.player.pos : this.world.has(face) ? this.world.worldPos(this.world.get(face)!) : null;
+    if (!t) return;
+    const at = this.world.worldPos(e);
+    if (Math.hypot(t[0] - at[0], t[2] - at[2]) < 1e-3) return;
+    const heading = (Math.atan2(t[0] - at[0], t[2] - at[2]) * 180) / Math.PI;
+    const fig = figureOfEntity(e)!;
+    const yaw = fig.view === 'side' ? heading + 90 : heading;
+    if (now) {
+      e.yaw = yaw;
+      e.flip = false;
+    } else this.turn(e.id, yaw, false, undefined, `face_${this.nextKey()}`);
   }
 
   /** Create and place a structure from a resolved build action, facing the player. Null when the world is full. */

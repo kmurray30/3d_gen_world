@@ -1925,7 +1925,7 @@ export const ENTRIES: CatalogEntry[] = [
   // shower passes over it.
   e('canopy', 'garden', 'garden things', () => {
     const b = m('canopy')
-      .pyramid([4.2, 0.9, 4.2], [0, 2.9, 0], 4, { color: 'white', rot: [0, 45, 0] })
+      .pyramid([4.35, 0.9, 4.35], [0, 2.9, 0], 4, { color: 'white' }) // square to the frame (size is corner to corner: 3.08 m a side)
       .box([3.0, 0.3, 3.0], [0, 2.32, 0], { color: '#c0362c', round: 0.1, edge: 'sharp' })
       .ball(0.16, [0, 3.38, 0], { color: '#c0362c' });
     b.each(4, (k) => b.each(6, (i) => {

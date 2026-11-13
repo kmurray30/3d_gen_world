@@ -7,6 +7,7 @@ import type { FigPart, Figure, Shape, Vec3 } from '../types';
 import type { Step } from '../../schema';
 import { col } from '../colors';
 import { apply, measure, solve, transpose } from '../math';
+import { toEuler } from '../pose';
 
 /* ----- local helpers: custom parts in a person's joint frames ----- */
 
@@ -452,8 +453,7 @@ const ANARCHY_ARM = { armL: [-46, 0, 24] as Vec3, foreL: [-44, 0, 0] as Vec3 };
 const blackFlag = (c = '#1d1d1f'): Extra => (p, d) => {
   const F = solve({ parts: p.list } as unknown as Figure, { j: {} }).get('handL')!;
   const Rt = transpose(F.R);
-  const DEG = 180 / Math.PI;
-  const up: Vec3 = [Math.atan2(-Rt[5], Rt[8]) * DEG, Math.asin(Math.max(-1, Math.min(1, Rt[2]))) * DEG, Math.atan2(-Rt[1], Rt[0]) * DEG];
+  const up = toEuler(Rt);
   const grip = apply(Rt, [0, 0, d.aw * 0.45]);
   const y0 = F.T[1], bottom = 0.12, top = 2.45, fw = 0.8, fh = 0.52;
   X(() => [

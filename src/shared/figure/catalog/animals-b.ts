@@ -624,6 +624,126 @@ const S = {
 
 const act = (f: Figure, ...click: Step[][]): Figure => withAct(f, { click });
 
+/* ----- marks for the sculpted (QK) big cats, house cats, dogs, reindeer, goat, ram, zebra and polar bear ----- */
+
+/** a + b k. */
+const v3 = (a: Vec3, b: Vec3, k = 1): Vec3 => [a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k];
+/** The point u of the way from a to b. */
+const lerp3 = (a: Vec3, b: Vec3, u: number): Vec3 => v3(a, sub(a, b), u);
+/** Repeatable random numbers 0..1 (markings come out the same on every build). */
+const rnd = (seed: number) => () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+/** A band of colour round a leg, a tail or a neck at p along dir: a short cylinder a little wider than it. */
+const band = (f: M, p: Vec3, dir: Vec3, dia: number, wid: number, c: string, parent: string, depth = 1) =>
+  f.cyl([dia, wid, dia * depth], p, { color: c, rot: aim(dir), parent, noInk: true, blend: 0 });
+/** The centre line of a QK leg, from the top of the forearm or gaskin to the foot, with its thickness there (kk:
+ *  the limbsQ thickness, 1 without), measured the way q4 and limbsQ build the leg. */
+const legPath = (d: QD, n: string, kk = 1): Array<[Vec3, number]> => {
+  const { H, D: Dq, W, L, leg } = d.q, lw = leg.w, x = (n[1] === 'L' ? 1 : -1) * W * 0.3, foot = leg.hoof ? lw * 1.25 : lw * 0.55;
+  if (n[0] === 'F') {
+    const fz = L * 0.31, ky = foot + (H - Dq * 0.95 - foot) * 0.42;
+    return [[[x, H - Dq * 0.78, fz - lw * 0.05], lw * Math.max(kk, 1.1)], [[x, ky, fz + lw * 0.09], lw * 1.18], [[x, foot, fz + lw * 0.15], lw * 1.04]];
+  }
+  const bz = -L * 0.32, hock = Math.max(lw * 1.6, (H - Dq) * 0.42 * (leg.hock ?? 1)), stifle = Math.max(hock + lw * 1.2, d.Hr - Dq * 1.02);
+  return [[[x, stifle + lw * 0.5, bz + lw * 0.6], lw * 1.1 * Math.max(kk, 1)], [[x, hock, bz - lw * 0.75], lw * 1.15], [[x, foot, bz - lw * 0.1], lw * 1.0]];
+};
+/** Bands round the legs at heights u (0 the foot .. 1 the top of the forearm or gaskin): zebra legs, a tiger's. */
+const legBandsQ = (c: string, us: number[], o: { kk?: number; legs?: string; wid?: number; k?: number } = {}): QMark => (f, d) => {
+  for (const n of (o.legs ?? 'FL,FR,BL,BR').split(',')) {
+    const path = legPath(d, n, o.kk), y0 = path[path.length - 1][0][1], y1 = path[0][0][1];
+    for (const u of us) {
+      const y = y0 + (y1 - y0) * u;
+      let i = 0;
+      while (i < path.length - 2 && y < path[i + 1][0][1]) i++;
+      const [a, da] = path[i], [b, db] = path[i + 1], s = Math.max(0, Math.min(1, (a[1] - y) / (a[1] - b[1] || 1)));
+      band(f, lerp3(a, b, s), sub(a, b), (da + (db - da) * s) * (o.k ?? 1.1), d.q.leg.w * (o.wid ?? 0.45), c, 'leg' + n, 1.12);
+    }
+  }
+};
+/** Stripes over the back and down the flanks: arcs of the body's own section, each [t (0 rump .. 1 chest), arc
+ *  degrees, width (fraction of the body length), slant (degrees, + leans the top forward)]. */
+const bodyBandsQ = (c: string, list: Array<[number, number, number, number?]>, k = 1.05): QMark => (f, d) => {
+  for (const [t, arc, wid, tilt = 0] of list) {
+    const [w, h, cy] = d.sec(t);
+    f.arc([w * 2 * k, h * 2 * k, wid * d.q.L], [0, cy, d.z(t)], { color: c, arc, tube: 0.1, rot: [tilt, 0, 0], parent: 'body', noInk: true, blend: 0 });
+  }
+};
+/** n stripes for bodyBandsQ from t0 to t1, of random lengths and widths, the slant going from tilt[0] to tilt[1]. */
+const stripeList = (n: number, t0: number, t1: number, arc: [number, number], wid: [number, number], tilt: [number, number] = [0, 0], seed = 3): Array<[number, number, number, number]> => {
+  const r = rnd(seed);
+  return Array.from({ length: n }, (_, i) => {
+    const u = (i + 0.5 + (r() - 0.5) * 0.45) / n;
+    return [t0 + (t1 - t0) * u, arc[0] + (arc[1] - arc[0]) * r(), wid[0] + (wid[1] - wid[0]) * r(), tilt[0] + (tilt[1] - tilt[0]) * u + (r() - 0.5) * 8];
+  });
+};
+/** Bands across the haunches, on the thighs (so they swing with the hind legs): [height -1 .. 1, slant]. */
+const thighBandsQ = (c: string, us: Array<[number, number?]>, wid: number, k = 1.07): QMark => (f, d) => {
+  const { D: Dq, W, L, leg } = d.q, kq = leg.k ?? 1, ex = leg.w * 0.95 * kq, ey = Dq * 0.475, ez = Math.max(leg.w * 1.3, Dq * 0.31) * kq;
+  f.pair((s) => {
+    for (const [u, tilt = 0] of us) {
+      const r = Math.sqrt(Math.max(0.06, 1 - u * u));
+      f.cyl([ex * 2 * r * k, wid, ez * 2 * r * k], [s * W * 0.3, d.Hr - Dq * 0.6 + u * ey, -L * 0.32], { color: c, rot: [tilt, 0, 0], parent: s > 0 ? 'legBL' : 'legBR', noInk: true, blend: 0 });
+    }
+  });
+};
+/** A long tail as a chain hung on QK's (stub) tail, so it swishes with it: segments at angles from straight up
+ *  toward the back (a cat's hangs and turns up at the tip), tapering to w1 of its width, with rings and a tip. */
+const longTailQ = (c: string, l: number, w: number, o: { angles?: number[]; w1?: number; rings?: string; n?: number; ring0?: number; tip?: string; tipL?: number } = {}): QMark => (f, d) => {
+  const ang = o.angles ?? [116, 150, 168, 158, 118], k = ang.length, seg = l / k, w1 = o.w1 ?? 0.75, tipL = o.tip ? o.tipL ?? 0.14 : 0;
+  const pts: Vec3[] = [d.tj];
+  for (const a of ang) pts.push(v3(pts[pts.length - 1], [0, Math.cos(a * D), -Math.sin(a * D)], seg));
+  const th = (u: number) => w * (1 + (w1 - 1) * u);
+  const along = (u: number): [Vec3, Vec3] => {
+    const i = Math.min(k - 1, Math.floor(u * k));
+    return [lerp3(pts[i], pts[i + 1], u * k - i), sub(pts[i], pts[i + 1])];
+  };
+  for (let i = 0; i < k; i++) f.rod(pts[i], pts[i + 1], th((i + 0.5) / k), c, { parent: 'tail' });
+  if (o.tip) {
+    const [p0] = along(1 - tipL);
+    f.rod(p0, pts[k], th(1) * 1.08, o.tip, { parent: 'tail', noInk: true });
+    for (let i = Math.ceil((1 - tipL) * k); i < k; i++) f.rod(pts[i], pts[i + 1], th((i + 0.5) / k) * 1.06, o.tip, { parent: 'tail', noInk: true });
+  }
+  const n = o.n ?? 0, r0 = o.ring0 ?? 0.3;
+  for (let i = 0; i < n && o.rings; i++) {
+    const u = r0 + ((1 - tipL - r0) * (i + 0.5)) / n, [p, dir] = along(u);
+    band(f, p, dir, th(u) * 1.12, th(u) * 0.7, o.rings, 'tail');
+  }
+};
+/** A cat's face: whisker pads either side of the muzzle, pupils (slits for the small cats), whiskers, and cheek
+ *  ruffs of longer fur. */
+const catFaceQ = (o: { pad?: string; whisk?: string; slit?: boolean; ruff?: string; ruffK?: number } = {}): QMark => (f, d) => {
+  const { l: hl, w: hw, h: hh } = d.q.head, m = d.q.muz, mz = d.mz, sk = d.sk, ek = d.q.eye?.k ?? 1, eu = d.q.eye?.up ?? 0.12;
+  f.pair((s) => {
+    f.ball([m.w * 0.56, m.h * 0.62, m.l * 0.7], [s * m.w * 0.25, mz[1] - m.h * 0.06, mz[2] + m.l * 0.16], { color: o.pad ?? m.c ?? d.q.c, parent: 'head' })
+      .ball([hw * 0.055 * ek, hh * (o.slit ? 0.17 : 0.1) * ek, hl * 0.04 * ek], [s * hw * 0.39, sk[1] + hh * eu, sk[2] + hl * 0.335], { color: '#141210', eye: true, parent: 'head', noInk: true });
+    if (o.ruff) {
+      const k = o.ruffK ?? 1;
+      f.ball([hw * 0.4 * k, hh * 0.62 * k, hl * 0.55], [s * hw * 0.4, sk[1] - hh * 0.22, sk[2] - hl * 0.06], { color: o.ruff, rot: [0, 0, s * 18], parent: 'head' });
+    }
+    if (o.whisk) for (const a of [-0.6, 0.6]) f.rod([s * m.w * 0.4, mz[1] - m.h * 0.08, mz[2] + m.l * 0.28], [s * (m.w * 0.4 + hw * 0.6), mz[1] - m.h * 0.08 + a * hh * 0.1, mz[2] + m.l * 0.28 - hl * 0.16 - a * hl * 0.04], Math.max(0.002, hw * 0.011), o.whisk, { parent: 'head', noInk: true });
+  });
+};
+/** A white spot on the back of each (round) ear: tigers. */
+const earSpotQ = (c: string): QMark => (f, d) => {
+  const { l, w, h } = d.q.head, s0 = d.q.ear.s;
+  f.pair((s) => f.ball([s0 * 0.44, s0 * 0.44, s0 * 0.12], v3(d.sk, [s * w * 0.34 + s * s0 * 0.12, h * 0.36 + s0 * 0.34, -l * 0.1 - s0 * 0.17]), { color: c, rot: [0, 0, -s * 20], parent: s > 0 ? 'earL' : 'earR', noInk: true }));
+};
+/** Rosettes: open rings of a darker colour lying on the coat (snow leopard, black panther). */
+const rosetteQ = (c: string, n: number, sz: number, o: { seed?: number; t0?: number; t1?: number; lo?: number; hi?: number; mid?: string } = {}): QMark => (f, d) => {
+  const r = rnd(o.seed ?? 21), t0 = o.t0 ?? 0.06, t1 = o.t1 ?? 0.94, lo = o.lo ?? -35, hi = o.hi ?? 88;
+  for (let i = 0; i < n; i++) {
+    const t = t0 + (t1 - t0) * r(), th = (lo + (hi - lo) * r()) * D, side = i % 2 ? 1 : -1, [w, h, cy] = d.sec(t);
+    const nx = side * Math.cos(th), ny = Math.sin(th), k = sz * (0.7 + r() * 0.6), at: Vec3 = [nx * w * 0.99, cy + ny * h * 0.99, d.z(t)];
+    f.torus([k, k * 1.25, k * 0.3], at, { color: c, tube: 0.24, rot: [-90, Math.atan2(nx, ny) / D, 0], parent: 'body', noInk: true, blend: 0 });
+    if (o.mid) f.ball([k * 0.5, k * 0.2, k * 0.62], at, { color: o.mid, rot: aim([nx, ny, 0]), parent: 'body', noInk: true, blend: 0 });
+  }
+};
+/** A collar round the neck, with a tag. */
+const collarQ = (c: string, tag?: string): QMark => (f, d) => {
+  const n = d.q.neck, p = lerp3(d.nb, d.nt, 0.62), dia = n.w * 1.16;
+  f.torus([dia, dia, n.w * 0.3], p, { color: c, rot: [n.lean - 90, 0, 0], tube: 0.18, parent: 'neck', edge: 'sharp' });
+  if (tag) f.cyl([n.w * 0.3, n.w * 0.06, n.w * 0.3], v3(p, [0, -n.w * 0.62 * Math.sin(n.lean * D) - n.w * 0.12, n.w * 0.58 * Math.cos(n.lean * D)]), { color: tag, rot: [80, 0, 0], parent: 'neck', edge: 'sharp' });
+};
+
 /* ----- entries ----- */
 
 export const ENTRIES: CatalogEntry[] = [
@@ -817,19 +937,26 @@ export const ENTRIES: CatalogEntry[] = [
       [treat('leaf', 'leaf', 'touch'), sayP('Munch munch.', 1.8), ...G.feel(4), A.remove('leaf', 'fade')],
     ),
   ),
-  e('lynx', 'wild', 'forest', () =>
-    act(feline('lynx', { s: 0.5, legK: 1.15, color: '#c4a27c', belly: '#efe4d2', snout: '#f2e8d8', tail: 'stub', earK: 1.4, eyes: '#c8b030', acc: [ani.spots('#7a5a3a', 8), tailTip('#2a2422', 'stub'), (p, d) => {
-      const [hl, hh, hw] = d.head;
-      const es = 0.11 * 0.5 * 1.4;
-      for (const s of [1, -1]) {
-        add(p, s > 0 ? 'earL' : 'earR', 'capsule', [es * 0.14, es * 0.55, es * 0.14], [0, es * 1.1, 0], '#2a2422', { srot: [0, 0, -s * 8] });
-        add(p, 'head', 'ball', [hw * 0.36, hh * 0.42, hl * 0.4], [s * hw * 0.36, -hh * 0.18, hl * 0.06], '#efe4d2', { layer: 1 });
-      }
-    }] }),
+  // A Eurasian lynx, 0.65 m at the shoulder (lofted): long legs with big furry paws, a short body sloping up to the
+  // rump, a stubby black-tipped tail, a grey-tan spotted coat, a pale face framed by a hanging ruff barred with
+  // black, and tall ears with long black tufts. It yowls, and pounces.
+  e('lynx', 'wild', 'forest', () => {
+    const K = '#2a2422';
+    const tufts: QMark = (f, d) => {
+      const { l, w, h } = d.q.head, s0 = d.q.ear.s;
+      f.pair((s) => {
+        const tip = v3(d.sk, [s * (w * 0.27 + s0 * 0.32), h * 0.36 + s0 * 0.9, -l * 0.12 - s0 * 0.08]);
+        f.cyl([0.011, 0.05, 0.007], v3(tip, [s * 0.004, 0.022, -0.003]), { color: K, taper: 0.1, rot: [-8, 0, -s * 10], parent: s > 0 ? 'earL' : 'earR' })
+          .pair((r) => f.capsule([0.008, 0.06, 0.008], v3(d.sk, [s * w * (0.46 + r * 0.03), -h * (0.28 + r * 0.1), -l * 0.04]), { color: K, rot: aim([s * 0.5, -0.6 - r * 0.2, -1]), parent: 'head', noInk: true }));
+      });
+    };
+    const tip: QMark = (f, d) => f.ball([0.064, 0.07, 0.064], v3(d.tj, [0, Math.cos(70 * D), -Math.sin(70 * D)], 0.15), { color: K, parent: 'tail' });
+    return act(QK('lynx', { c: '#c2a07a', H: 0.65, L: 0.82, D: 0.3, W: 0.26, tuck: 0.38, rump: 1.06, belly: '#efe4d2', neck: { l: 0.13, w: 0.15, lean: 45 }, head: { l: 0.16, w: 0.18, h: 0.15 }, muz: { l: 0.058, w: 0.095, h: 0.064, c: '#f2e8d8', drop: 0.22 }, nose: '#c87a6a', eye: { k: 1.15, c: '#c8b030' }, ear: { k: 'prick', s: 0.078, c: '#5a4a3a', in: '#efe4d2' }, leg: { w: 0.074, k: 1.2, paw: '#cdb08c' }, tail: { k: 'stub', l: 0.18, w: 0.065, a: 70 } },
+      chestQ('#efe4d2'), limbsQ(1.35), spotsQ('#6a4a30', 26, 0.035, { seed: 4 }), catFaceQ({ pad: '#f2e8d8', ruff: '#ece2d0', ruffK: 1.4 }), tufts, tip),
       [...Q.ears(6, 25), A.par(po('jaw', [24, 0, 0], 0.25), sayP('Mrrrow!', 1.5)), back('jaw')],
       Q.pounce(0.7),
-    ),
-  ),
+    );
+  }),
   // A scarlet macaw perched upright: red with yellow and blue wings, a white face and a long tail hanging behind.
   e('macaw', 'aviary', 'tropical birds', () =>
     act(birdx('macaw', { height: 0.5, color: '#d62828', wing: '#2a5fc0', beak: '#efe8dc', legs: '#7a7a80', tail: ['#d62828', '#2a5fc0', '#d62828'] }, (p, g, H) => {
@@ -1104,14 +1231,31 @@ export const ENTRIES: CatalogEntry[] = [
       G.buzz('...', 3),
     ),
   ),
-  e('mountain goat', 'wild', 'mountains', () =>
-    act(beast('mountain goat', { color: '#f2efe8', body: [1.0, 0.55, 0.42], legL: 0.45, legW: 0.09, hoof: '#2a2522', hoofH: 0.06, neckL: 0.22, neckLean: 40, neckW: 0.22, head: [0.32, 0.2, 0.16], snout: { len: 0.12, h: 0.12, w: 0.1, color: '#ece8e0' }, nose: '#2a2522', ears: 'pointy', earSize: 0.09, tail: 'stub', acc: [(p, d) => { const [hl, hh, hw] = d.head; for (const s of [1, -1]) coneP(p, 'head', [s * hw * 0.25, hh * 0.42, -hl * 0.05], [s * hw * 0.32, hh * 1.45, -hl * 0.38], hw * 0.24, '#2a2522'); }, ani.beard('#f2efe8'), hump('#f2efe8', 1.1), jaw({ len: 0.12, h: 0.12, w: 0.1 }, '#ece8e0')] }),
+  // A mountain goat, 0.95 m at the humped shoulder (lofted): a thick shaggy white coat with a hump of long hair over
+  // the shoulders, long-haired "trousers" on the forelegs and a fringe along the belly, a beard, a long narrow face,
+  // short black dagger horns curving back, and small black hooves. It bleats and hops, and butts.
+  e('mountain goat', 'wild', 'mountains', () => {
+    const Wc = '#f2efe8';
+    const shag: QMark = (f, d) => {
+      const { H, D: Dq, W, L, leg, muz } = d.q;
+      f.cone([muz.w * 0.62, 0.13, muz.w * 0.5], v3(d.mz, [0, -muz.h * 0.75 - 0.04, -muz.l * 0.2]), { color: Wc, rot: [172, 0, 0], parent: 'jaw' })
+        .ball([W * 0.7, Dq * 0.36, L * 0.3], [0, H + 0.02, L * 0.22], { color: Wc, parent: 'body' })
+        .ball([W * 0.98, Dq * 0.36, L * 0.62], [0, H - Dq * 0.86, L * 0.04], { color: Wc, parent: 'body' });
+      f.pair((s) => f.ball([leg.w * 2.4, Dq * 0.62, leg.w * 2.6], [s * W * 0.3, H - Dq * 1.05, L * 0.31], { color: Wc, parent: s > 0 ? 'legFL' : 'legFR' }));
+    };
+    return act(QK('mountain goat', { c: Wc, H: 0.95, L: 1.05, D: 0.55, W: 0.42, tuck: 0.08, rump: 0.88, hump: 0.12, neck: { l: 0.26, w: 0.24, lean: 48, base: 0.36 }, head: { l: 0.32, w: 0.165, h: 0.185 }, muz: { l: 0.15, w: 0.105, h: 0.115, c: '#ece8e0', drop: 0.18 }, nose: '#2a2522', eye: { k: 0.9, c: '#2a2018' }, ear: { k: 'long', s: 0.11, in: '#e0d8cc', tilt: 35 }, leg: { w: 0.075, k: 1.2, hoof: '#2a2522' }, tail: { k: 'stub', l: 0.1, w: 0.07, a: 125 } },
+      hornsQ('#1e1c1a', 0.25, 'back', 0.17), shag, limbsQ(1.5)),
       [A.par(A.anim('hop', 2), po('jaw', [18, 0, 0], 0.2), sayP('Meh-eh-eh!', 1.6)), back('jaw')],
       Q.butt('Baa!'),
-    ),
-  ),
+    );
+  }),
+  // A mountain lion (cougar, puma), 0.72 m at the shoulder (lofted): plain tawny, a small round head with a pale
+  // muzzle and chin, dark marks at the sides of the muzzle, dark-backed ears, long hind legs, and a long heavy tail
+  // with a dark tip. It screams, and pounces.
   e('mountain lion', 'wild', 'mountains', () =>
-    act(feline('mountain lion', { s: 0.68, color: '#b98a58', belly: '#ecdcc0', snout: '#efe3cc', tailAngle: 115, acc: [tailTip('#3a2a20', 'long'), mask('#3a2a20', 0.6)] }),
+    act(QK('mountain lion', { c: '#b98a58', H: 0.72, L: 1.2, D: 0.38, W: 0.3, tuck: 0.45, rump: 1.04, belly: '#ecdcc0', neck: { l: 0.2, w: 0.19, lean: 50, base: 0.26 }, head: { l: 0.2, w: 0.2, h: 0.17 }, muz: { l: 0.08, w: 0.12, h: 0.085, c: '#efe3cc', drop: 0.22 }, nose: '#c08a7a', eye: { k: 1.0, c: '#c8a050' }, ear: { k: 'round', s: 0.062, c: '#4a3426', in: '#e0cdb0' }, leg: { w: 0.08, k: 1.2 }, tail: { k: 'stub', l: 0.08, w: 0.07, a: 110 } },
+      chestQ('#ecdcc0'), limbsQ(1.4), catFaceQ({ pad: '#efe3cc' }), onHead('#3a2a20', [0.16, 0.24, 0.2], [0.27, -0.24, 0.6], { mirror: true }),
+      longTailQ('#b98a58', 0.78, 0.07, { angles: [110, 150, 170, 150, 95], w1: 0.95, tip: '#3a2a20', tipL: 0.16 })),
       [A.par(po('neck', [-15, 0, 0], 0.3), po('head', [-25, 0, 0], 0.3), po('jaw', [32, 0, 0], 0.3), sayP('Rrreeee-owww!', 2)), A.wait(1), back('neck', 'head', 'jaw')],
       Q.pounce(0.83),
     ),
@@ -1331,8 +1475,13 @@ export const ENTRIES: CatalogEntry[] = [
       [...Q.sit(0.38), A.par(po('head', [0, 20, 20], 0.4), sayP('?', 1)), A.wait(1), Q.stand()],
     ),
   ),
+  // A black panther (a black leopard), 0.68 m at the shoulder (lofted): long, low and sleek on muscled legs, a small
+  // head with yellow-green eyes and round ears, a long tail turned up at the tip, and its rosettes just showing
+  // through the black coat. It snarls, and pounces.
   e('panther', 'wild', 'jungle', () =>
-    act(feline('panther', { s: 0.72, color: '#25252c', snout: '#303038', nose: '#18181c', eyes: '#c8d040', tailAngle: 120, acc: [ani.spots('#1c1c22', 8)] }),
+    act(QK('panther', { c: '#26262d', H: 0.68, L: 1.15, D: 0.36, W: 0.3, tuck: 0.45, rump: 1.0, neck: { l: 0.2, w: 0.18, lean: 52, base: 0.25 }, head: { l: 0.21, w: 0.22, h: 0.18 }, muz: { l: 0.08, w: 0.12, h: 0.085, c: '#2e2e36', drop: 0.22 }, nose: '#141418', eye: { k: 1.05, c: '#c8d040' }, ear: { k: 'round', s: 0.06, in: '#3c3c46' }, leg: { w: 0.075, k: 1.25 }, tail: { k: 'stub', l: 0.08, w: 0.06, a: 108 } },
+      limbsQ(1.4), catFaceQ({ pad: '#30303a' }), rosetteQ('#141418', 34, 0.06, { seed: 5 }),
+      longTailQ('#26262d', 0.82, 0.06, { angles: [108, 146, 168, 145, 78], w1: 0.85 })),
       Q.roar('Grrrowwl!'),
       Q.pounce(0.88),
     ),
@@ -1421,16 +1570,24 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(po('body', [75, 0, 0], 0.5, { move: [0, -0.32, 0] }), po('wingL', [0, 0, 30], 0.5), po('wingR', [0, 0, -30], 0.5)), A.par(A.effect('snow', { dur: 1.2 }), sayP('!', 1)), back('body', 'wingL', 'wingR')],
     );
   }),
+  // A pet dog, a friendly little mixed-breed 0.32 m at the shoulder (lofted): ginger with a white blaze, chest and
+  // socks and a white end to its tail, half-folded ears, and a blue collar with a gold tag. It sits and gives a
+  // paw, and spins.
   e('pet', 'pets', 'small pets', () =>
-    act(dog('pet', { s: 0.42, headK: 1.2, color: '#c8873f', belly: '#f4efe6', snout: '#f4efe6', earColor: '#8a5428', tailAngle: 60, acc: [dogCollar(0.42, '#2a6ad0', '#e2b23a'), blaze('#f4efe6')] }),
+    act(QK('pet', { c: '#c8873f', H: 0.32, L: 0.38, D: 0.16, W: 0.16, tuck: 0.3, neck: { l: 0.1, w: 0.095, lean: 35 }, head: { l: 0.13, w: 0.12, h: 0.11 }, muz: { l: 0.075, w: 0.065, h: 0.06, c: '#f4efe6', drop: 0.16 }, nose: '#231f1d', eye: { k: 1.2 }, ear: { k: 'drop', s: 0.095, c: '#8a5428' }, leg: { w: 0.038 }, tail: { k: 'long', l: 0.22, w: 0.03, a: 35, tip: '#f4efe6' } },
+      chestQ('#f4efe6'), blazeQ('#f4efe6'), socksQ('#f4efe6', 0.2), collarQ('#2a6ad0', '#e2b23a')),
       [...Q.sit(0.31), A.par(po('legFL', [-85, 0, 0], 0.3), sayP('Woof!', 1.2)), ...osc([['legFL', [-95, 0, 0], [-80, 0, 0]]], 3, 0.18), Q.stand(), A.anim('wag')],
       [A.par(A.anim('spin'), sayP('Arf!', 1)), A.anim('wag')],
     ),
   ),
+  // Pets: a young golden dog with a red collar (0.34 m at the shoulder) and a grey tabby cat (0.24 m) side by side,
+  // both lofted like the dogs and cats. The dog barks and wags, then the cat meows; or both are happy.
   e('pets', 'pets', 'small pets', () =>
     act(herd('pets', 'side', [
-      [dog('pets', { s: 0.4, headK: 1.3, legK: 0.85, color: '#e3b067', belly: '#f6e6c8', snout: '#f6e6c8', earColor: '#a8743f', tailAngle: 50, acc: [dogCollar(0.4, '#d6453a', '#e2b23a')] }), -0.16, 0],
-      [feline('pets', { s: 0.2, hk: 1.4, earK: 1.4, color: '#9a9590', belly: '#f4f2ee', snout: '#f4f2ee', tailAngle: 40, eyes: '#8ac040', acc: [ani.stripes('#5a5650', 4)] }), 0.18, 0.04],
+      [QK('pets', { c: '#e3b067', H: 0.34, L: 0.38, D: 0.17, W: 0.17, tuck: 0.25, belly: '#f6e6c8', neck: { l: 0.1, w: 0.1, lean: 35 }, head: { l: 0.14, w: 0.13, h: 0.12 }, muz: { l: 0.075, w: 0.07, h: 0.065, c: '#f6e6c8', drop: 0.16 }, nose: '#2a2220', eye: { k: 1.2 }, ear: { k: 'drop', s: 0.1, c: '#a8743f' }, leg: { w: 0.042 }, tail: { k: 'long', l: 0.22, w: 0.034, a: 40 } }, chestQ('#f6e6c8'), collarQ('#d6453a', '#e2b23a')), -0.16, 0],
+      [QK('pets', { c: '#9a9590', H: 0.24, L: 0.34, D: 0.12, W: 0.12, tuck: 0.45, rump: 1.02, belly: '#f4f2ee', neck: { l: 0.065, w: 0.07, lean: 42 }, head: { l: 0.085, w: 0.095, h: 0.08 }, muz: { l: 0.033, w: 0.05, h: 0.034, c: '#f4f2ee', drop: 0.24 }, nose: '#e0909a', eye: { k: 1.3, c: '#8ac040' }, ear: { k: 'prick', s: 0.048, c: '#85807a', in: '#d9b2aa' }, leg: { w: 0.026 }, tail: { k: 'stub', l: 0.03, w: 0.022, a: 45 } },
+        chestQ('#f4f2ee'), catFaceQ({ pad: '#f4f2ee', slit: true }), bodyBandsQ('#5a5650', stripeList(7, 0.1, 0.9, [140, 200], [0.035, 0.05], [-10, 8], 8), 1.04),
+        longTailQ('#9a9590', 0.26, 0.022, { angles: [45, 28, 15, 8, -25], w1: 0.85, rings: '#5a5650', n: 4, ring0: 0.2 })), 0.18, 0.04],
     ]),
       [A.par(po('jaw_0', [26, 0, 0], 0.15), sayP('Woof!', 1.2), ...oscT([['tail_0', [0, 40, 0], [0, -40, 0]]], 6, 0.12)), A.par(po('jaw_0', R0, 0.15), po('jaw_1', [24, 0, 0], 0.2), po('head_1', [-10, 0, 0], 0.2), sayP('Meow!', 1.2)), A.wait(0.6), back('jaw_1', 'head_1')],
       [A.par(A.anim('hop'), sayP('♥', 1.2))],
@@ -1502,14 +1659,24 @@ export const ENTRIES: CatalogEntry[] = [
       Q.dig(3),
     ),
   ),
-  // A polar bear: creamy white, long neck and small head, black nose; it rears up to its full height, and rolls in
-  // the snow.
-  e('polar bear', 'wild', 'polar', () =>
-    act(bear('polar bear', 1.05, '#f2eee2', { snout: '#ece6d6', acc: [(p) => void add(p, 'neck', 'ball', [0.42, 0.5, 0.42], [0, 0.2, 0], '#f2eee2')] }),
+  // A polar bear, 1.4 m at the shoulder on all fours and 2.6 m reared up (lofted, like the brown bear): creamy white,
+  // a long neck and a narrow head with a Roman nose, small round ears, a black nose and lips, the rump higher than
+  // the shoulders, and huge furry paws with short black claws. It rears up to its full height, and rolls in the snow.
+  e('polar bear', 'wild', 'polar', () => {
+    const claws: QMark = (f, d) => {
+      const { W, L, leg } = d.q, lw = leg.w, m = d.q.muz;
+      for (const n of ['FL', 'FR', 'BL', 'BR']) {
+        const x = (n[1] === 'L' ? 1 : -1) * W * 0.3, z = n[0] === 'F' ? L * 0.31 + lw * 0.15 : -L * 0.32 - lw * 0.1;
+        for (const i of [-1.5, -0.5, 0.5, 1.5]) f.cone([lw * 0.11, lw * 0.28, lw * 0.11], [x + i * lw * 0.25, lw * 0.14, z + lw * 1.18], { color: '#2a2622', rot: [100, 0, 0], parent: 'leg' + n });
+      }
+      f.pair((s) => f.rod([s * m.w * 0.4, d.mz[1] - m.h * 0.26, d.mz[2] + m.l * 0.36], [s * m.w * 0.44, d.mz[1] - m.h * 0.3, d.mz[2] - m.l * 0.3], 0.018, '#2a2622', { parent: 'head', noInk: true }));
+    };
+    return act(QK('polar bear', { c: '#f2eee2', H: 1.4, L: 2.0, D: 0.85, W: 0.8, tuck: 0.08, rump: 1.05, neck: { l: 0.5, w: 0.4, lean: 60, base: 0.62 }, head: { l: 0.42, w: 0.32, h: 0.29 }, muz: { l: 0.24, w: 0.17, h: 0.15, c: '#ece6d6', drop: 0.12 }, nose: '#1e1c1c', eye: { k: 0.75 }, ear: { k: 'round', s: 0.075, in: '#d8d0c0' }, leg: { w: 0.21, k: 1.25, paw: '#ece6d6' }, tail: { k: 'stub', l: 0.12, w: 0.1, a: 120 } },
+      limbsQ(1.35), claws),
       [...Q.rear('RRRAWRR!', 1.6, 1.2)],
       [...Q.lie(1.6, 0.7), A.par(A.anim('spin'), A.effect('snow', { dur: 1.4 }), sayP('Hmmf.', 1.2)), Q.stand()],
-    ),
-  ),
+    );
+  }),
   e('polar bear cub', 'wild', 'polar', () =>
     act(bear('polar bear cub', 0.42, '#f6f2e8', { hk: 1.45, snout: '#f0ece0' }),
       [A.par(A.anim('spin'), A.effect('snow', { dur: 1.2 }), sayP('Mew!', 1.2))],
@@ -1659,20 +1826,27 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(A.anim('hop'), sayP('!', 1), ...oscT([['wingL', [0, 0, 70], [0, 0, 20]], ['wingR', [0, 0, -70], [0, 0, -20]]], 3, 0.1))],
     ),
   ),
-  // A pug: fawn, stocky, with a flat black-masked face, wrinkled brow, big round eyes, folded black ears and a
-  // tail curled tight over its hip. It snorts.
-  e('pug', 'pets', 'dog breeds', () =>
-    act(dog('pug', { s: 0.44, fat: 1.3, legK: 0.75, headK: 1.3, snoutK: 0.35, color: '#d9b98a', snout: '#2a2522', earColor: '#2a2522', earK: 0.55, nose: '#141212', tail: 'curl', tailAngle: 20, acc: [bigEyes(1.35), (p, d) => {
-      const [hl, hh, hw] = d.head;
-      add(p, 'head', 'ball', [hw * 0.82, hh * 0.62, hl * 0.42], [0, -hh * 0.1, hl * 0.36], '#2a2522', { layer: 3 });
-      for (let i = 0; i < 2; i++) add(p, 'head', 'box', [hw * 0.5, hh * 0.05, hl * 0.1], [0, hh * (0.32 + i * 0.1), hl * 0.4], '#a88a62', { round: 0.9, noInk: true, layer: 4 });
-    }] }),
+  // A pug, 0.3 m at the shoulder (lofted, like the French bulldog): fawn, square and stocky on short straight legs,
+  // a big round head with a flat black-masked face, wrinkles over the short muzzle and a fat nose roll, big round
+  // dark eyes, small folded black ears, and a tail curled tight over its hip. It snorts, and tilts its head.
+  e('pug', 'pets', 'dog breeds', () => {
+    const wrinkles: QMark = (f, d) => {
+      const { l, w, h } = d.q.head, m = d.q.muz;
+      for (const [y, z, k] of [[0.32, 0.37, 0.42], [0.1, 0.47, 0.3]]) f.capsule([w * 0.035, w * k, w * 0.035], v3(d.sk, [0, h * y, l * z]), { color: '#1e1a18', rot: [0, 0, 90], parent: 'head', noInk: true });
+      f.capsule([m.h * 0.34, m.w * 0.95, m.h * 0.34], v3(d.mz, [0, m.h * 0.5, -m.l * 0.05]), { color: '#3a3230', rot: [0, 0, 90], parent: 'head' });
+    };
+    return act(QK('pug', { c: '#d9b98a', H: 0.3, L: 0.34, D: 0.2, W: 0.24, tuck: 0.15, rump: 0.98, neck: { l: 0.06, w: 0.15, lean: 30 }, head: { l: 0.155, w: 0.19, h: 0.175 }, muz: { l: 0.04, w: 0.115, h: 0.09, c: '#2a2522', jaw: '#2a2522', drop: 0.26 }, nose: '#141212', eye: { k: 1.5, c: '#1d1a17' }, ear: { k: 'side', s: 0.072, c: '#2a2522', tilt: -52 }, leg: { w: 0.05, k: 1.15 }, tail: { k: 'curl', l: 0.09, w: 0.035, a: 30 } },
+      faceQ('#2a2522', 0.66), wrinkles),
       [A.par(sayP('Snort! Snort!', 1.6), po('head', [-10, 0, 0], 0.2)), ...osc([['head', [-10, 0, 0], [5, 0, 0]], ['jaw', [12, 0, 0], R0]], 4, 0.14), ...Q.tilt('?')],
       [A.par(A.anim('spin'), sayP('Snrk!', 1)), A.anim('wag')],
-    ),
-  ),
+    );
+  }),
+  // A puppy, a golden retriever pup 0.28 m at the shoulder (lofted): a round body on short legs with big paws, a big
+  // head with a short pale muzzle and big eyes, soft floppy ears, a pale chest, and a waggy tail. It yips and spins,
+  // and barks.
   e('puppy', 'pets', 'dog breeds', () =>
-    act(dog('puppy', { s: 0.4, headK: 1.5, legK: 0.8, snoutK: 0.6, color: '#e3b067', belly: '#f6e6c8', snout: '#f6e6c8', earColor: '#c58f45', earK: 1.15, tailAngle: 50, acc: [bigEyes(1.2)] }),
+    act(QK('puppy', { c: '#e3b067', H: 0.28, L: 0.3, D: 0.15, W: 0.15, tuck: 0.12, belly: '#f6e6c8', neck: { l: 0.07, w: 0.1, lean: 32 }, head: { l: 0.14, w: 0.14, h: 0.13 }, muz: { l: 0.06, w: 0.07, h: 0.06, c: '#f6e6c8', drop: 0.18 }, nose: '#2a2220', eye: { k: 1.4 }, ear: { k: 'drop', s: 0.1, c: '#c58f45' }, leg: { w: 0.044, paw: '#f0d8b0' }, tail: { k: 'long', l: 0.13, w: 0.032, a: 40 } },
+      chestQ('#f6e6c8')),
       [A.par(A.anim('spin', 2), sayP('Yip yip!', 1.6))],
       [...Q.bark('Arf!', 1), A.par(A.anim('wag', 2), sayP('♥', 1.2))],
     ),
@@ -1696,18 +1870,38 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(po('jaw', [28, 0, 0], 0.2), sayP('Hssss!', 1.2)), A.anim('shake'), back('jaw')],
     ),
   ),
-  e('ram', 'farm', 'sheep', () =>
-    act(beast('ram', { color: '#eee8da', bodyShape: 'ball', body: [0.95, 0.55, 0.55], legL: 0.3, legW: 0.08, legColor: '#e2d8cc', hoof: '#3a3330', hoofH: 0.05, neckL: 0.12, neckLean: 45, neckW: 0.2, head: [0.3, 0.22, 0.2], headColor: '#e8dccf', snout: { len: 0.12, h: 0.13, w: 0.12, color: '#e2d2c2' }, nose: '#8a6a60', ears: 'side', earSize: 0.09, tail: 'stub', acc: [tuft('#eee8da'), jaw({ len: 0.12, h: 0.13, w: 0.12 }, '#e2d2c2'), (p, d) => {
-      const [hl, hh, hw] = d.head;
-      for (const s of [1, -1]) {
-        add(p, 'head', 'torus', [hh * 1.2, hh * 1.2, hw * 0.3], [s * hw * 0.52, hh * 0.25, -hl * 0.05], '#b89a6a', { srot: [0, 90, 0], tube: 0.36 });
-        add(p, 'head', 'torus', [hh * 0.62, hh * 0.62, hw * 0.24], [s * hw * 0.62, hh * 0.18, hl * 0.02], '#a88a5a', { srot: [0, 90, 0], tube: 0.4 });
+  // A ram, 0.85 m at the shoulder (lofted): a deep barrel of curly cream fleece (lumpy with curls, a woolly cap on
+  // the brow), a pale bare face and thin bare legs, and great ridged horns curling back, down and round past the
+  // cheeks in a spiral. It paws and butts, and grazes.
+  e('ram', 'farm', 'sheep', () => {
+    const Wo = '#ece6d6';
+    const fleece: QMark = (f, d) => {
+      const r = rnd(17);
+      for (let i = 0; i < 48; i++) {
+        const t = 0.03 + 0.94 * r(), th = (-35 + 130 * r()) * D, side = i % 2 ? 1 : -1, [w, h, cy] = d.sec(t), k = 0.1 + r() * 0.05;
+        f.ball(k, [side * Math.cos(th) * w * 0.96, cy + Math.sin(th) * h * 0.96, d.z(t)], { color: i % 3 ? Wo : '#e2dccb', parent: 'body' });
       }
-    }] }),
+      const n = d.q.neck, { l, w, h } = d.q.head;
+      for (const u of [0.25, 0.6, 0.9]) f.ball(n.w * 0.7, v3(lerp3(d.nb, d.nt, u), [0, n.w * 0.3, -n.w * 0.2]), { color: Wo, parent: 'neck' });
+      f.ball([w * 0.8, h * 0.45, l * 0.42], v3(d.sk, [0, h * 0.4, -l * 0.05]), { color: Wo, parent: 'head' });
+    };
+    const horns: QMark = (f, d) => {
+      const { l, w, h } = d.q.head, n = 12;
+      f.pair((s) => {
+        const c0 = v3(d.sk, [s * w * 0.55, -h * 0.02, -l * 0.18]), pts: Vec3[] = [];
+        for (let i = 0; i <= n; i++) {
+          const a = (-15 + (i / n) * 330) * D, r = 0.15 * (1 - (0.42 * i) / n);
+          pts.push(v3(c0, [s * 0.11 * (i / n), r * Math.cos(a), -r * Math.sin(a)]));
+        }
+        for (let i = 0; i < n; i++) f.rod(pts[i], pts[i + 1], 0.085 * (1 - (0.6 * i) / n), i % 2 ? '#c9b48c' : '#bba47c', { parent: 'head' });
+      });
+    };
+    return act(QK('ram', { c: Wo, H: 0.85, L: 1.0, D: 0.6, W: 0.6, tuck: 0, rump: 0.98, neck: { l: 0.22, w: 0.26, lean: 50, base: 0.38 }, head: { l: 0.28, w: 0.17, h: 0.18, c: '#e6dccb' }, muz: { l: 0.13, w: 0.11, h: 0.12, c: '#e2d2c2', drop: 0.24 }, nose: '#8a6a60', eye: { k: 0.9, c: '#c8a050' }, ear: { k: 'side', s: 0.1, in: '#e8c8c0' }, leg: { w: 0.055, hoof: '#3a3330', low: '#e2d8cc' }, tail: { k: 'stub', l: 0.16, w: 0.1, a: 165 } },
+      fleece, horns),
       [...Q.paw(3), ...Q.butt('BAAA!')],
       Q.graze('Baa-aa!'),
-    ),
-  ),
+    );
+  }),
   // A bird of prey (an eagle): dark brown, white head and tail, a hooked yellow beak and yellow talons.
   e('raptor', 'aviary', 'birds of prey', () =>
     act(birdx('raptor', { height: 0.75, color: '#4a3424', wing: '#3e2a1c', beak: '#f2c230', legs: '#f2c230', tail: ['#f4f2ee', '#f4f2ee', '#f4f2ee'] }, (p, g, H) => {
@@ -1759,12 +1953,43 @@ export const ENTRIES: CatalogEntry[] = [
       [...B.flutter(4, 50), sayP('Chip!', 1)],
     ),
   ),
-  e('reindeer', 'wild', 'polar', () =>
-    act(beast('reindeer', { color: '#7a5a40', belly: '#e8dcc8', body: [1.4, 0.65, 0.5], legL: 0.65, legW: 0.1, hoof: '#2a2018', hoofH: 0.08, neckL: 0.35, neckLean: 40, neckW: 0.24, head: [0.42, 0.24, 0.21], snout: { len: 0.16, h: 0.16, w: 0.14, color: '#5a4030' }, nose: '#2a2018', ears: 'side', earSize: 0.12, tail: 'stub', tailColor: '#f4efe6', acc: [antlers('#c8b08a', 0.75, 1.1), chest('#efe6d6', 1.1, 0.1), jaw({ len: 0.16, h: 0.16, w: 0.14 }, '#5a4030')] }),
+  // A reindeer (caribou), 1.15 m at the shoulder (lofted): a dark brown body, a pale cream neck with a long mane
+  // hanging under the throat, a white rump and short tail, dark legs with a pale band over the big black hooves, a
+  // broad hairy muzzle, and great antlers: beams sweeping back, up and forward to palmed, tined tops, a bez tine
+  // forward, and a flat brow "shovel" down over the face. It grunts, and paws the snow.
+  e('reindeer', 'wild', 'polar', () => {
+    const C = '#c8b08a';
+    const antlers: QMark = (f, d) => {
+      const { l, w, h } = d.q.head;
+      f.pair((s) => {
+        const b = v3(d.sk, [s * w * 0.28, h * 0.42, -l * 0.12]), A = 0.8;
+        const p1 = v3(b, [s * 0.14, 0.2, -0.2], A), p2 = v3(p1, [s * 0.16, 0.28, -0.1], A), p3 = v3(p2, [s * 0.05, 0.26, 0.12], A), p4 = v3(p3, [-s * 0.06, 0.12, 0.2], A);
+        const pts = [b, p1, p2, p3, p4], th = [0.042, 0.036, 0.031, 0.027];
+        for (let i = 0; i < 4; i++) f.rod(pts[i], pts[i + 1], th[i], C, { parent: 'head' });
+        // the palmed top and its tines, a tine back, and the bez tine forward from low on the beam
+        f.ball([0.028, 0.1, 0.17], lerp3(p3, p4, 0.55), { color: C, rot: [-25, s * 12, 0], parent: 'head' });
+        for (const [u, dy, dz] of [[0.15, 0.12, 0.02], [0.55, 0.13, 0.05], [0.98, 0.09, 0.08]]) {
+          const q = lerp3(p3, p4, u);
+          f.rod(q, v3(q, [s * 0.01, dy, dz]), 0.02, C, { parent: 'head' });
+        }
+        f.rod(p2, v3(p2, [s * 0.03, 0.1, -0.08]), 0.022, C, { parent: 'head' });
+        const bz = lerp3(b, p1, 0.6);
+        f.rod(bz, v3(bz, [s * 0.04, 0.1, 0.19]), 0.024, C, { parent: 'head' });
+        // the brow tine: a flat shovel over the face, big on one side only
+        const k = s > 0 ? 1 : 0.5, br = v3(b, [0, 0.03, 0.01]), bt = v3(br, [-s * 0.03 * k, 0.05 * k, 0.17 * k]);
+        f.rod(br, bt, 0.024, C, { parent: 'head' }).ball([0.026, 0.13 * k, 0.13 * k], v3(bt, [0, -0.03 * k, 0.04 * k]), { color: C, rot: [25, 0, 0], parent: 'head' });
+      });
+    };
+    const mane: QMark = (f, d) => {
+      const n = d.q.neck;
+      f.rod(v3(d.nt, [0, -n.w * 0.45, n.w * 0.1]), v3(lerp3(d.nb, d.nt, 0.25), [0, -n.w * 0.7, n.w * 0.5]), 0.17, '#efe8dc', { parent: 'neck' });
+    };
+    return act(QK('reindeer', { c: '#6e5442', H: 1.15, L: 1.32, D: 0.6, W: 0.48, tuck: 0.2, rump: 0.96, belly: '#5a4434', neck: { l: 0.42, w: 0.24, lean: 42, base: 0.42, c: '#d8ccb8' }, head: { l: 0.36, w: 0.2, h: 0.2, c: '#6a5242' }, muz: { l: 0.2, w: 0.15, h: 0.15, c: '#5e4838', drop: 0.18 }, nose: '#3a2c22', eye: { k: 0.9 }, ear: { k: 'side', s: 0.11, in: '#c8b8a0' }, leg: { w: 0.075, hoof: '#1e1a18', low: '#3e2e22' }, tail: { k: 'stub', l: 0.12, w: 0.08, a: 150, c: '#f4efe6' } },
+      backQ('#4e3a2a', 0.12, 0.86), chestQ('#e2d8c6'), patchQ('#efe8dc', 0, 0.09), mane, antlers, socksQ('#d8d0c4', 0.07), limbsQ(1.5)),
       [A.par(po('head', [-10, 0, 0], 0.3), po('jaw', [16, 0, 0], 0.3), sayP('Hrrnk! Hrrnk!', 1.6)), back('head', 'jaw'), A.par(A.effect('snow', { dur: 1.2 }), ...oscT([['legFL', [-45, 0, 0], [12, 0, 0]]], 4, 0.18))],
       Q.graze('*munch*'),
-    ),
-  ),
+    );
+  }),
   // A white rhinoceros: grey, heavy, two horns on the nose. It paws the ground and charges.
   e('rhinoceros', 'wild', 'savanna', () =>
     act(beast('rhinoceros', { color: '#8d8a85', body: [2.6, 1.3, 1.1], legL: 0.55, legW: 0.3, hoof: '#6a6762', hoofH: 0.12, neckL: 0.25, neckLean: 75, neckW: 0.6, head: [0.85, 0.5, 0.45], snout: { len: 0.25, h: 0.35, w: 0.35, shape: 'box' }, nose: '#5a5752', ears: 'pointy', earSize: 0.2, tail: 'tuft', acc: [ani.stripes('#7a7772', 2), jaw({ len: 0.25, h: 0.35, w: 0.35 }), (p, d) => {
@@ -1811,19 +2036,40 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(A.anim('hop', 2), sayP('Squeak!', 1.2))],
     ),
   ),
-  e('rottweiler', 'pets', 'dog breeds', () =>
-    act(dog('rottweiler', { s: 0.95, fat: 1.2, color: '#1f1c1c', snout: '#9a5a2a', hoof: '#9a5a2a', hoofH: 0.1, earK: 0.7, tail: 'stub', acc: [brows('#9a5a2a', 0.8), chest('#9a5a2a', 0.6, -0.1)] }),
+  // A rottweiler, 0.63 m at the shoulder (lofted): big, deep-chested and muscled, black with rich rust markings (a
+  // spot over each eye, the cheeks and muzzle, two patches on the chest, the lower legs), small drop ears and a
+  // docked tail. It growls and barks, and sits.
+  e('rottweiler', 'pets', 'dog breeds', () => {
+    const R = '#9a5a2a';
+    const chestR: QMark = (f, d) => {
+      const { W, L, H, D: Dq } = d.q;
+      f.pair((s) => f.ball([W * 0.22, Dq * 0.3, L * 0.1], [s * W * 0.17, H - Dq * 0.6, L * 0.46], { color: R, parent: 'body', noInk: true }));
+    };
+    return act(QK('rottweiler', { c: '#1f1c1c', H: 0.63, L: 0.72, D: 0.34, W: 0.32, tuck: 0.25, rump: 0.97, neck: { l: 0.15, w: 0.2, lean: 40, base: 0.27 }, head: { l: 0.22, w: 0.2, h: 0.18 }, muz: { l: 0.1, w: 0.11, h: 0.1, c: R, drop: 0.2, jaw: R }, nose: '#141212', eye: { k: 0.8, c: '#3a2418' }, ear: { k: 'drop', s: 0.09 }, leg: { w: 0.066, k: 1.2 }, tail: { k: 'stub', l: 0.07, w: 0.06, a: 60 } },
+      onHead(R, [0.16, 0.12, 0.12], [0.2, 0.3, 0.36], { mirror: true }), onHead(R, [0.32, 0.32, 0.36], [0.3, -0.24, 0.28], { mirror: true }), chestR, socksQ(R, 0.28), limbsQ(1.35)),
       [A.par(po('neck', [20, 0, 0], 0.4), po('head', [-10, 0, 0], 0.4), po('jaw', [8, 0, 0], 0.4), sayP('Grrrrr...', 1.6)), A.wait(0.8), ...Q.bark('WOOF!', 1), back('neck', 'jaw')],
       [...Q.sit(0.7), A.par(A.anim('wag'), sayP('Woof.', 1)), Q.stand()],
-    ),
-  ),
-  // A sabre-toothed cat (smilodon): heavy, short-tailed, with dagger-long upper canines; its jaw gapes huge.
-  e('sabre toothed tiger', 'wild', 'prehistoric', () =>
-    act(feline('sabre toothed tiger', { s: 0.95, fat: 1.15, color: '#c49a5e', belly: '#e8d4b0', snout: '#ecdcc0', tail: 'stub', acc: [ani.spots('#9a7040', 6), teeth('#f6f2e4', { len: 0.14 * 0.95, h: 0.16 * 0.95, w: 0.24 * 0.95 }, 1, 3)] }),
+    );
+  }),
+  // A sabre-toothed cat (smilodon), 1 m at the shoulder (lofted): heavier than a lion, with a thick neck, massive
+  // forelegs, a back sloping down to a low rump, a short bobbed tail, a tawny coat with faint spots, and dagger upper
+  // canines 18 cm long, flat-sided and curved, hanging below the chin; its jaw gapes huge.
+  e('sabre toothed tiger', 'wild', 'prehistoric', () => {
+    const sabres: QMark = (f, d) => {
+      const m = d.q.muz, mz = d.mz;
+      f.pair((s) => {
+        const top: Vec3 = [s * m.w * 0.3, mz[1] - m.h * 0.22, mz[2] + m.l * 0.22], mid1 = v3(top, [0, -0.1, 0.004]), tip = v3(top, [0, -0.185, -0.03]);
+        f.cyl([0.026, 0.11, 0.046], lerp3(top, mid1, 0.5), { color: '#f4eedc', rot: aim(sub(top, mid1)), taper: 0.82, parent: 'head' })
+          .cyl([0.021, 0.095, 0.037], lerp3(mid1, tip, 0.5), { color: '#f4eedc', rot: aim(sub(mid1, tip)), taper: 0.12, parent: 'head' });
+      });
+    };
+    const tip: QMark = (f, d) => f.ball([0.084, 0.1, 0.084], v3(d.tj, [0, Math.cos(125 * D), -Math.sin(125 * D)], 0.24), { color: '#5a3a20', parent: 'tail' });
+    return act(QK('sabre toothed tiger', { c: '#c49a5e', H: 1.05, L: 1.4, D: 0.56, W: 0.48, tuck: 0.35, rump: 0.87, hump: 0.03, belly: '#e8d4b0', neck: { l: 0.26, w: 0.34, lean: 55, base: 0.46 }, head: { l: 0.32, w: 0.31, h: 0.28 }, muz: { l: 0.13, w: 0.18, h: 0.14, c: '#ecdcc0', drop: 0.2 }, nose: '#5a3a2a', eye: { k: 0.8, c: '#c89a3a' }, ear: { k: 'round', s: 0.06, in: '#3a2a20' }, leg: { w: 0.125, k: 1.3 }, tail: { k: 'stub', l: 0.3, w: 0.08, a: 125 } },
+      chestQ('#e8d4b0'), limbsQ(1.65), spotsQ('#b08450', 20, 0.06, { seed: 12, lo: 0, hi: 70 }), catFaceQ({ pad: '#ecdcc0' }), sabres, tip),
       Q.roar('ROAAARR!', 1.6),
       [...Q.paw(3), Q.pounce(1.2)[0], A.wait(0.5), Q.stand(), A.anim('hop')],
-    ),
-  ),
+    );
+  }),
   // A fire salamander, 20 cm: glossy black with bright yellow blotches, a long tail.
   e('salamander', 'wild', 'amphibians', () =>
     act(scaleFig(beast('salamander', { color: '#1e1e22', body: [0.17, 0.045, 0.05], legL: 0.018, legW: 0.016, neckL: 0.006, neckLean: 80, neckW: 0.035, head: [0.045, 0.03, 0.042], snout: { len: 0.012, h: 0.018, w: 0.034 }, ears: 'side', earSize: 0.002, tail: 'stub', acc: [coneTail(0.16, 0.035, '#1e1e22', 0.02), (p, d) => {
@@ -2263,21 +2509,23 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(po('neck', [40, 0, 0], 0.6), sayP('...', 1)), A.wait(1), back('neck')],
     ),
   ),
-  // A snow leopard: smoky white-grey with black rosettes and an enormous thick tail. It chuffs, and pounces in snow.
-  e('snow leopard', 'wild', 'mountains', () =>
-    act(feline('snow leopard', { s: 0.62, color: '#d6d3cb', belly: '#f0eee8', snout: '#f0eee8', eyes: '#a8c8c0', tail: 'fluffy', tailAngle: 128, acc: [ani.spots('#4a4a4a', 12), (p, d) => {
-      const [L, , W] = d.body;
-      const q = p.list.find((x) => x.name === 'tail')!;
-      q.size = [W * 0.42, L * 0.78, W * 0.42];
-      q.off = [0, L * 0.36, 0];
-      for (let i = 0; i < 5; i++) add(p, 'tail', 'torus', [W * 0.44, W * 0.44, L * 0.05], [0, L * (0.12 + i * 0.13), 0], '#4a4a4a', { srot: [90, 0, 0], tube: 0.4, noInk: true, layer: 0 });
-      const [hl, hh, hw] = d.head;
-      for (const [x, y] of [[0.15, 0.4], [-0.15, 0.4], [0, 0.48], [0.3, 0.25], [-0.3, 0.25]]) add(p, 'head', 'ball', [hw * 0.08, hh * 0.08, hl * 0.06], [x * hw, y * hh, hl * 0.35], '#4a4a4a', { noInk: true, layer: 4 });
-    }] }),
+  // A snow leopard, 0.6 m at the shoulder (lofted): smoky grey-white in thick fur, a small round head with pale
+  // green eyes and short round dark-backed ears, big furry paws, dark open rosettes, and an enormous thick tail as
+  // long as its body, ringed and curling up. It chuffs, and pounces in the snow.
+  e('snow leopard', 'wild', 'mountains', () => {
+    const K = '#4a4a4a';
+    const dots: QMark = (f, d) => {
+      const { l, w, h } = d.q.head;
+      for (const [x, y, z] of [[0.15, 0.38, 0.3], [0, 0.44, 0.24], [0.3, 0.26, 0.24], [0.4, 0.05, 0.2], [0.22, 0.42, 0.12]]) f.pair((s) => f.ball([w * 0.06, h * 0.06, l * 0.05], v3(d.sk, [s * x * w, y * h, z * l]), { color: K, parent: 'head', noInk: true }));
+    };
+    return act(QK('snow leopard', { c: '#d8d4ca', H: 0.6, L: 1.05, D: 0.36, W: 0.32, tuck: 0.35, rump: 1.02, belly: '#f2f0ea', neck: { l: 0.16, w: 0.2, lean: 52, base: 0.26 }, head: { l: 0.19, w: 0.2, h: 0.17 }, muz: { l: 0.07, w: 0.11, h: 0.08, c: '#f2f0ea', drop: 0.22 }, nose: '#c8a0a0', eye: { k: 1.0, c: '#a8c8b8' }, ear: { k: 'round', s: 0.05, c: K, in: '#d8d4ca' }, leg: { w: 0.08, k: 1.2, paw: '#ecebe6' }, tail: { k: 'stub', l: 0.12, w: 0.11, a: 104 } },
+      chestQ('#f2f0ea'), limbsQ(1.35), catFaceQ({ pad: '#f2f0ea', ruff: '#e6e2da', ruffK: 0.9 }), dots,
+      rosetteQ(K, 30, 0.07, { seed: 9, mid: '#bdb8ae' }), legBandsQ(K, [0.62, 0.8], { kk: 1.35, wid: 0.25, k: 1.05 }),
+      longTailQ('#d8d4ca', 0.92, 0.11, { angles: [104, 142, 166, 135, 72, 40], w1: 1.0, rings: K, n: 6, ring0: 0.25, tip: '#3a3a3a', tipL: 0.1 })),
       [A.par(sayP('Chuff! Chuff!', 1.6)), ...osc([['head', [12, 0, 0], [-8, 0, 0]], ['jaw', [10, 0, 0], R0]], 4, 0.18), ...Q.swish(4, -20, 30)],
       [...Q.pounce(0.75), A.effect('snow', { dur: 1.2 })],
-    ),
-  ),
+    );
+  }),
   // A house sparrow: brown streaked back, grey cap and chest, a black bib. It hops and cheeps, and pecks seed.
   e('sparrow', 'aviary', 'garden birds', () =>
     act(birdx('sparrow', { height: 0.15, color: '#a07a52', wing: '#7a5a3a', beak: '#4a3a2a', legs: '#c8a080', tail: ['#6a4a2e', '#6a4a2e'] }, (p, g, H) => {
@@ -2516,17 +2764,25 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(sayP('!', 0.8)), ...osc([['body', [0, 18, 0], [0, -18, 0]]], 6, 0.12)],
     ),
   ),
-  // A tabby cat: grey-brown with dark stripes and an M on its forehead, green eyes. It meows, and pounces on a mouse.
-  e('tabby', 'pets', 'cats', () =>
-    act(feline('tabby', { s: 0.21, hk: 1.35, earK: 1.5, color: '#9a8670', belly: '#f2eee6', snout: '#f2eee6', tailAngle: 50, eyes: '#8ac040', nose: '#e0909a', acc: [ani.stripes('#4e4236', 5), tailRings('#4e4236', 3, 'long'), (p, d) => {
-      const [hl, hh, hw] = d.head;
-      for (const x of [-0.14, 0, 0.14]) add(p, 'head', 'capsule', [hw * 0.06, hh * 0.28, hl * 0.06], [x * hw, hh * 0.45, hl * 0.28], '#4e4236', { srot: [-30, 0, 0], noInk: true, layer: 4 });
-      for (const s of [1, -1]) for (const a of [-8, 4]) rodP(p, 'head', [s * hw * 0.12, -hh * 0.18, hl * 0.6], [s * hw * 0.7, -hh * 0.18 + a * 0.002, hl * 0.55], 0.003, '#f8f6f0', { noInk: true });
-    }] }),
+  // A tabby cat, 0.25 m at the shoulder (lofted, like the calico): grey-brown with dark mackerel stripes over the
+  // back and flanks, rings on the legs and the long raised tail, an "M" on the forehead and lines back from the eyes,
+  // a pale muzzle, chin and chest, green eyes with slit pupils, a pink nose and white whiskers. It meows, and pounces
+  // on a mouse.
+  e('tabby', 'pets', 'cats', () => {
+    const K = '#4e4236';
+    const face: QMark = (f, d) => {
+      const { l, w, h } = d.q.head;
+      for (const x of [-0.17, -0.06, 0.06, 0.17]) f.capsule([w * 0.05, h * 0.26, w * 0.05], v3(d.sk, [x * w, h * 0.38, l * 0.26]), { color: K, rot: [-38, 0, Math.abs(x) > 0.1 ? 0 : x > 0 ? -25 : 25], parent: 'head', noInk: true });
+      f.pair((s) => f.capsule([w * 0.04, l * 0.26, w * 0.04], v3(d.sk, [s * w * 0.42, h * 0.02, l * 0.1]), { color: K, rot: aim([s * 0.6, -0.15, -1]), parent: 'head', noInk: true }));
+    };
+    return act(QK('tabby', { c: '#9a8670', H: 0.25, L: 0.38, D: 0.13, W: 0.13, tuck: 0.45, rump: 1.02, belly: '#f2eee6', neck: { l: 0.07, w: 0.075, lean: 42 }, head: { l: 0.09, w: 0.1, h: 0.085 }, muz: { l: 0.035, w: 0.052, h: 0.036, c: '#f2eee6', drop: 0.24 }, nose: '#e0909a', eye: { k: 1.3, c: '#8ac040' }, ear: { k: 'prick', s: 0.05, c: '#8a7660', in: '#d9b2aa' }, leg: { w: 0.028 }, tail: { k: 'stub', l: 0.03, w: 0.024, a: 45 } },
+      chestQ('#f2eee6'), catFaceQ({ pad: '#f2eee6', whisk: '#f8f6f0', slit: true }), face,
+      bodyBandsQ(K, stripeList(9, 0.1, 0.92, [140, 210], [0.035, 0.05], [-10, 8], 5), 1.04), legBandsQ(K, [0.3, 0.55, 0.8], { wid: 0.5, k: 1.06 }),
+      longTailQ('#9a8670', 0.28, 0.024, { angles: [45, 28, 15, 8, -25], w1: 0.85, rings: K, n: 5, ring0: 0.2, tip: K, tipL: 0.12 })),
       [A.par(po('jaw', [22, 0, 0], 0.25), po('head', [-15, 0, 0], 0.25), sayP('Meow!', 1.4)), back('jaw', 'head'), A.anim('wag')],
       [A.spawn('mouse', 'mouse', { rel: 'front', of: 'self', dist: 'near' }), ...Q.pounce(0.3), A.par(A.remove('mouse', 'fly_away'), sayP('Mrrp?', 1.2))],
-    ),
-  ),
+    );
+  }),
   // A tadpole at its real 4 cm: a round dark body with eyes and a long wriggling tail.
   // Real size: a real 4 cm tadpole (the vocabulary's 0.1 m is too big).
   e('tadpole', 'wild', 'amphibians', () => {
@@ -2597,13 +2853,30 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(po('abdomen', R0, 0.6, { scale: 1.3 })), A.wait(0.8), po('abdomen', R0, 0.6, { scale: 1 })],
     ),
   ),
-  // A Bengal tiger: orange with black stripes, white cheeks and belly. It roars, and loves a splash in the water.
-  e('tiger', 'wild', 'jungle', () =>
-    act(feline('tiger', { s: 0.92, color: '#e07a2a', belly: '#f6efe2', snout: '#f6efe2', eyes: '#e0b030', acc: tigerAcc(0.92) }),
+  // A Bengal tiger, 1 m at the shoulder and 1.6 m from chest to rump (lofted, like the lion): a long body on heavy
+  // forelegs, a big round head with white cheek ruffs, whisker pads and brows, black-backed ears with a white spot,
+  // and black stripes over the back and down the flanks, across the haunches and forelegs and round the long tail
+  // to its black tip. It roars, and loves a splash in the water.
+  e('tiger', 'wild', 'jungle', () => {
+    const K = '#1e1a18', P = '#f6efe2';
+    const face: QMark = (f, d) => {
+      const { l, w, h } = d.q.head;
+      f.pair((s) => {
+        f.ball([w * 0.2, h * 0.13, l * 0.14], v3(d.sk, [s * w * 0.24, h * 0.3, l * 0.33]), { color: P, parent: 'head', noInk: true });
+        for (const [y, a] of [[-0.12, 8], [-0.28, -6]]) f.capsule([w * 0.045, l * 0.3, w * 0.045], v3(d.sk, [s * w * 0.6, h * y, -l * 0.08]), { color: K, rot: aim([s * 0.3, a * 0.015, -1]), parent: 'head', noInk: true });
+      });
+      for (const x of [-0.15, 0, 0.15]) f.capsule([w * 0.045, h * 0.3, w * 0.045], v3(d.sk, [x * w, h * 0.4, l * 0.22]), { color: K, rot: [-42, 0, -x * 50], parent: 'head', noInk: true });
+    };
+    return act(QK('tiger', { c: '#e2782a', H: 1.0, L: 1.6, D: 0.54, W: 0.46, tuck: 0.45, rump: 0.98, belly: P, neck: { l: 0.28, w: 0.3, lean: 55, base: 0.4 }, head: { l: 0.33, w: 0.34, h: 0.29 }, muz: { l: 0.12, w: 0.2, h: 0.14, c: P, drop: 0.22 }, nose: '#c87a6a', eye: { k: 0.85, c: '#e0b030' }, ear: { k: 'round', s: 0.085, c: K, in: P }, leg: { w: 0.115, k: 1.2 }, tail: { k: 'stub', l: 0.1, w: 0.075, a: 112 } },
+      chestQ(P), limbsQ(1.5), catFaceQ({ pad: P, ruff: P, ruffK: 1.1 }), earSpotQ(P), face,
+      bodyBandsQ(K, stripeList(13, 0.07, 0.95, [150, 232], [0.013, 0.022], [-14, 10], 7), 1.035),
+      thighBandsQ(K, [[0.55, -24], [0.12, -16], [-0.32, -8]], 0.03, 1.04),
+      legBandsQ(K, [0.68, 0.86], { kk: 1.5, wid: 0.3, k: 1.06 }),
+      longTailQ('#e2782a', 0.95, 0.075, { angles: [112, 148, 166, 140, 80], w1: 0.8, rings: K, n: 6, tip: K, tipL: 0.13 })),
       Q.roar('RRROOOAR!'),
       Q.shakeOff('Grr.'),
-    ),
-  ),
+    );
+  }),
   e('tiger cub', 'wild', 'jungle', () =>
     act(feline('tiger cub', { s: 0.42, hk: 1.7, legK: 0.7, bodyK: 0.8, fat: 1.1, color: '#e8862e', belly: '#f6efe2', snout: '#f6efe2', eyes: '#8ab0d0', acc: tigerAcc(0.42) }),
       [A.par(A.anim('spin'), sayP('Mew!', 1.2)), A.anim('hop')],
@@ -2971,14 +3244,57 @@ export const ENTRIES: CatalogEntry[] = [
       [A.par(A.anim('spin'), sayP('♥', 1))],
     );
   }),
-  // A plains zebra: bold black and white stripes down to the hooves, an upright striped mane and a black muzzle.
-  // It barks and kicks up its heels.
-  e('zebra', 'wild', 'savanna', () =>
-    act(zebra('zebra', 0.86, 1.15, 1, '#1e1e1e'),
+  // A plains zebra, 1.3 m at the withers (lofted, like the mare but stockier): bold black stripes on white, upright
+  // down the body and round the belly, slanting back over the croup and running across the haunches, ringing the
+  // neck and up through the short upright mane, banding the legs to the hooves and barring the face; a black nose,
+  // big round ears, a tufted tail. It barks and kicks up its heels.
+  e('zebra', 'wild', 'savanna', () => {
+    const K = '#1e1e1e';
+    const neck: QMark = (f, d) => {
+      const n = d.q.neck, base = n.base ?? n.w, la = n.lean * D, dir: Vec3 = [0, Math.cos(la), Math.sin(la)], up: Vec3 = [0, Math.sin(la), -Math.cos(la)], mane = n.w * 0.76;
+      for (let i = 0; i < 6; i++) {
+        const u = 0.07 + i * 0.165, dia = (u < 0.4 ? base * (1 - (0.38 * u) / 0.4) : base * (0.62 + ((n.w / base - 0.62) * (u - 0.4)) / 0.6)) * 1.025, out = Math.max(dia / 2, mane * 1.03);
+        band(f, v3(lerp3(d.nb, d.nt, u), up, (out - dia / 2) / 2), dir, dia, 0.065, K, 'neck', (dia / 2 + out) / dia);
+      }
+    };
+    const face: QMark = (f, d) => {
+      const { l, w, h } = d.q.head, m = d.q.muz;
+      for (const z of [-0.16, 0.02, 0.17]) {
+        const r = Math.sqrt(1 - (2 * z) ** 2);
+        band(f, v3(d.sk, [0, 0, z * l]), [0, 0, 1], w * r * 1.03, l * 0.045, K, 'head', h / w);
+      }
+      for (const z of [-0.32, -0.14]) {
+        const r = Math.sqrt(1 - (2 * z) ** 2);
+        band(f, v3(d.mz, [0, 0, z * m.l]), [0, 0, 1], m.w * r * 1.03, m.l * 0.07, K, 'head', m.h / m.w);
+      }
+      f.ball([m.w * 1.04, m.h * 0.92, m.l * 0.42], v3(d.mz, [0, -m.h * 0.02, m.l * 0.33]), { color: '#2a2626', parent: 'head' });
+    };
+    const haunch: QMark = (f, d) => {
+      const { D: Dq, W, L, leg } = d.q, [w, h, cy] = d.sec(0.15), ty = d.Hr - Dq * 0.6, ey = Dq * 0.475, kq = leg.k ?? 1;
+      const ex = leg.w * 0.95 * kq, ez = Math.max(leg.w * 1.3, Dq * 0.31) * kq;
+      for (const u of [0.55, 0.12, -0.3]) {
+        const y = cy + u * h, half = w * Math.sqrt(1 - u * u);
+        f.ball([half * 2 * 1.04, 0.065, L * 0.4], [0, y, d.z(0.11)], { color: K, rot: [-6, 0, 0], parent: 'body', noInk: true, blend: 0 });
+      }
+      f.pair((s) => {
+        for (const y of [cy + 0.12 * h, cy - 0.3 * h, ty - ey * 0.45, ty - ey * 0.8]) {
+          const u = (y - ty) / ey, r = Math.sqrt(Math.max(0.06, 1 - u * u));
+          f.cyl([ex * 2 * r * 1.06, 0.065, ez * 2 * r * 1.06], [s * W * 0.3, y, -L * 0.32], { color: K, rot: [-8, 0, 0], parent: s > 0 ? 'legBL' : 'legBR', noInk: true, blend: 0 });
+        }
+      });
+    };
+    const tailBands: QMark = (f, d) => {
+      const a = 165 * D, dir: Vec3 = [0, Math.cos(a), -Math.sin(a)];
+      for (const u of [0.1, 0.25]) band(f, v3(d.tj, dir, 0.55 * u), dir, 0.04, 0.03, K, 'tail');
+    };
+    return act(QK('zebra', { c: '#f4f2ee', H: 1.3, L: 1.4, D: 0.66, W: 0.52, tuck: 0.12, rump: 0.98, neck: { l: 0.55, w: 0.3, lean: 38, base: 0.55 }, head: { l: 0.42, w: 0.22, h: 0.25 }, muz: { l: 0.28, w: 0.17, h: 0.19, c: '#f4f2ee', jaw: '#3a3434', drop: 0.2 }, nose: '#1a1818', eye: { k: 0.9 }, ear: { k: 'long', s: 0.2, in: '#f4f2ee', tilt: 10 }, leg: { w: 0.085, hoof: '#1e1e1e' }, tail: { k: 'tuft', l: 0.55, w: 0.035, a: 165, tip: K } },
+      maneQ('#f4f2ee', 1.3), limbsQ(1.5), neck, face, haunch, tailBands,
+      bodyBandsQ(K, [...stripeList(7, 0.36, 0.97, [292, 312], [0.042, 0.05], [-24, 10], 11), [0.12, 110, 0.044, -12], [0.24, 130, 0.046, -20]], 1.03),
+      legBandsQ(K, [0.12, 0.27, 0.42, 0.57, 0.72, 0.87], { kk: 1.5, wid: 0.42, k: 1.04 })),
       [A.par(po('neck', [-15, 0, 0], 0.3), po('jaw', [16, 0, 0], 0.3), sayP('Kwa-ha! Kwa-ha!', 1.8)), back('neck', 'jaw'), A.par(po('body', [14, 0, 0], 0.2), po('legBL', [60, 0, 0], 0.2), po('legBR', [60, 0, 0], 0.2), A.effect('dust', { dur: 0.8 })), back('body', 'legBL', 'legBR')],
       Q.graze('*munch*'),
-    ),
-  ),
+    );
+  }),
   e('zebra foal', 'wild', 'savanna', () =>
     act(zebra('zebra foal', 0.52, 1.35, 1.2, '#4a3426'),
       [A.par(A.anim('hop', 3), sayP('Kwee!', 1.2))],

@@ -4051,13 +4051,13 @@ export const ENTRIES: CatalogEntry[] = [
     b.box([0.02, 0.008, 0.008], [0, 0.04, 0.005], { color: '#1e1e1e' });
     return b.act({ click: [A.par(A.pose('strapL', { rot: [0, 30, 0], dur: 0.2 }), A.pose('strapR', { rot: [0, -30, 0], dur: 0.2 })), A.par(A.pose('strapL', { rot: [0, 0, 0], dur: 0.08 }), A.pose('strapR', { rot: [0, 0, 0], dur: 0.08 }), A.say('Snap!', 1))] }).done();
   }),
-  // Three stamped gold bullion bars stacked on each other: they gleam.
+  // Three stamped gold bullion bars stacked on each other, each a 10 x 4.5 cm bar with sloping sides: they gleam.
+  // (A 4-sided pyramid is square to the axes and sized corner to corner, hence the SQRT2.)
   e('gold', 'nature', 'gems', () =>
     m('gold', { edge: 'sharp' })
-      .pyramid([0.1, 0.035, 0.045], [-0.028, 0.0175, 0], 4, { color: 'gold', taper: 0.8, rot: [0, 45, 0] })
-      .box([0.1, 0.035, 0.045], [-0.028, 0.0175, 0], { color: 'gold', round: 0.2 })
-      .box([0.1, 0.035, 0.045], [0.028, 0.0175, 0.005], { color: '#e8b830', round: 0.2 })
-      .box([0.1, 0.035, 0.045], [0, 0.0525, 0.002], { color: '#f0c840', round: 0.2, rot: [0, 8, 0], name: 'top' })
+      .pyramid([0.1 * Math.SQRT2, 0.035, 0.045 * Math.SQRT2], [-0.028, 0.0175, 0], 4, { color: 'gold', taper: 0.8 })
+      .pyramid([0.1 * Math.SQRT2, 0.035, 0.045 * Math.SQRT2], [0.028, 0.0175, 0.005], 4, { color: '#e8b830', taper: 0.8 })
+      .pyramid([0.1 * Math.SQRT2, 0.035, 0.045 * Math.SQRT2], [0, 0.0525, 0.002], 4, { color: '#f0c840', taper: 0.8, rot: [0, 8, 0], name: 'top' })
       .label('999.9', [0.04, 0.012], [0, 0.07, 0.002], { color: 'gold', rot: [-90, 8, 0], parent: 'top', depth: 0.002 })
       .star(0.025, [0.03, 0.085, 0.02], { color: 'white', glow: true })
       .act({ click: [A.par(A.effect('sparkle', { dur: 1.5 }), A.say('Ka-ching!', 1.5), A.pose('top', { move: [0, 0.02, 0], dur: 0.2 })), A.pose('top', { move: [0, 0, 0], dur: 0.2 })] })

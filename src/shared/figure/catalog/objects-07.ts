@@ -2560,7 +2560,7 @@ export const ENTRIES: CatalogEntry[] = [
   e('phone', 'tech', 'phones', () => {
     const b = m('phone')
       .box([0.22, 0.07, 0.2], [0, 0.035, 0], { color: '#c0392b', round: 0.4, name: 'body' })
-      .cyl([0.21, 0.06, 0.2], [0, 0.09, -0.01], { color: '#c0392b', taper: 0.75, segs: 4, rot: [0, 45, 0], parent: 'body' })
+      .cyl([0.2 * Math.SQRT2, 0.06, 0.19 * Math.SQRT2], [0, 0.09, -0.01], { color: '#c0392b', taper: 0.75, segs: 4, parent: 'body' }) // square to the base (sized corner to corner)
       .cyl([0.1, 0.012, 0.1], [0, 0.085, 0.08], { color: 'white', rot: [60, 0, 0], name: 'dial', parent: 'body', edge: 'sharp' });
     b.each(8, (i) => {
       const a = (i / 8) * Math.PI * 1.6 + 0.6;
@@ -3221,15 +3221,17 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [[A.par(A.pose('bottle', { scale: 0.8, dur: 0.15 }), A.say('Squeak!', 1)), A.pose('bottle', { scale: 1, dur: 0.2 }), A.anim('bounce')]] })
       .done();
   }),
-  // A white china dinner plate (27 cm) with a blue rim, standing in a plate stand. It spins on its edge.
+  // A white china dinner plate lying flat, ready for food: 27 cm across and 2.5 cm high, a foot ring under a
+  // shallow body, a flat well and a raised rim with a blue band; food goes on its top. Clicked, it rattles.
   e('plate', 'kitchen', 'tableware', () =>
     m('plate', { edge: 'sharp' })
-      .box([0.14, 0.02, 0.1], [0, 0.01, 0], { color: 'darkwood', round: 0.3 })
-      .rod([0, 0.02, -0.03], [0, 0.12, -0.05], 0.012, 'darkwood')
-      .cyl([0.27, 0.02, 0.27], [0, 0.155, 0], { color: 'white', rot: [80, 0, 0], name: 'plate', pivot: [0, 0.155, 0] })
-      .torus([0.27, 0.27, 0.02], [0, 0.155, 0.002], { color: '#4e8fd6', rot: [-10, 0, 0], tube: 0.06, parent: 'plate', noInk: true })
-      .cyl([0.18, 0.022, 0.18], [0, 0.155, 0.001], { color: '#f2f0ea', rot: [80, 0, 0], parent: 'plate', noInk: true })
-      .act({ click: [[A.par(A.pose('plate', { rot: [0, 0, 360], dur: 1 }), A.say('Clink!', 1)), A.pose('plate', { rot: [0, 0, 0], dur: 0 })]] })
+      .cyl([0.2, 0.013, 0.2], [0, 0.0145, 0], { color: 'white', taper: 1.3, name: 'plate', pivot: [0, 0, 0] })
+      .cyl([0.16, 0.008, 0.16], [0, 0.004, 0], { color: '#e6e4de', parent: 'plate' })
+      .torus([0.27, 0.27, 0.012], [0, 0.02, 0], { color: 'white', rot: [90, 0, 0], tube: 0.09, parent: 'plate' })
+      .torus([0.236, 0.236, 0.003], [0, 0.0215, 0], { color: '#4e8fd6', rot: [90, 0, 0], tube: 0.035, parent: 'plate', noInk: true })
+      .cyl([0.18, 0.002, 0.18], [0, 0.0215, 0], { color: '#f7f6f1', parent: 'plate', noInk: true })
+      .socket('top', [0, 0.023, 0], 'top', { size: 0.2, part: 'plate' })
+      .act({ click: [[A.par(A.pose('plate', { rot: [5, 0, 0], dur: 0.1, times: 2 }), A.say('Clink!', 1)), A.pose('plate', { rot: [0, 0, 5], dur: 0.1, times: 2 })]] })
       .done(),
   ),
   // A stage platform (6 x 4 m, 1 m high): a plank deck, a skirt, side steps, a microphone stand and two
@@ -3256,7 +3258,7 @@ export const ENTRIES: CatalogEntry[] = [
   // A bar of platinum stamped Pt and 999.5, beside a nugget of the raw metal. It gleams.
   e('platinum', 'nature', 'metals', () =>
     m('platinum', { edge: 'sharp' })
-      .cyl([0.12 * Math.SQRT2, 0.04, 0.05 * Math.SQRT2], [0, 0.02, 0], { color: '#d8dce4', segs: 4, taper: 0.8, rot: [0, 45, 0], name: 'bar' })
+      .cyl([0.12 * Math.SQRT2, 0.04, 0.05 * Math.SQRT2], [0, 0.02, 0], { color: '#d8dce4', segs: 4, taper: 0.8, name: 'bar' }) // 12 x 5 cm, square to its stamp
       .label('Pt 999.5', [0.07, 0.02], [0, 0.041, 0.0], { color: '#e8ecf2', rot: [-90, 0, 0], parent: 'bar', depth: 0.002 })
       .ball([0.04, 0.025, 0.035], [0.1, 0.0125, 0.05], { color: '#c9ccd1', edge: 'soft' })
       .act({ click: [[A.par(A.effect('sparkle', { dur: 1.2 }), A.say('Ting!', 1))]] })

@@ -4,7 +4,10 @@ import { addEntries } from '../../src/shared/figure/catalog/registry';
 import { EXAMPLES } from '../../src/shared/figure/catalog/examples';
 import { Engine, type EngineEvent } from '../../src/shared/engine/index';
 import { getFigure, registerFigure } from '../../src/shared/figure/items';
-import { partOverrides, socketOffset, subtree } from '../../src/shared/figure/pose';
+import { partOverrides, restFacing, socketOffset, subtree } from '../../src/shared/figure/pose';
+import { A, withAct } from '../../src/shared/figure/act';
+import { setFiguresDrawn } from '../../src/shared/engine/transform';
+import { visibility } from '../../src/shared/engine/facing';
 import { who } from '../../src/shared/figure/accessories';
 import { Animator } from '../../src/shared/figure/anim';
 import type { Entity, World } from '../../src/shared/types';
@@ -199,5 +202,53 @@ describe('acts, movers, sockets and pieces', () => {
     run(e, 4);
     expect(e.world.get('m')!.facing).toBeUndefined();
     expect(e.world.get('m')!.yaw).toBe(before);
+  });
+
+  it('a click never leaves a thing turned: a step aside in its act, a spin, a face-the-player step', () => {
+    registerFigure(withAct({ ...getFigure('man')!, key: 'sidestepper' }, { click: [[A.face(), A.move('self', { rel: 'left', of: 'self', dist: 'close' }, { speed: 'run' }), A.anim('spin')]] }));
+    const e = world({ ...thing('s', 'sidestepper', [0, 0, 0], 30), kind: 'human' });
+    e.poke('s');
+    let turned = 0;
+    for (let t = 0; t < 6; t += 0.05) {
+      e.update(0.05);
+      if (e.world.trans('s').walk === 'face') turned++;
+    }
+    const s = e.world.get('s')!;
+    expect(turned).toBe(0); // the view is told to keep its facing while it steps aside
+    expect(Math.round(s.yaw!)).toBe(30);
+    expect(s.facing).toBeUndefined();
+    expect(Math.hypot(s.pos[0], s.pos[2])).toBeGreaterThan(0.5); // it did step aside
+  });
+
+  it('a command to face the player turns a model once; it never tracks the camera', () => {
+    const e = world(thing('m', 'man', [0, 0, 0], 90));
+    e.run([{ op: 'set', id: 'm', face: 'player' }]);
+    run(e, 1);
+    const m = e.world.get('m')!;
+    expect(m.facing).toBeUndefined();
+    expect(Math.round(m.yaw!)).toBe(0); // the player stands at +z: front faces +z
+  });
+
+  it('turning into a model drawn the other way round keeps the way it faces', () => {
+    const e = world(thing('m', 'man', [0, 0, 0], 40));
+    const before = restFacing(e.world.get('m')!, getFigure('man')!);
+    e.run([{ op: 'set', id: 'm', word: 'bus', res: { word: 'bus', sprite: { file: null, w: 1, h: 1 }, heightM: getFigure('bus')!.heightM, kind: 'object', solid: true, huge: false } } as never]);
+    run(e, 1);
+    const m = e.world.get('m')!;
+    expect(m.word).toBe('bus');
+    expect(Math.round(restFacing(m, getFigure('bus')!) - before) % 360).toBe(0);
+  });
+
+  it('switching to a flat look stands each cutout so the player can see it', () => {
+    // a bus that drove straight away from the player in cel: its plane points at the player, edge-on
+    const e = world({ ...thing('b', 'bus', [0, 0, -12], 270) });
+    expect(visibility(e.world.get('b')!.yaw!, e.world.get('b')!.pos, e.world.player.pos)).toBeLessThan(0.1);
+    setFiguresDrawn(true, false);
+    try {
+      e.flattenFacings();
+    } finally {
+      setFiguresDrawn(true, true);
+    }
+    expect(visibility(e.world.get('b')!.yaw!, e.world.get('b')!.pos, e.world.player.pos)).toBeGreaterThan(0.55);
   });
 });

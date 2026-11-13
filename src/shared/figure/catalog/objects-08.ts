@@ -3833,22 +3833,34 @@ export const ENTRIES: CatalogEntry[] = [
     b.rod([-0.12, 0.12, 0.06], [-0.18, 0.6, 0.07], 0.025, '#6a8a2a', { name: 'top2', pivot: [-0.12, 0.12, 0.06] }).ball([0.08, 0.18, 0.025], [-0.2, 0.48, 0.08], { color: '#7a9a32', rot: [0, 0, 20], parent: 'top2' });
     return b.act({ click: [A.par(A.pose('top', { rot: [0, 0, 18], dur: 0.6, times: 1 }), A.pose('top2', { rot: [0, 0, -15], dur: 0.6, times: 1 }), A.effect('water_spray', { dur: 1.5 }), A.say('Swish...', 1.2))] }).done();
   }),
-  // A bullet security camera (CCTV) on a wall plate and bracket at the top of a short post: a white housing
-  // with a sun visor, a dark lens and a red recording light. Click: it pans round to look, light on.
-  e('security camera', 'tech', 'gadgets', () =>
-    m('security camera', { edge: 'sharp' })
-      .box([0.3, 0.04, 0.3], [0, 0.02, -0.1], { color: '#5c6166' })
-      .stick([0, 0.04, -0.12], [0, 0.5, -0.12], 0.06, '#9da3a8')
-      .box([0.12, 0.2, 0.03], [0, 0.55, -0.1], { color: 'white', round: 0.2 })
-      .rod([0, 0.6, -0.085], [0, 0.6, -0.02], 0.025, 'white')
-      .box([0.08, 0.08, 0.2], [0, 0.6, 0.06], { color: '#f2f2ee', round: 0.35, rot: [15, 0, 0], name: 'cam', pivot: [0, 0.6, -0.02] })
-      .box([0.1, 0.012, 0.22], [0, 0.65, 0.07], { color: '#f2f2ee', rot: [15, 0, 0], parent: 'cam' })
-      .cyl([0.06, 0.02, 0.06], [0, 0.575, 0.16], { color: '#2a2726', rot: [105, 0, 0], parent: 'cam' })
-      .cyl([0.035, 0.022, 0.035], [0, 0.573, 0.163], { color: '#4a6a9a', rot: [105, 0, 0], parent: 'cam' })
-      .ball(0.012, [0.025, 0.625, 0.14], { color: '#ff3a2a', name: 'led', parent: 'cam', mover: { kind: 'light' } })
+  // A bullet security camera (CCTV) as it is really seen, high out of reach: on a bracket at the top of a 2.5 m
+  // steel pole with a CCTV sign and a junction box: a white housing tipped down, with a sun visor, a dark lens and a
+  // red recording light. Click: it pans round to look, light on.
+  // Real size: the camera sits at 2.4 m (the tsv's 0.2 m is the camera alone, so the size check may warn).
+  e('security camera', 'tech', 'gadgets', () => {
+    const P = [0, 2.42, 0.1]; // the swivel at the end of the bracket
+    const t = (15 * Math.PI) / 180;
+    /** A point in the camera's frame (from the swivel, z along the housing), tipped down 15 degrees. */
+    const c = (x: number, y: number, z: number): [number, number, number] => [P[0] + x, P[1] + y * Math.cos(t) - z * Math.sin(t), P[2] + y * Math.sin(t) + z * Math.cos(t)];
+    const b = m('security camera', { edge: 'sharp' }).box([0.3, 0.03, 0.3], [0, 0.015, -0.1], { color: '#5c6166', round: 0.1 });
+    for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) b.cyl([0.025, 0.02, 0.025], [x * 0.11, 0.035, -0.1 + z * 0.11], { color: '#3a3e42', segs: 6 });
+    b.cyl([0.08, 2.4, 0.08], [0, 1.23, -0.1], { color: '#9da3a8' })
+      .cyl([0.09, 0.03, 0.09], [0, 2.445, -0.1], { color: '#7d8388' })
+      .box([0.14, 0.2, 0.08], [0, 1.0, -0.02], { color: '#8a9095', round: 0.15 })
+      .label('CCTV', [0.24, 0.16], [0, 1.75, -0.05], { color: '#f2c14e', depth: 0.012 })
+      .box([0.1, 0.16, 0.03], [0, 2.4, -0.045], { color: 'white', round: 0.2 })
+      .rod([0, 2.42, -0.03], [0, 2.42, P[2]], 0.03, 'white')
+      .ball(0.04, P as [number, number, number], { color: '#e8e8e4' })
+      .rod([0, 2.36, -0.035], [0, 2.2, -0.055], 0.012, '#2a2726')
+      .box([0.09, 0.09, 0.26], c(0, 0, 0.13), { color: '#f2f2ee', round: 0.35, rot: [15, 0, 0], name: 'cam', pivot: P as [number, number, number] })
+      .box([0.115, 0.012, 0.29], c(0, 0.052, 0.15), { color: '#f2f2ee', rot: [15, 0, 0], parent: 'cam' })
+      .cyl([0.078, 0.02, 0.078], c(0, -0.002, 0.265), { color: '#2a2726', rot: [105, 0, 0], parent: 'cam' })
+      .cyl([0.05, 0.022, 0.05], c(0, -0.002, 0.268), { color: '#3a5a8a', rot: [105, 0, 0], parent: 'cam' })
+      .ball(0.014, c(0.031, 0.032, 0.262), { color: '#ff3a2a', name: 'led', parent: 'cam', mover: { kind: 'light' } });
+    return b
       .act({ click: [A.operate('led', 'on'), A.pose('cam', { rot: [0, 40, 0], dur: 0.7 }), A.pose('cam', { rot: [0, -40, 0], dur: 1.2 }), A.par(A.pose('cam', { rot: [0, 0, 0], dur: 0.6 }), A.say('Bzzt. Recording.', 1.5)), A.operate('led', 'off')] })
-      .done(),
-  ),
+      .done();
+  }),
   // A bean seed sprouting in a little pot cut away to show it: the split seed coat in the dark soil, a root
   // going down and a curled green shoot with two seed leaves. Click: the shoot grows; click again, it settles.
   e('seed', 'garden', 'plant parts', () => {

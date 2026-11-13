@@ -4,6 +4,8 @@
  */
 import { e, x, type CatalogEntry } from './types';
 import { A, around, m, withAct, type M } from '../dsl';
+import { loftSection } from '../math';
+import { toEuler } from '../pose';
 import { hat, held, wear, who } from '../accessories';
 
 type V = [number, number, number];
@@ -2081,17 +2083,80 @@ export const ENTRIES: CatalogEntry[] = [
       .act({ click: [A.pose('collar', { move: [0, 0.06, 0], dur: 0.3 }), A.say('Fluff!', 1), A.wait(0.5), A.pose('collar', { move: [0, 0, 0], dur: 0.3 })] })
       .done(),
   ),
-  // An empty turtle shell, 0.5 m: a domed carapace of hexagonal scutes over a flat pale plastron; knock on it.
+  // An empty tortoise shell, 0.5 m long: a high carapace (a loft, highest behind the middle and sloping down to
+  // the head end) tiled with its raised plates (scutes), the dark seams sunk between them: five vertebrals down the
+  // spine and four costals a side, each with a paler growth centre, and a rim of marginal scutes round the edge
+  // over a flat pale plastron, open at the head and tail ends. Knock on it.
   e('turtle shell', 'wild', 'animal parts', () => {
+    const W = 0.4, H = 0.46, L = 0.5, y0 = 0.05;
+    const profile: Array<[number, number, number, number]> = [[0, 0.34, 0.2, 0], [0.08, 0.74, 0.56, 0], [0.42, 1, 1, 0], [0.8, 0.9, 0.78, 0], [0.94, 0.62, 0.46, 0], [1, 0.32, 0.18, 0]];
+    const sec = (t: number) => loftSection({ size: [W, H, L], profile } as unknown as Parameters<typeof loftSection>[0], Math.max(0, Math.min(1, t)));
+    /** The carapace at section t, a degrees round from the spine (+ to the left). */
+    const pt = (t: number, a: number): V => {
+      const q = sec(t);
+      return [q.w * Math.sin(a * DEG), y0 + q.h * Math.cos(a * DEG), (t - 0.5) * L];
+    };
+    /** How far a point is outside the carapace (0 on it), for its outward normal. */
+    const F = (x: number, y: number, z: number) => {
+      const q = sec(z / L + 0.5);
+      return Math.hypot(x / q.w, (y - y0) / q.h) - 1;
+    };
+    /** n places evenly spaced (by distance over the shell) along the line a degrees round, from t0 to t1. */
+    const along = (a: number, t0: number, t1: number, n: number): { ts: number[]; gap: number } => {
+      const N = 120, acc = [0];
+      for (let i = 1; i <= N; i++) {
+        const p = pt(t0 + ((t1 - t0) * (i - 1)) / N, a), q = pt(t0 + ((t1 - t0) * i) / N, a);
+        acc.push(acc[i - 1] + Math.hypot(q[0] - p[0], q[1] - p[1], q[2] - p[2]));
+      }
+      const total = acc[N];
+      const ts = Array.from({ length: n }, (_, k) => {
+        const want = ((k + 0.5) / n) * total;
+        const i = Math.max(1, acc.findIndex((v) => v >= want));
+        return t0 + ((t1 - t0) * (i - 1 + (want - acc[i - 1]) / (acc[i] - acc[i - 1] || 1))) / N;
+      });
+      return { ts, gap: total / n };
+    };
+    /** A plate on the carapace: its x along the shell, y out of it, z round it; sunk by `sink` (raised if < 0). */
+    const plate = (t: number, a: number, size: V, color: string, o: { sink?: number; drop?: number; segs?: number; noInk?: boolean } = {}) => {
+      const p = pt(t, a);
+      p[1] -= o.drop ?? 0;
+      const k = 1e-3;
+      const g: V = [F(p[0] + k, p[1], p[2]) - F(p[0] - k, p[1], p[2]), F(p[0], p[1] + k, p[2]) - F(p[0], p[1] - k, p[2]), F(p[0], p[1], p[2] + k) - F(p[0], p[1], p[2] - k)];
+      const n = g.map((v) => v / Math.hypot(...g)) as V;
+      const ul = Math.hypot(n[0], n[1]) || 1;
+      const u: V = [n[1] / ul, -n[0] / ul, 0]; // round the shell
+      const w: V = [u[1] * n[2] - u[2] * n[1], u[2] * n[0] - u[0] * n[2], u[0] * n[1] - u[1] * n[0]]; // along it
+      const rot = toEuler([w[0], n[0], -u[0], w[1], n[1], -u[1], w[2], n[2], -u[2]]);
+      const off = size[1] / 2 - (o.sink ?? 0.012);
+      const at: V = [p[0] + n[0] * off, p[1] + n[1] * off, p[2] + n[2] * off];
+      if (o.segs) b.cyl(size, at, { color, segs: o.segs, taper: 0.78, rot, parent: 'shell', noInk: o.noInk });
+      else b.box(size, at, { color, rot, parent: 'shell', round: 0.3, noInk: o.noInk });
+    };
+    /** Round-the-shell size scaled to the section (plates shrink toward the ends). */
+    const kOf = (t: number) => { const q = sec(t); return (q.w + q.h) / 0.43; };
     const b = m('turtle shell')
-      .cyl([0.4, 0.035, 0.48], [0, 0.02, 0], { color: '#d9c48a' })
-      .dome([0.42, 0.21, 0.5], [0, 0.135, 0], { color: '#6b7a3a', name: 'shell' })
-      .prism([0.11, 0.02, 0.12], [0, 0.236, 0], 6, { color: '#55642a', parent: 'shell', noInk: true });
-    for (const [x0, z] of around(6, 0.11, Math.PI / 6)) {
-      const r = Math.hypot(x0 / 0.21, z / 0.25);
-      b.prism([0.1, 0.018, 0.1], [x0, 0.03 + 0.21 * Math.sqrt(Math.max(0, 1 - r * r)) + 0.002, z], 6, { color: '#55642a', noInk: true, parent: 'shell', rot: [(z / 0.11) * 30, 0, (-x0 / 0.11) * 30] });
+      .cyl([0.3, 0.032, 0.36], [0, 0.016, 0.0], { color: '#d6c08a', name: 'shell', pivot: [0, 0, 0] })
+      .ball([0.32, 0.1, 0.44], [0, 0.06, 0], { color: '#1f1a12', parent: 'shell' })
+      .loft([W, H, L], [0, y0, 0], profile, { color: '#2e2718', cut: 'top', parent: 'shell' });
+    const SCUTE = '#7a6230', CENTRE = '#b39550', RIM = '#6a5328', SEAM = 0.012;
+    // five vertebrals down the spine and four costals a side, each with a pale growth centre
+    const v = along(0, 0.07, 0.95, 5);
+    for (const t of v.ts) {
+      plate(t, 0, [v.gap - SEAM, 0.03, 0.15 * kOf(t)], SCUTE, { segs: 6 });
+      plate(t, 0, [0.04, 0.008, 0.055 * kOf(t)], CENTRE, { segs: 6, sink: -0.016, noInk: true });
     }
-    for (const [x0, z] of around(14, 1)) b.box([0.06, 0.035, 0.045], [x0 * 0.2, 0.05, z * 0.24], { color: '#5a6a30', rot: [0, -Math.atan2(z, x0) / DEG, 0], parent: 'shell', round: 0.4 });
+    for (const s of [1, -1]) {
+      const c = along(s * 46, 0.1, 0.92, 4);
+      for (const t of c.ts) {
+        plate(t, s * 46, [c.gap - SEAM, 0.03, 0.16 * kOf(t)], SCUTE, { segs: 6 });
+        plate(t, s * 46, [0.045, 0.008, 0.06 * kOf(t)], CENTRE, { segs: 6, sink: -0.016, noInk: true });
+      }
+      // the marginals round the rim, hanging a little over the plastron
+      const r = along(s * 80, 0.03, 0.97, 11);
+      for (const t of r.ts) plate(t, s * 80, [r.gap - SEAM * 0.8, 0.024, 0.085 * Math.min(1, kOf(t) * 1.2)], RIM, { drop: 0.012 });
+    }
+    plate(0.995, 0, [0.04, 0.024, 0.06], RIM, { drop: 0.01 });
+    plate(0.005, 0, [0.04, 0.024, 0.07], RIM, { drop: 0.01 });
     return b.act({ click: [A.pose('shell', { rot: [0, 0, 6], dur: 0.1 }), A.pose('shell', { rot: [0, 0, -6], dur: 0.1 }), A.par(A.pose('shell', { rot: [0, 0, 0], dur: 0.1 }), A.say('Knock knock!', 1.3))] }).done();
   }),
   // A single curved elephant tusk, 1.5 m, on a turning wooden display stand.
@@ -4039,11 +4104,68 @@ export const ENTRIES: CatalogEntry[] = [
     b.pair((s) => b.stick(at(s * 0.05 - 0.3, -0.36, 0.04), at(s * 0.05 - 0.3 + 0.55, -0.33, 0.04), 0.02, '#1e1c1c', { name: s > 0 ? 'wiperL' : 'wiperR', pivot: at(s * 0.05 - 0.3, -0.36, 0.04) }));
     return b.act({ click: [A.par(A.effect('rain', { dur: 2.5 }), A.pose('wiperL', { rot: [0, 0, 70], dur: 0.4, times: 3 }), A.pose('wiperR', { rot: [0, 0, 70], dur: 0.4, times: 3 }), A.say('Swish... swish... swish!', 2.2))] }).done();
   }),
-  // (The vocabulary's 12 m is an aeroplane's; this is a bird's.) An eagle's wing, 1.1 m across, spread on a
-  // little display stand: brown coverts and a fan of long flight feathers; it flaps.
+  // (The vocabulary's 12 m is an aeroplane's; this is a bird's.) A golden eagle's wing, 1.1 m long, spread on a
+  // display stand, its upper side to the front: the leading edge (shoulder, elbow, wrist, hand) under a band of
+  // small marginal coverts, rows of lesser, median and greater coverts laid like shingles, then the flight
+  // feathers: three broad tertials, eleven secondaries along the forearm and ten primaries fanning from the hand,
+  // the outer ones narrow, splayed "fingers". It flaps.
   e('wing', 'aviary', 'feathers', () => {
-    const b = m('wing').box([0.3, 0.05, 0.2], [0, 0.025, 0], { color: '#7a5230', edge: 'sharp' }).stick([0, 0.05, 0], [0, 0.42, 0], 0.03, '#5a3a22');
-    featherWing(b, 1, [-0.05, 0.45, 0], 1.1, 'wing', { bone: '#6b4a2e', covert: '#8a6a4a', quill: ['#5a3a22', '#6b4a2e'] });
+    const S: V = [-0.08, 0.66, 0]; // the shoulder
+    const al = 14 * DEG; // the wing raised a little
+    /** A point in the wing's plane (u out along the span, v up across it), z toward the front (the upper side). */
+    const P = (u: number, v: number, z = 0): V => [S[0] + u * Math.cos(al) - v * Math.sin(al), S[1] + u * Math.sin(al) + v * Math.cos(al), S[2] + z];
+    const b = m('wing')
+      .box([0.34, 0.05, 0.24], [0.02, 0.025, 0], { color: '#5a3a22', edge: 'sharp', round: 0.2 })
+      .stick([S[0], 0.05, 0], [S[0], S[1] - 0.02, -0.03], 0.035, '#3a2a1e');
+    const lead: Array<[number, number]> = [[0, 0], [0.23, -0.035], [0.5, 0.035], [0.72, 0.0]]; // shoulder, elbow, wrist, hand
+    const LESSER = '#9a6c3c';
+    // the arm bones, covered in the small marginal coverts: the wing's rounded leading edge
+    b.rod(P(...lead[0], 0.065), P(...lead[1], 0.065), 0.075, LESSER, { name: 'wing', pivot: P(0, 0) });
+    b.rod(P(...lead[1], 0.065), P(...lead[2], 0.065), 0.065, LESSER, { parent: 'wing' }).rod(P(...lead[2], 0.06), P(...lead[3], 0.06), 0.045, LESSER, { parent: 'wing' });
+    /** The leading edge's v at u (straight lines between the joints). */
+    const edgeV = (u: number): number => {
+      const i = Math.max(0, Math.min(2, lead.findIndex((q) => q[0] > u) - 1));
+      const [a, c] = [lead[i], lead[i + 1]];
+      return a[1] + ((c[1] - a[1]) * (u - a[0])) / (c[0] - a[0]);
+    };
+    /** A feather from its base (u, v) pointing at phi degrees in the wing's plane (0 = out along the span). */
+    const feather = (u: number, v: number, phi: number, len: number, w: number, z: number, color: string, shape: 'ball' | 'capsule' = 'capsule') => {
+      const r = phi * DEG;
+      const at = P(u + (Math.cos(r) * len) / 2, v + (Math.sin(r) * len) / 2, z);
+      if (shape === 'ball') b.ball([w, len, 0.014], at, { color, rot: [0, 0, phi + al / DEG - 90], parent: 'wing' });
+      else b.capsule([w, len, 0.01], at, { color, rot: [0, 0, phi + al / DEG - 90], parent: 'wing' });
+    };
+    const FLIGHT = ['#3a2718', '#4a3220'], COVERT = '#7a5432';
+    // the primaries fanning from the hand (outermost first, so each inner one lies over it)
+    for (let i = 0; i < 10; i++) {
+      const k = i / 9; // 0 outermost .. 1 innermost
+      const len = [0.38, 0.45, 0.49, 0.5, 0.48, 0.45, 0.42, 0.4, 0.38, 0.36][i];
+      feather(0.72 - k * 0.22, edgeV(0.72 - k * 0.22) - 0.02, -6 - k * 76, len, i < 5 ? 0.06 : 0.075, 0.004 * i, FLIGHT[i % 2], 'ball');
+    }
+    // the secondaries along the forearm and the tertials at the body
+    for (let i = 0; i < 11; i++) {
+      const u = 0.48 - i * 0.042;
+      feather(u, edgeV(u) - 0.04, -84 - i * 1.5, 0.34, 0.068, 0.045 + 0.003 * i, FLIGHT[i % 2]);
+    }
+    for (let i = 0; i < 3; i++) feather(0.03 - i * 0.03, -0.05, -100 - i * 8, 0.3, 0.085, 0.08 + 0.003 * i, '#5a3e26');
+    // coverts in shingled rows, the lesser and marginal ones along the leading edge
+    for (let i = 0; i < 10; i++) {
+      const u = 0.66 - i * 0.068;
+      feather(u, edgeV(u) - 0.07, -95, 0.16, 0.07, 0.1, COVERT, 'ball');
+    }
+    for (let i = 0; i < 8; i++) {
+      const u = 0.56 - i * 0.07;
+      feather(u, edgeV(u) - 0.045, -98, 0.11, 0.078, 0.112, i % 2 ? COVERT : '#865c36', 'ball');
+    }
+    for (let i = 0; i < 8; i++) {
+      const u = 0.6 - i * 0.075;
+      feather(u, edgeV(u) - 0.015, -100, 0.08, 0.08, 0.124, LESSER, 'ball');
+    }
+    // the primary coverts over the bases of the primaries at the hand
+    for (let i = 0; i < 5; i++) {
+      const u = 0.71 - i * 0.045;
+      feather(u, edgeV(u) - 0.02, -30 - i * 11, 0.17, 0.075, 0.09 + 0.004 * i, COVERT, 'ball');
+    }
     return b.act({ click: [A.par(A.pose('wing', { rot: [0, 0, 22], dur: 0.25, times: 2 }), A.say('Flap flap!', 1.2))] }).done();
   }),
   // (The vocabulary's 12 m is an aeroplane's.) A pair of white angel wings on a harness stand, 3 m across: a soft

@@ -420,7 +420,7 @@ export const ENTRIES: CatalogEntry[] = [
         ],
       }),
       [
-        [A.operate('scope', 'open'), ...talk('look_around', 'Jupiter has four moons!'), A.operate('scope', 'close')],
+        [A.operate('scope', 'open'), ...talk('point', 'Jupiter has four moons!'), A.operate('scope', 'close')],
         talk('shrug', 'And yet it moves.'),
       ],
     ),
@@ -2085,7 +2085,25 @@ export const ENTRIES: CatalogEntry[] = [
         wear('armor', '#c8d0d8'),
         x((d) => [['torso', 'box', [d.tw * 0.9, d.torsoH * 0.8, d.td * 1.15], [0, d.torsoH * 0.35, 0], '#2f5aa8', { layer: 2, round: 0.3 }]]),
         arms(rest),
-        grip('R', rest, (a) => [['cyl', [0.12, 3.2, 0.12], [0, 0.15, 1.2], '#e8e4d8', { taper: 0.2, srot: [82, 0, 0] }], ['cyl', [0.26, 0.26, 0.26], [0, 0.05, 0.25], '#c8d0d8', { taper: 0.3, srot: [82, 0, 0] }], ...[0.6, 1.2, 1.8].map((z): Hold => ['cyl', [0.11, 0.08, 0.11], [0, 0.05 + z * 0.13, 0.4 + z], '#2f5aa8', { srot: [82, 0, 0], noInk: true }])]),
+        // a solid 3 m lance couched in the fist, a little up and across the horse's neck: a rounded butt and the
+        // handle, a stop ring, a steel vamplate (the funnel guarding the hand), then the shaft tapering from 11 cm
+        // to a blunt steel coronel, painted in blue and white bands
+        grip('R', rest, () => {
+          const u = [0.1, 0.07, 1].map((v, _i, l) => v / Math.hypot(...l)) as Vec3;
+          const at = (t: number): Vec3 => [u[0] * t, -0.01 + u[1] * t, 0.03 + u[2] * t];
+          const sr: Vec3 = [(Math.atan2(u[2], u[1]) * 180) / Math.PI, 0, (-Math.asin(u[0]) * 180) / Math.PI];
+          const piece = (t0: number, t1: number, d0: number, d1: number, c: string): Hold => ['cyl', [d0, t1 - t0, d0], at((t0 + t1) / 2), c, { taper: d1 / d0, srot: sr, edge: 'sharp' }];
+          const dia = (t: number) => 0.11 - (0.07 * (t - 0.12)) / 2.33;
+          const bands = [0.12, 0.62, 1.12, 1.62, 2.07, 2.45];
+          return [
+            ['ball', [0.08, 0.08, 0.08], at(-0.55), '#5a3a22'],
+            piece(-0.55, 0.12, 0.072, 0.066, '#5a3a22'),
+            piece(-0.15, -0.09, 0.1, 0.1, '#c8d0d8'),
+            piece(0.1, 0.3, 0.34, 0.12, '#c8d0d8'),
+            ...bands.slice(1).map((t1, i) => piece(bands[i], t1, dia(bands[i]), dia(t1), i % 2 ? '#f2efe6' : '#2f5aa8')),
+            piece(2.45, 2.52, 0.04, 0.06, '#c8d0d8'),
+          ];
+        }),
         grip('L', rest, (a) => [['cyl', [0.5, 0.05, 0.62], [0.05, 0.05, a * 0.8], '#2f5aa8', { segs: 3, srot: [90, 0, 180], edge: 'sharp' }], ['box', [0.06, 0.4, 0.02], [0.05, 0.08, a * 0.8 + 0.03], 'white', { edge: 'sharp' }]]),
       ],
     });
@@ -2332,7 +2350,7 @@ export const ENTRIES: CatalogEntry[] = [
           grip('L', rest, (a) => [['box', [a * 2.6, a * 3.4, a * 0.25], [-a * 0.6, a * 1.2, a * 0.6], 'darkwood', { srot: [-15, 0, 0], edge: 'sharp' }], ['box', [a * 2.2, a * 3.0, a * 0.05], [-a * 0.6, a * 1.2, a * 0.75], '#6a6a3a', { srot: [-15, 0, 0], noInk: true }], ['ball', [a * 0.8, a * 1.0, a * 0.05], [-a * 0.6, a * 1.6, a * 0.73], '#d9b090', { srot: [-15, 0, 0], noInk: true }], ['ball', [a * 1.4, a * 1.2, a * 0.05], [-a * 0.6, a * 0.6, a * 0.88], '#3a2a1a', { srot: [-15, 0, 0], noInk: true }]]),
         ],
       }),
-      [talk('look_around', 'Hmm... a machine that flies!', rest), talk('thumbs_up', 'Behold! I call her Mona Lisa.', rest)],
+      [talk('look_around', 'Hmm... a machine that flies!', rest), talk('tada', 'Behold! I call her Mona Lisa.', rest)],
     );
   }),
   // A leprechaun under a metre tall: green coat and buckled hat, an orange beard, a shillelagh, and his pot of gold.
@@ -2840,8 +2858,8 @@ export const ENTRIES: CatalogEntry[] = [
         ],
       }),
       [
-        [A.spawn('star', 'starfish', near), ...talk('thumbs_up', 'Look! A sea star!', 'hold'), A.wait(1), A.remove('star', 'sink')],
-        talk('point', 'Save the coral reefs!', 'hold'),
+        [A.spawn('star', 'starfish', near), ...talk('point', 'Look! A sea star!', 'hold'), A.wait(1), A.remove('star', 'sink')],
+        talk('arms_up', 'Save the coral reefs!', 'hold'),
       ],
     ),
   ),
@@ -2987,7 +3005,7 @@ export const ENTRIES: CatalogEntry[] = [
         ],
       }),
       [
-        talk('thumbs_up', 'The finest silks in all the land!', rest),
+        talk('tada', 'The finest silks in all the land!', rest),
         [A.par(A.face('player'), A.say('A fair price, my friend!', 2)), A.pose('beam', { rot: [0, 0, 12], dur: 0.4 }), A.pose('beam', { rot: [0, 0, -12], dur: 0.5 }), A.pose('beam', { rot: [0, 0, 0], dur: 0.4 })],
       ],
     );

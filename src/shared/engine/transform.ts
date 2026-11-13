@@ -9,8 +9,8 @@ import type { Figure } from '../figure/types';
 let figuresDrawn = true;
 let figuresSolid = true;
 /**
- * The client says whether code-drawn models are shown, and whether they are solid (3D and cel) or flat (paper,
- * origami). In the sprites Look things are pictures: a model's acts, part poses and sockets would not show, so the
+ * The client says whether code-drawn models are shown, and whether they are solid (3D, cel and origami) or
+ * flat (paper cutouts). In the sprites Look things are pictures: a model's acts, part poses and sockets would not show, so the
  * engine treats them as the drawings they are. Flat things turn their plane to stay readable; solid models just
  * face where they go.
  */
@@ -23,7 +23,7 @@ export function setFiguresDrawn(on: boolean, solid = on): void {
 export function isSolidFigure(e: Entity): boolean {
   if (!figureOfEntity(e)) return false;
   // a thing with a look of its own (the visuals demo's rows) goes by that
-  return e.look ? e.look === 'toon' || e.look === 'cel' : figuresSolid;
+  return e.look ? e.look !== 'paper' : figuresSolid;
 }
 
 export function figureOfEntity(e: Entity): Figure | null {

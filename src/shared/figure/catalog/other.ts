@@ -1805,7 +1805,8 @@ export const ENTRIES: CatalogEntry[] = [
     for (let i = 0; i < 15; i++) {
       const x = -1.6 + i * 0.23;
       if (Math.abs(x) < 0.4) continue;
-      b.box([0.09, 0.9, 0.025], [x, 0.45, -1.2], { color: 'white', edge: 'sharp' }).pyramid([0.09, 0.08, 0.025], [x, 0.94, -1.2], 4, { color: 'white', rot: [0, 45, 0], edge: 'sharp' });
+      // a pointed top square to the picket (a 4-sided pyramid is sized corner to corner)
+      b.box([0.09, 0.9, 0.025], [x, 0.45, -1.2], { color: 'white', edge: 'sharp' }).pyramid([0.09 * Math.SQRT2, 0.08, 0.025 * Math.SQRT2], [x, 0.94, -1.2], 4, { color: 'white', edge: 'sharp' });
     }
     b.pair((s) => b.box([1.25, 0.06, 0.03], [s * 1.0, 0.3, -1.22], { color: 'white', edge: 'sharp' }).box([1.25, 0.06, 0.03], [s * 1.0, 0.7, -1.22], { color: 'white', edge: 'sharp' }));
     b.box([0.7, 0.85, 0.04], [0, 0.48, -1.2], { color: 'white', edge: 'sharp', name: 'gate', pivot: [-0.38, 0.48, -1.2], mover: { kind: 'swing', axis: 'y', amount: 95 } });
@@ -3359,7 +3360,7 @@ export const ENTRIES: CatalogEntry[] = [
     const b = m('serenity').box([2.2, 0.08, 1.4], [0, 0.04, 0], { color: 'sand', round: 0.2 }).box([2.3, 0.12, 0.08], [0, 0.06, 0.72], { color: 'darkwood', edge: 'sharp' }).box([2.3, 0.12, 0.08], [0, 0.06, -0.72], { color: 'darkwood', edge: 'sharp' });
     for (let i = 0; i < 6; i++) b.box([2.0, 0.008, 0.02], [0, 0.083, -0.55 + i * 0.12], { color: '#c9b07a', noInk: true, round: 0 });
     [[0.3, 0.1], [0.24, 0.09], [0.18, 0.08], [0.13, 0.07], [0.09, 0.06]].reduce((y, [w, h]) => (b.ball([w, h, w * 0.85], [-0.55, y + h / 2, 0.15], { color: 'stone' }), y + h * 0.85), 0.08);
-    b.cyl([0.18, 0.3, 0.18], [0.75, 0.23, -0.4], { color: 'stone' }).box([0.3, 0.18, 0.3], [0.75, 0.47, -0.4], { color: '#b8b8b0', edge: 'sharp' }).box([0.12, 0.08, 0.02], [0.75, 0.47, -0.25], { color: '#fff3a0', glow: true }).pyramid([0.42, 0.18, 0.42], [0.75, 0.65, -0.4], 4, { color: 'stone', rot: [0, 45, 0] });
+    b.cyl([0.18, 0.3, 0.18], [0.75, 0.23, -0.4], { color: 'stone' }).box([0.3, 0.18, 0.3], [0.75, 0.47, -0.4], { color: '#b8b8b0', edge: 'sharp' }).box([0.12, 0.08, 0.02], [0.75, 0.47, -0.25], { color: '#fff3a0', glow: true }).pyramid([0.42 * Math.SQRT2, 0.18, 0.42 * Math.SQRT2], [0.75, 0.65, -0.4], 4, { color: 'stone' }); // a roof square to the lantern box
     b.cyl([0.2, 0.08, 0.16], [-0.1, 0.12, -0.45], { color: '#5a3a22', edge: 'sharp' }).rod([-0.1, 0.15, -0.45], [-0.05, 0.35, -0.45], 0.04, 'bark').ball([0.28, 0.14, 0.2], [-0.04, 0.4, -0.45], { color: 'darkgreen' });
     b.cyl([0.5, 0.15, 0.5], [0.55, 0.15, 0.35], { color: '#8f8c86', edge: 'sharp' }).cyl([0.42, 0.02, 0.42], [0.55, 0.22, 0.35], { color: 'water' });
     b.ball(0.04, [0.55, 0.25, 0.35], { color: 'yellow', name: 'lotus' });
@@ -3692,8 +3693,9 @@ export const ENTRIES: CatalogEntry[] = [
   e('tempo', 'music', 'music tools', () =>
     m('tempo', { edge: 'sharp' })
       .box([0.18, 0.03, 0.14], [0, 0.015, 0], { color: 'darkwood', round: 0.3 })
-      .pyramid([0.2, 0.24, 0.16], [0, 0.15, 0], 4, { color: 'wood', taper: 0.3, rot: [0, 45, 0] })
-      .box([0.07, 0.17, 0.005], [0, 0.14, 0.055], { color: 'cream', rot: [-14, 0, 0] })
+      // the case: a flat-fronted pyramid square to its base (sized corner to corner), the scale on its front face
+      .pyramid([0.17 * Math.SQRT2, 0.24, 0.14 * Math.SQRT2], [0, 0.15, 0], 4, { color: 'wood', taper: 0.3 })
+      .box([0.07, 0.17, 0.005], [0, 0.14, 0.0495], { color: 'cream', rot: [-12, 0, 0] })
       .stick([0, 0.07, 0.065], [0, 0.29, 0.065], 0.008, 'steel', { name: 'arm', pivot: [0, 0.07, 0.065] })
       .box([0.03, 0.025, 0.02], [0, 0.24, 0.07], { color: 'gold', parent: 'arm' })
       .act({ click: [[A.par(A.pose('arm', { rot: [0, 0, 28], dur: 0.45, times: 4 }), A.say('Tick, tock, tick, tock...', 3))]] })

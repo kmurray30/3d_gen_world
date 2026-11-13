@@ -9,7 +9,8 @@ import { A, m, withAct, withSockets } from '../dsl';
 import { ani, beast, body, face, hat, held, wear, who, type Extra } from '../accessories';
 import { Parts, figure } from '../kit';
 import { col } from '../colors';
-import { apply, measure, solve } from '../math';
+import { apply, euler, measure, mul, solve, transpose } from '../math';
+import { toEuler } from '../pose';
 import type { FigPart, Figure, Vec3 } from '../types';
 import type { Step } from '../../schema';
 
@@ -434,6 +435,76 @@ const strum = (n = 4): Step[] => [...Array.from({ length: n }, (_, i) => T('fore
 
 /** Rest-pose joint turns (an arm raised to wave, arms out like a zombie): armL [0, 0, 130] raises the left arm. */
 const pose = (f: Figure, j: Record<string, Vec3>): Figure => measure({ ...f, parts: f.parts.map((p) => (j[p.name] ? { ...p, rot: j[p.name] } : p)) });
+/** A prop carried in a fist, built in its own frame (metres): with the figure at rest its origin sits at `at`
+ *  (figure space) turned by `turn` (world degrees). The first part is its joint `name` on the hand (its position
+ *  is its solid's offset from the origin), the rest hang off that joint, so the prop rides with the hand. Set
+ *  the rest stance first. */
+const carried = (f: Figure, side: Side, name: string, at: Vec3, turn: Vec3, parts: Array<[Sh, Vec3, Vec3, string, O?]>): Figure => {
+  const F = solve(f).get(`hand${side}`)!;
+  const Rt = transpose(F.R);
+  const loc = apply(Rt, [at[0] - F.T[0], at[1] - F.T[1], at[2] - F.T[2]]);
+  const rot = toEuler(mul(Rt, euler(turn)));
+  const add = parts.map(([shape, size, q, c, o = {}], i): FigPart => (i
+    ? { name: `${name}${i}`, parent: name, shape, size, at: q, color: col(c), layer: 4, ...o }
+    : { name, parent: `hand${side}`, shape, size, at: loc, rot, off: q, color: col(c), layer: 4, ...o }));
+  return measure({ ...f, parts: [...f.parts, ...add] });
+};
+/** Where a person's lips are (figure space, at rest). */
+const lips = (f: Figure): Vec3 => {
+  const h = f.parts.find((q) => q.name === 'head')!;
+  const H = solve(f).get('head')!;
+  return apply(H.R, [0, (h.off?.[1] ?? 0) - h.size[1] * 0.2, h.size[2] * 0.45]).map((v, i) => v + H.T[i]) as Vec3;
+};
+/** The centre of a fist (figure space, at rest). */
+const fist = (f: Figure, side: Side): Vec3 => {
+  const h = f.parts.find((q) => q.name === `hand${side}`)!;
+  const F = solve(f).get(`hand${side}`)!;
+  return apply(F.R, h.off ?? [0, 0, 0]).map((v, i) => v + F.T[i]) as Vec3;
+};
+const SH: O = { edge: 'sharp' };
+/** A tennis racket (0.69 m: grip, throat, a strung oval head) in its own frame: the grip at the origin, the head up
+ *  +y, its face toward +z. */
+const racketParts = (c = 'red', grip = '#3a3a3a'): Array<[Sh, Vec3, Vec3, string, O?]> => {
+  const r: Array<[Sh, Vec3, Vec3, string, O?]> = [
+    ['cyl', [0.034, 0.19, 0.03], [0, 0.005, 0], grip, { segs: 8, ...SH }],
+    ['cyl', [0.04, 0.014, 0.036], [0, -0.092, 0], grip, { segs: 8, ...SH }],
+    ['capsule', [0.024, 0.08, 0.02], [0, 0.13, 0], c, SH],
+    ['capsule', [0.018, 0.165, 0.016], [0.035, 0.22, 0], c, { srot: [0, 0, -26.6], ...SH }],
+    ['capsule', [0.018, 0.165, 0.016], [-0.035, 0.22, 0], c, { srot: [0, 0, 26.6], ...SH }],
+    ['torus', [0.275, 0.335, 0.02], [0, 0.43, 0], c, { tube: 0.1, ...SH }],
+  ];
+  const a = 0.125, b = 0.155;
+  for (let i = -3; i <= 3; i++) {
+    const x = i * 0.033;
+    r.push(['capsule', [0.004, 2 * b * Math.sqrt(1 - (x / a) ** 2), 0.004], [x, 0.43, 0.001], '#f2f2ea', { noInk: true }]);
+  }
+  for (let i = -4; i <= 4; i++) {
+    const y = i * 0.031;
+    r.push(['capsule', [0.004, 2 * a * Math.sqrt(1 - (y / b) ** 2), 0.004], [0, 0.43 + y, -0.001], '#f2f2ea', { noInk: true, srot: [0, 0, 90] }]);
+  }
+  return r;
+};
+/** A trumpet (0.48 m, a 12 cm bell) in its own frame: the mouthpiece at the origin, the bell ahead along +z. */
+const trumpetParts = (c = 'brass'): Array<[Sh, Vec3, Vec3, string, O?]> => {
+  const Z: O = { srot: [90, 0, 0], ...SH };
+  const r: Array<[Sh, Vec3, Vec3, string, O?]> = [
+    ['cyl', [0.028, 0.024, 0.028], [0, 0, 0.012], 'silver', { ...Z, taper: 0.45 }], // mouthpiece cup (the joint)
+    ['cyl', [0.011, 0.06, 0.011], [0, 0, 0.054], 'silver', Z],
+    ['cyl', [0.013, 0.13, 0.013], [0, 0, 0.148], c, Z], // leadpipe
+    ['cyl', [0.014, 0.07, 0.014], [0, 0, 0.32], c, Z], // bell tube
+    ['cyl', [0.05, 0.09, 0.05], [0, 0, 0.395], c, { ...SH, srot: [-90, 0, 0], taper: 0.3 }], // the bell flaring out
+    ['cyl', [0.12, 0.04, 0.12], [0, 0, 0.46], c, { ...SH, srot: [-90, 0, 0], taper: 0.42 }],
+    ['torus', [0.122, 0.122, 0.008], [0, 0, 0.479], c, { tube: 0.12, ...SH }],
+    ['cyl', [0.013, 0.25, 0.013], [0, -0.07, 0.215], c, Z], // the lower tubing and its two bends
+    ['arc', [0.083, 0.083, 0.013], [0, -0.035, 0.09], c, { arc: 180, tube: 0.31, srot: [-90, -90, 0], ...SH }],
+    ['arc', [0.083, 0.083, 0.013], [0, -0.035, 0.34], c, { arc: 180, tube: 0.31, srot: [90, 90, 0], ...SH }],
+  ];
+  for (const z of [0.226, 0.254, 0.282]) {
+    r.push(['cyl', [0.025, 0.085, 0.025], [0, -0.032, z], c, SH], ['cyl', [0.029, 0.01, 0.029], [0, 0.012, z], c, SH], ['cyl', [0.029, 0.012, 0.029], [0, -0.077, z], c, SH]);
+    r.push(['capsule', [0.006, 0.03, 0.006], [0, 0.03, z], 'silver', SH], ['cyl', [0.018, 0.007, 0.018], [0, 0.047, z], 'cream', SH]);
+  }
+  return r;
+};
 /** The same figure scaled (child proportions at toddler or puppet size). */
 const scale = (f: Figure, k: number): Figure => measure({ ...f, parts: f.parts.map((p) => ({ ...p, at: k3(p.at, k), off: p.off && k3(p.off, k), size: k3(p.size, k) })) });
 /** Several people side by side as one figure: a crowd, twins, toddlers. */
@@ -633,7 +704,7 @@ export const ENTRIES: CatalogEntry[] = [
   // The wallet is a piece: it drops, and comes back.
   e('pickpocket', 'town', 'crime', () => acts(
     who('pickpocket', { top: '#5a4a3a', bottom: '#3a3a3a', long: true, acc: [hat('bowler', '#3a3a3a'), wear('scarf', 'red'), wear('coat', '#6b5a3a'), wallet2('R'), bit('handL', 'box', [1.2, 0.9, 0.3], [0, -0.5, 0.9], 'gold', { edge: 'sharp' })] }),
-    [G('look_around', 'Nothing to see here... just browsing.')],
+    [G('shrug', 'Nothing to see here... just browsing.')],
     [A.detach('wallet', 'wallet'), G('gasp', "Oops! That one isn't mine, honest!")],
     [A.reattach('wallet'), G('laugh', 'Finders keepers!')],
   )),
@@ -1171,7 +1242,7 @@ export const ENTRIES: CatalogEntry[] = [
   e('starlet', 'town', 'entertainment', () => acts(
     who('starlet', { top: 'gold', skirt: 'gold', bottom: 'gold', hair: '#f4d35e', style: 'long', skin: 'skin1', acc: [wear('robe', 'gold'), face('sunglasses'), wear('necklace', 'white'), wear('scarf', 'white'), clutch('L', 'red')] }),
     [A.par(A.anim('wink'), A.say('Kisses, darlings!', 2), A.effect('hearts', { dur: 1.5 }))],
-    [A.par(A.anim('thumbs_up'), A.effect('sparkle', { dur: 1.5 }), A.say('No photos, please! Well... maybe one.', 2.6))],
+    [A.par(A.anim('cover_eyes'), A.effect('sparkle', { dur: 1.5 }), A.say('No photos, please!', 2)), A.wait(0.6), A.par(A.anim('nod'), A.say('Well... maybe one.', 1.8))],
   )),
   // A flight attendant with a tray of cups: offers drinks, points out the exits.
   e('steward', 'town', 'travel', () => acts(
@@ -1267,12 +1338,14 @@ export const ENTRIES: CatalogEntry[] = [
     [G('shrug', 'Like, whatever.')],
     [A.par(A.anim('dance'), A.say('This song is SO good.', 2))],
   )),
-  // Tosses the ball up and serves.
-  e('tennis player', 'town', 'sports', () => acts(
-    who('tennis player', { top: 'white', skirt: 'white', bottom: 'white', shoes: 'white', style: 'ponytail', acc: [hat('headband', 'lime'), held('racket'), smallBall('L')] }),
-    [A.par(arm('L', 'up'), A.say('Serving...', 1.4)), A.par(arm('L', 'down', 'down', 0.2), arm('R', 'raise')), A.par(arm('R', 'offer', 'down', 0.15), A.say('Ace!', 1.4)), A.wait(0.5), armsHome()],
-    [G('arms_up', 'Game, set and match!')],
-  )),
+  // A strung racket held up in front, head high; tosses the ball up and serves.
+  e('tennis player', 'town', 'sports', () => {
+    const f = rest(who('tennis player', { top: 'white', skirt: 'white', bottom: 'white', shoes: 'white', style: 'ponytail', acc: [hat('headband', 'lime'), smallBall('L')] }), { R: 'hold' });
+    return acts(carried(f, 'R', 'racket', fist(f, 'R'), [20, -30, 15], racketParts('red')),
+      [A.par(arm('L', 'up'), A.say('Serving...', 1.4)), A.par(arm('L', 'down', 'down', 0.2), arm('R', 'raise', 'hold')), A.par(arm('R', 'offer', 'hold', 0.15), A.say('Ace!', 1.4)), A.wait(0.5), armsHome()],
+      [G('arms_up', 'Game, set and match!')],
+    );
+  }),
   // A clay statue that creaks to life.
   e('terracotta warrior', 'town', 'history', () => acts(
     who('terracotta warrior', { h: 1.85, skin: '#b5735a', hair: '#9a5f48', style: 'bun', top: '#a8644e', bottom: '#a8644e', skirt: '#b5735a', shoes: '#8a4f3c', long: true, eyes: '#5a3020', blush: '#b5735a', acc: [wear('armor', '#9a5f48'), wear('belt', '#8a4f3c'), held('spear', '#9a5f48')] }),
@@ -1387,21 +1460,24 @@ export const ENTRIES: CatalogEntry[] = [
     [arm('L', 'fist', 'down', 0.25), A.par(arm('L', 'side', 'down', 0.15), A.say('HONK HONK!', 1.6)), arm('L', 'fist', 'down', 0.15), arm('L', 'side', 'down', 0.15), armsHome('L')],
     [A.par(arm('R', 'mouth'), A.say("Ahh, coffee. Keep on truckin'!", 2.4)), A.wait(1), armsHome('R')],
   )),
-  // Puts the trumpet up and plays a fanfare.
-  e('trumpeter', 'town', 'music', () => acts(
-    who('trumpeter', { top: 'red', bottom: 'white', shoes: 'black', long: true, acc: [hat('police', 'red'), buttons('gold'), wear('sash', 'white'), held('trumpet')] }),
-    [A.par(arm('R', 'eye'), A.say('♪ Ta-ta-ta-TAAA! ♪', 2.4)), T('torso', [-8, 0, 0], 0.4), A.wait(0.8), A.par(home('torso'), armsHome('R'))],
-    [G('bow', 'Thank you! The parade starts at noon.')],
-  )),
+  // A real-size trumpet (0.48 m, a 12 cm bell) held to the lips in both hands; blows a fanfare, leaning back.
+  e('trumpeter', 'town', 'music', () => {
+    const f = pose(who('trumpeter', { top: 'red', bottom: 'white', shoes: 'black', long: true, acc: [hat('police', 'red'), buttons('gold'), wear('sash', 'white')] }),
+      { armR: [-96, 0, 0], foreR: [-34, 0, 40], armL: [-80, 0, 0], foreL: [-74, 0, -40] });
+    return acts(carried(f, 'R', 'trumpet', lips(f), [-8, 0, 0], trumpetParts()),
+      [A.par(A.pose('torso', { rot: [-6, 0, 0], dur: 0.22, times: 3 }), A.say('♪ Ta-ta-ta-TAAA! ♪', 2.4)), T('torso', [-12, 0, 0], 0.4), A.wait(0.8), home('torso')],
+      [G('bow', 'Thank you! The parade starts at noon.')],
+    );
+  }),
   e('tsar', 'town', 'royalty', () => acts(
     who('tsar', { top: 'darkred', bottom: 'darkred', shoes: 'brown', long: true, hair: 'brown', beard: 'brown', build: 1.15, acc: [wear('robe', 'darkred'), wear('cape', 'gold'), bit('hips', 'cyl', [5.0, 0.6, 3.6], [0, -5.6, 0], 'white'), furCrown, face('longbeard', 'brown'), held('staff', 'gold'), orb('L')] }),
     [A.par(A.anim('nod'), A.say('I am the Tsar of all the Russias!', 2.6))],
     [A.par(arm('L', 'up'), A.effect('sparkle', { dur: 1.2 }), A.say('Behold the imperial orb!', 2.2)), A.wait(1), armsHome('L')],
   )),
-  // Looks for the other twin, who pops up beside them.
+  // Wonders where the other twin went (a shrug), who then pops up beside them.
   e('twin (person)', 'town', 'family', () => acts(
     who('twin (person)', { h: 'kid', top: 'yellow', bottom: 'navy', style: 'short', hair: 'brown', acc: [chest('TWIN', 'white', 2.4, 1.0, 4.4)] }),
-    [G('look_around', "Where's my twin?")],
+    [G('shrug', "Where's my twin?")],
     [A.spawn('t2', 'twin (person)', { rel: 'left', of: 'self', dist: 'close' }), G('arms_up', 'There you are!'), A.wait(1), A.remove('t2', 'fade')],
   )),
   e('twins', 'town', 'family', () => acts(
@@ -1422,7 +1498,7 @@ export const ENTRIES: CatalogEntry[] = [
   )),
   e('used car salesman', 'town', 'sales', () => acts(
     who('used car salesman', { top: '#c98a2a', bottom: 'brown', shoes: 'white', long: true, hair: 'black', style: 'short', acc: [bands('#7a4a1a', 4), front('red'), face('mustache', 'black'), keys('R')] }),
-    [G('thumbs_up', 'Have I got a deal for YOU!')],
+    [G('point', 'Have I got a deal for YOU!')],
     [A.par(A.anim('wink'), A.say('Only one careful owner!', 2.2))],
   )),
   e('used car saleswoman', 'town', 'sales', () => acts(
@@ -1432,7 +1508,7 @@ export const ENTRIES: CatalogEntry[] = [
   )),
   e('valentine', 'town', 'holidays', () => acts(
     who('valentine', { top: 'pink', skirt: 'red', bottom: 'red', style: 'long', blush: '#ff6f8f', acc: [hat('bow', 'red'), heartHeld('R'), held('bouquet', undefined, 'L')] }),
-    [A.par(A.anim('wink'), A.say('Will you be my valentine?', 2.4), A.effect('hearts', { dur: 2 }))],
+    [A.par(A.anim('love'), A.say('Will you be my valentine?', 2.4), A.effect('hearts', { dur: 2 }))],
     give('box', 'box of chocolates', 'Chocolates, for my sweetheart!', 'R'),
   )),
   // Bows, then brings the car round.
@@ -1471,7 +1547,7 @@ export const ENTRIES: CatalogEntry[] = [
   e('vigilante', 'town', 'superheroes', () => acts(
     who('vigilante', { top: 'black', bottom: 'black', shoes: 'black', long: true, acc: [hat('hood', '#2a2a2a'), domino(), wear('cloak', '#2a2a2a'), gloves('darkgray'), wear('belt', 'gold'), held('bat', 'darkgray')] }),
     [A.par(arm('R', 'raise'), A.say('Justice never sleeps!', 2)), A.wait(0.8), armsHome('R')],
-    [G('look_around', 'Quiet tonight... too quiet.')],
+    [G('look_around', 'Hmm... who is behind all this?')],
   )),
   e('viking', 'town', 'history', () => acts(
     who('viking', { top: '#6b5a3a', bottom: '#4a3a2a', shoes: 'brown', long: true, hair: '#c0622d', style: 'long', build: 1.25, acc: [hat('viking'), face('longbeard', '#c0622d'), wear('vest', '#8a6a4a'), wear('belt', 'darkbrown'), armRings('#c9a227', 1), held('axe'), held('shield', 'red', 'L')] }),

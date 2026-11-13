@@ -638,7 +638,9 @@ function blend(a: Pose, b: Pose, w: number): Pose {
       sc[k] = x + (y - x) * w;
     }
   }
-  return { j, t, sc, root: lerp3(a.root, b.root), rootRot: lerp3(a.rootRot, b.rootRot), expr: w > 0.5 ? b.expr : a.expr };
+  // whole-body turns blend the short way round: a finished spin (360) fades out as no turn, not a whirl back
+  const wrap = (v: Vec3 | undefined): Vec3 | undefined => v && (v.map((x) => ((((x + 180) % 360) + 360) % 360) - 180) as Vec3);
+  return { j, t, sc, root: lerp3(a.root, b.root), rootRot: lerp3(wrap(a.rootRot), wrap(b.rootRot)), expr: w > 0.5 ? b.expr : a.expr };
 }
 
 export type Locomotion = 'idle' | 'walk' | 'run' | 'hover' | 'fly';
@@ -848,6 +850,8 @@ export function clipForGesture(fig: Figure, name: string): string | null {
     ...(fig.rig === 'biped' ? {} : { thumbs_up: 'tada', hands_on_hips: 'stomp', wink: 'love', salute: 'nod' }),
     hop: fig.rig === 'biped' ? 'jump' : 'hop',
   };
+  // a whole-body spin is the engine's (one clean turn); a clip spinning on top would tumble it on two axes
+  if (name === 'spin') return null;
   const want = MAP[name] ?? name;
   const have = new Set(clipNames(fig.rig));
   if (have.has(want)) return want;

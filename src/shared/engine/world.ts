@@ -12,6 +12,9 @@ export interface Transient {
   sq: number;
   /** A gesture being acted out (wave, clap...): seconds in, out of its length. Puppets move their pieces. */
   gesture?: { name: string; t: number; dur: number };
+  /** Being walked by a move: 'face' turns a model to where it goes, 'keep' (a step aside inside an act, backing
+   *  up) keeps the way it faces. Nothing else (a shove, a teleport) turns it. */
+  walk?: 'face' | 'keep';
 }
 
 /**

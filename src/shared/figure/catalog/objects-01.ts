@@ -2481,7 +2481,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([1.9, 0.12, 0.12], [0, 6.85, 6.6], { color: 'white' })
       // cupola and weathervane
       .box([1.2, 1.0, 1.2], [0, 9.7, 0], { color: 'white' })
-      .pyramid([1.7, 0.8, 1.7], [0, 10.6, 0], 4, { color: RF, rot: [0, 45, 0] })
+      .pyramid([2.1, 0.8, 2.1], [0, 10.6, 0], 4, { color: RF }) // square to the cupola (size is corner to corner: a 1.5 m roof)
       .stick([0, 11.0, 0], [0, 11.8, 0], 0.04, 'iron')
       .box([0.9, 0.05, 0.05], [0, 11.6, 0], { color: 'iron', name: 'vane' })
       .cone([0.14, 0.2, 0.05], [0.5, 11.6, 0], { color: 'iron', rot: [0, 0, -90], parent: 'vane' })

@@ -1819,8 +1819,9 @@ export const ENTRIES: CatalogEntry[] = [
   // A cowbell on a drum-kit clamp, its wooden stick resting against it; clonk clonk.
   e('cowbell', 'music', 'percussion', () =>
     m('cowbell', { edge: 'sharp' })
-      .cyl([0.12, 0.16, 0.08], [0, 0.17, 0], { color: '#8a8a8a', taper: 0.62, name: 'bell', pivot: [0, 0.27, 0], segs: 4, rot: [0, 45, 0] })
-      .cyl([0.125, 0.014, 0.085], [0, 0.095, 0], { color: '#5a5a5a', parent: 'bell', segs: 4, rot: [0, 45, 0] })
+      // a flat-fronted box flaring to its mouth (a 4-sided cyl is square to the axes, sized corner to corner)
+      .cyl([0.12 * Math.SQRT2, 0.16, 0.08 * Math.SQRT2], [0, 0.17, 0], { color: '#8a8a8a', taper: 0.62, name: 'bell', pivot: [0, 0.27, 0], segs: 4 })
+      .cyl([0.125 * Math.SQRT2, 0.014, 0.085 * Math.SQRT2], [0, 0.095, 0], { color: '#5a5a5a', parent: 'bell', segs: 4 })
       .box([0.03, 0.03, 0.03], [0, 0.265, 0], { color: '#3a3a3a', parent: 'bell' })
       .stick([0, 0.28, 0], [0, 0.32, 0], 0.012, '#3a3a3a')
       .cyl([0.12, 0.02, 0.12], [0, 0.01, 0], { color: '#3a3a3a' })

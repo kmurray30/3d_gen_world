@@ -1682,7 +1682,7 @@ export const ENTRIES: CatalogEntry[] = [
     const b = m('spiral staircase', { edge: 'sharp' })
       .cyl([0.5, 0.05, 0.5], [0, 0.025, 0], { color: '#3a3633' })
       .stick([0, 0, 0], [0, 3.15, 0], 0.16, '#3a3633')
-      .cyl([1.0, 0.06, 1.0], [0, 3.0, 0], { color: '#5c6166', segs: 4, rot: [0, 45, 0] });
+      .cyl([1.0 * Math.SQRT2, 0.06, 1.0 * Math.SQRT2], [0, 3.0, 0], { color: '#5c6166', segs: 4 }); // the 1 m square landing its rails stand on (sized corner to corner)
     let last: V | null = null;
     const N = 13;
     b.each(N, (i) => {
@@ -2464,7 +2464,7 @@ export const ENTRIES: CatalogEntry[] = [
       .box([8.0, 0.25, 16], [0, 7.6, -3.5], { color: '#e8e4dc', round: 0.1 })
       .box([3.6, 2.2, 3.6], [0, 8.85, 2.0], { color: 'white', round: 0.05 })
       .box([3.7, 0.9, 3.7], [0, 9.2, 2.0], { color: '#3d5a73' })
-      .pyramid([4.4, 0.8, 4.4], [0, 10.35, 2.0], 4, { color: '#c0392b', rot: [0, 45, 0] })
+      .pyramid([5.8, 0.8, 5.8], [0, 10.35, 2.0], 4, { color: '#c0392b' }) // square to the pilot house (size is corner to corner: 4.1 m a side)
       .label('BELLE', [4, 0.9], [0, 4.0, 8.52], { color: 'white', depth: 0.05 })
       .cyl([1.0, 7.6, 1.0], [0, 3.2, -19.0], { color: '#2a2726', rot: [0, 0, 90], name: 'paddle', mover: { kind: 'spin', axis: 'x', amount: 90 } });
     b.pair((s) => b.torus([6.8, 6.8, 0.3], [s * 3.4, 3.2, -19.0], { color: '#c0392b', rot: [0, 90, 0], tube: 0.06, parent: 'paddle' }).torus([3.6, 3.6, 0.25], [s * 3.4, 3.2, -19.0], { color: '#c0392b', rot: [0, 90, 0], tube: 0.08, parent: 'paddle' }));

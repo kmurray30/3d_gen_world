@@ -248,7 +248,11 @@ export class SceneView {
           this.scene.add(fv.root);
         }
         let lookAt: [number, number] | null = null;
-        if (e.facing === 'player') lookAt = [cam.pos[0], cam.pos[2]];
+        // a solid model never turns to follow the camera or another thing (a command turns it once, in the
+        // engine); only a paper cutout keeps a target to mirror toward
+        const solidView = style !== 'paper';
+        if (solidView) lookAt = null;
+        else if (e.facing === 'player') lookAt = [cam.pos[0], cam.pos[2]];
         else if (e.facing) {
           const t = byId.get(e.facing);
           if (t) {
@@ -261,6 +265,7 @@ export class SceneView {
         // in another thing's socket (bread in a toaster): turn with the owner
         fv.heldFacing = null;
         fv.seated = false;
+        fv.walk = model.transient.get(e.id)?.walk;
         let shownPos = pos;
         if (e.parent && e.anchor?.startsWith('@')) {
           const owner = byId.get(e.parent);
@@ -282,7 +287,7 @@ export class SceneView {
           // a person in a seat (a chair, a saddle, a car's driving seat) sits in it
           fv.seated = sock?.kind === 'seat';
         }
-        fv.update(e, shownPos, cam.yaw, cam.pitch, this.resolveFlip(e, pos, byId, camState), model.transient.get(e.id)?.sq ?? 1, dt, lookAt, this.groundView);
+        fv.update(e, shownPos, cam.yaw, cam.pitch, solidView ? e.flip : this.resolveFlip(e, pos, byId, camState), model.transient.get(e.id)?.sq ?? 1, dt, lookAt, this.groundView);
         continue;
       }
       const oldFigure = this.figures.get(e.id);

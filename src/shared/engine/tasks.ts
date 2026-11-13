@@ -155,6 +155,8 @@ class MoveTask extends BaseTask {
   constructor(
     private readonly action: MoveAction,
     private readonly engine: Engine,
+    /** Keep the way it faces (a move inside a click's act, or relative to itself): it ends facing as it began. */
+    private readonly keepYaw = false,
   ) {
     super(action.delay ?? 0);
     this.entity = action.id;
@@ -164,6 +166,7 @@ class MoveTask extends BaseTask {
     const e = this.engine.world.get(this.action.id);
     if (!e) return false;
     this.e = e;
+    this.engine.world.trans(e.id).walk = this.keepYaw ? 'keep' : 'face';
     this.engine.world.detach(e.id);
     const kind = e.kind;
     const defaultSpeed = kind === 'animal' ? 2.2 : kind === 'human' || kind === 'humanoid' ? 1.4 : 2.5;
@@ -235,13 +238,14 @@ class MoveTask extends BaseTask {
       e.faceDir = [dx / dist, dz / dist];
       const fig = isSolidFigure(e) ? figureOfEntity(e) : null;
       if (fig) {
-        // a solid model faces where it is going (and stays facing that way when it stops); a side-view one stands
-        // a quarter turn round from its yaw
-        const heading = (Math.atan2(dx, dz) * 180) / Math.PI;
-        const want = fig.view === 'side' ? heading + 90 : heading;
-        e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
-        e.flip = false;
-      } else {
+        // a solid model faces where it is going (and stays facing that way when it stops; the view smooths the
+        // turn); a side-view one stands a quarter turn round from its yaw. Inside an act it keeps its facing
+        if (!this.keepYaw) {
+          const heading = (Math.atan2(dx, dz) * 180) / Math.PI;
+          e.yaw = wrapYaw(fig.view === 'side' ? heading + 90 : heading);
+          e.flip = false;
+        }
+      } else if (!this.keepYaw) {
         // the paper turns to contain the direction of travel, nudged so the player still sees its face
         const want = faceViewer(visibleYaw(yawAlong(dx / dist, dz / dist), e.pos, w.player.pos, 0.6), e.pos, w.player.pos);
         e.yaw = lerpAngle(e.yaw ?? want, want, Math.min(1, dt * 8));
@@ -286,7 +290,8 @@ class MoveTask extends BaseTask {
       e.pos[1] = w.ground(e.pos[0], e.pos[2]);
       resolveOverlap(w, e, this.engine.rng);
     }
-    if (this.action.face) e.facing = this.action.face;
+    delete tr.walk;
+    if (this.action.face) this.engine.faceOnce(e, this.action.face);
     this.engine.emit({ type: 'arrive', id: e.id, target: this.chase?.id ?? (this.action.to.of === 'player' ? 'player' : undefined) });
   }
   cancel(): void {
@@ -294,7 +299,13 @@ class MoveTask extends BaseTask {
     const tr = this.engine.world.trans(this.e.id);
     tr.ofs[1] = 0;
     tr.sq = 1;
+    delete tr.walk;
   }
+}
+
+function wrapYaw(a: number): number {
+  const m = ((a % 360) + 360) % 360;
+  return m > 180 ? m - 360 : m;
 }
 
 /** Fall under gravity until something solid or the ground; land with a squash, attach to what was landed on. */
@@ -478,7 +489,16 @@ function setTasks(action: ResolvedSet, engine: Engine): Task[] {
           const punch = k < 0.5 ? 1 + k * 0.5 : 1.25 - (k - 0.5) * 0.5;
           w.trans(e.id).sq = punch;
           if (k >= 0.5 && e.word !== action.res.word) {
+            // a solid model keeps the way it faces when it turns into a model drawn the other way round (a robot
+            // standing front-on becoming a truck drawn side-on)
+            const before = isSolidFigure(e) ? figureOfEntity(e) : null;
+            const facing = before ? restFacing(e, before) : null;
             e.word = action.res.word;
+            const after = facing !== null && isSolidFigure(e) ? figureOfEntity(e) : null;
+            if (after && facing !== null) {
+              e.yaw = wrapYaw(after.view === 'side' ? facing + 90 : facing);
+              e.flip = false;
+            }
             e.label = action.res.placeholder ? action.word ?? action.res.word : action.res.word;
             e.sprite = { ...action.res.sprite };
             e.kind = action.res.kind;
@@ -492,7 +512,7 @@ function setTasks(action: ResolvedSet, engine: Engine): Task[] {
         () => {
           const e = w.get(action.id);
           if (!e) return false;
-          if (action.face) e.facing = action.face;
+          if (action.face) engine.faceOnce(e, action.face);
           if (action.expression) {
             const prev = e.state.expression;
             if (action.expression === 'neutral') delete e.state.expression;
@@ -594,6 +614,9 @@ function animTask(action: AnimAction, engine: Engine): Task {
   const dur = cycle[action.name] * times;
   let baseTilt = 0;
   let baseScale = 1;
+  let baseYaw = 0;
+  // a solid model spins round once on the spot (a flat cutout cartwheels in its plane)
+  let turnSpin = false;
   const usesTilt = action.name === 'wobble' || action.name === 'spin' || action.name === 'fall_over';
   const usesScale = action.name === 'pulse';
   return new Tween(
@@ -617,7 +640,8 @@ function animTask(action: AnimAction, engine: Engine): Task {
           tr.ofs[0] = Math.sin(c * Math.PI * 12) * Math.min(0.15, h * 0.06) * (1 - c);
           break;
         case 'spin':
-          e.tilt = baseTilt + easeInOut(c) * 360;
+          if (turnSpin) e.yaw = baseYaw + easeInOut(c) * 360;
+          else e.tilt = baseTilt + easeInOut(c) * 360;
           break;
         case 'bounce':
           tr.sq = 1 - Math.sin(c * Math.PI) * 0.25;
@@ -636,6 +660,8 @@ function animTask(action: AnimAction, engine: Engine): Task {
       if (!e) return false;
       baseTilt = e.tilt;
       baseScale = e.scale;
+      baseYaw = e.yaw ?? 0;
+      turnSpin = action.name === 'spin' && isSolidFigure(e);
       engine.emit({ type: 'anim', id: action.id, name: action.name, times });
       return true;
     },
@@ -647,6 +673,8 @@ function animTask(action: AnimAction, engine: Engine): Task {
       tr.ofs[1] = 0;
       tr.sq = 1;
       if (action.name === 'spin' || action.name === 'wobble') e.tilt = baseTilt;
+      // ends facing exactly as it began
+      if (turnSpin) e.yaw = baseYaw;
       if (action.name === 'pulse') e.scale = baseScale;
     },
     action.delay ?? 0,
@@ -904,7 +932,8 @@ export function makeTasks(action: ResolvedAction, _script: Script, engine: Engin
     case 'build':
       return [new BuildTask(action as ResolvedBuild, engine)];
     case 'move':
-      return [new MoveTask(action, engine)];
+      // a move inside a click's act, or relative to the mover itself (a step aside, backing up), keeps its facing
+      return [new MoveTask(action, engine, _script.id.startsWith('act_') || action.to.of === action.id)];
     case 'set':
       return setTasks(action as ResolvedSet, engine);
     case 'anim':

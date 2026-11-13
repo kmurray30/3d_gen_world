@@ -44,6 +44,8 @@ export class FigureView {
   heldFacing: number | null = null;
   /** In a seat socket: a person sits (hips and knees bent, lowered onto the seat) and does not walk. */
   seated = false;
+  /** The engine is walking it: 'face' turns the model to where it goes, 'keep' holds its facing (a step aside). */
+  walk: 'face' | 'keep' | undefined = undefined;
   private hipDrop: number | null = null;
   private wasTurned = false;
 
@@ -163,7 +165,10 @@ export class FigureView {
     // off the ground (a dragon in the sky) flying figures hover and fly instead of standing and walking
     const groundY = ground ? ground.height(pos[0], pos[2]) : 0;
     this.animator.setAirborne(pos[1] - groundY > 0.35);
-    this.animator.setSpeed(this.seated ? 0 : this.speed);
+    // only a walk the engine is doing animates the legs and turns the model: a shove, a teleport or a ride in
+    // something else does not
+    const walking = !!this.walk || !!orbit;
+    this.animator.setSpeed(this.seated || !walking ? 0 : this.speed);
     this.animator.update(dt);
     this.clock += dt;
     // the entity's own part poses (a door left open, a spinning propeller, a piece taken off) on top of the clip
@@ -222,7 +227,7 @@ export class FigureView {
       }
       this.toon.update(pose, expr);
       if (this.toon instanceof CelFigure) this.toon.setFar(this.camDistance > Math.max(16, 8 * this.fig.heightM * s));
-      const moving = this.speed > 0.15 && this.dir;
+      const moving = (this.walk === 'face' || !!orbit) && this.speed > 0.15 && this.dir;
       if (this.heldFacing !== null) this.wantFacing = this.heldFacing;
       else if (moving) this.wantFacing = Math.atan2(this.dir![0], this.dir![1]) / DEG;
       else if (lookAt) this.wantFacing = Math.atan2(lookAt[0] - pos[0], lookAt[1] - pos[2]) / DEG;
