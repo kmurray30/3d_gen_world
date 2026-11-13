@@ -43,7 +43,8 @@ and the structure regenerates with the rest kept.
 
 **Look.** The Look button (or `L`) switches how things that have a code-drawn figure are shown:
 the original sprites, layered paper cutouts (2D), folded origami (2.5D), 3D, or sculpted cel-shaded
-models. Your own character follows it in third person
+models (where new visitors start: every word has a model, and models have moving parts and acts; in the
+sprites look things are pictures again, with their cut-out pieces to knock off). Your own character follows it in third person
 and walks and runs with real leg and arm motion in paper and 3D.
 
 **Visuals demo.** Every code-drawn figure stands five times in labelled rows: its old sprite, the
