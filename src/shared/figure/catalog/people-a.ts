@@ -6,7 +6,7 @@ import type { PersonDims } from '../kit';
 import type { FigPart, Figure, Shape, Vec3 } from '../types';
 import type { Step } from '../../schema';
 import { col } from '../colors';
-import { measure } from '../math';
+import { apply, measure, solve, transpose } from '../math';
 
 /* ----- local helpers: custom parts in a person's joint frames ----- */
 
@@ -445,6 +445,27 @@ const kite = (c = 'red') => X((d) => {
   );
   return r;
 });
+/** A black flag on a 2.4 m pole held upright in the left fist, out to the side (put ANARCHY_ARM in rest() first).
+ *  The pole's joint is turned to line up with the figure's axes at rest, so it stands upright and the flag
+ *  (named 'flag', its joint on the pole) can wave about it. */
+const ANARCHY_ARM = { armL: [-46, 0, 24] as Vec3, foreL: [-44, 0, 0] as Vec3 };
+const blackFlag = (c = '#1d1d1f'): Extra => (p, d) => {
+  const F = solve({ parts: p.list } as unknown as Figure, { j: {} }).get('handL')!;
+  const Rt = transpose(F.R);
+  const DEG = 180 / Math.PI;
+  const up: Vec3 = [Math.atan2(-Rt[5], Rt[8]) * DEG, Math.asin(Math.max(-1, Math.min(1, Rt[2]))) * DEG, Math.atan2(-Rt[1], Rt[0]) * DEG];
+  const grip = apply(Rt, [0, 0, d.aw * 0.45]);
+  const y0 = F.T[1], bottom = 0.12, top = 2.45, fw = 0.8, fh = 0.52;
+  X(() => [
+    ['handL', 'capsule', [0.035, top - bottom, 0.035], grip, 'darkwood', { name: 'pole', rot: up, off: [0, (top + bottom) / 2 - y0, 0] }],
+    ['pole', 'ball', [0.06, 0.06, 0.06], [0, top - y0 + 0.02, 0], 'silver'],
+    ['pole', 'box', [0.012, fh, 0.012], [0, top - y0 - 0.04 - fh / 2, 0], c, { name: 'flag' }],
+    // the cloth, in three panels with a ripple, flying out to the side
+    ['flag', 'box', [fw * 0.36, fh, 0.014], [fw * 0.17, 0, 0.02], c, { srot: [0, -14, 0], round: 0.05 }],
+    ['flag', 'box', [fw * 0.36, fh * 0.97, 0.014], [fw * 0.5, -0.01, 0.045], c, { srot: [0, 10, 0], round: 0.05 }],
+    ['flag', 'box', [fw * 0.32, fh * 0.94, 0.014], [fw * 0.82, -0.02, 0.025], c, { srot: [0, -8, 0], round: 0.05 }],
+  ])(p, d);
+};
 const coil = (c: string, side: 'L' | 'R' = 'L') => inHand(side, (a) => [['torus', [a * 2.6, a * 2.6, a * 0.6], [0, -a * 1.4, a * 0.6], c, { tube: 0.25 }], ['torus', [a * 2.2, a * 2.2, a * 0.6], [0, -a * 1.4, a * 0.9], c, { tube: 0.25 }]]);
 /** A rope loop hanging from the right hand; raised overhead and spun (pose spin about y) it twirls. */
 const lasso = (c: string) => X((d) => {
@@ -544,10 +565,11 @@ export const ENTRIES: CatalogEntry[] = [
     hold(SHAKE, 'Pleased to meet you.', 1.6),
     [G('bow', 'Welcome, on behalf of my nation.', 2.2)],
   )),
-  // Hood, mask, a black flag and an A on the chest; shakes a fist, then shrugs at bosses.
-  e('anarchist', 'town', 'crime', () => act(W('anarchist', { top: 'black', long: true, bottom: 'black', shoes: 'black', acc: [hat('hood', 'black'), face('mask', 'black'), chest('A', 'red', 0.4, 0.3), held('flag', 'black', 'L'), wear('backpack', 'darkgray')] }),
-    hold(FIST, 'No rules!', 1.4),
-    [G('shrug', 'Who needs a boss?')],
+  // Hood, mask, a black flag on a pole held to one side and an A on the chest; shakes a fist, then shakes his head
+  // at bosses, the flag flapping.
+  e('anarchist', 'town', 'crime', () => act(W('anarchist', { top: 'black', long: true, bottom: 'black', shoes: 'black', acc: [hat('hood', 'black'), face('mask', 'black'), chest('A', 'red', 0.4, 0.3), wear('backpack', 'darkgray'), rest(ANARCHY_ARM), blackFlag()] }),
+    hold(FIST, 'No rules!', 1.4, [A.pose('flag', { rot: [0, 22, 0], dur: 0.35, times: 2 })]),
+    [A.par(A.anim('shake_head'), A.pose('flag', { rot: [0, -18, 0], dur: 0.4, times: 2 }), A.say('Who needs a boss?', 2))],
   )),
   // A TV news anchor: suit, tie, perfect hair, a microphone and his script.
   e('anchorman', 'town', 'media', () => act(W('anchorman', { top: 'white', long: true, bottom: 'maroon', shoes: 'black', hair: 'darkbrown', style: 'short', skin: 'skin1', acc: [suitX('maroon', 'navy'), face('mustache', 'darkbrown'), held('mic'), held('letter', 'paper', 'L')] }),
@@ -779,7 +801,7 @@ export const ENTRIES: CatalogEntry[] = [
   )),
   // Bald with long grey sides, little glasses and a waistcoat, flying his kite with a key on the string.
   e('benjamin franklin', 'town', 'history', () => act(W('benjamin franklin', { skin: 'skin1', hair: '#d4d7da', style: 'bald', top: 'brown', long: true, bottom: 'brown', legs: 'white', shoes: 'black', build: 1.15, acc: [sideHair('#d4d7da'), face('glasses', '#5a3a22'), wear('vest', 'tan'), rest(KITE_ARM), kite('red')] }),
-    [A.par(A.effect('sparkle', { dur: 1.5 }), A.expr('surprised'), A.pose('kite', { rot: [0, 7, 0], dur: 0.3, times: 3 }), A.say('Electricity!', 2)), A.expr('neutral')],
+    [A.par(A.effect('sparkle', { dur: 1.5 }), A.expr('surprised'), A.pose('kite', { rot: [0, 10, 0], dur: 0.3, times: 3 }), A.say('Electricity!', 2)), A.expr('neutral')],
     [G('nod', 'Early to bed, early to rise.', 2.2)],
   )),
   // Sasquatch: 2.4 m, shaggy brown, big feet; shy, then roars.

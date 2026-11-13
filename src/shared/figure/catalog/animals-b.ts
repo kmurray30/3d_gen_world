@@ -10,7 +10,7 @@ import { col } from '../colors';
 import type { FigPart, Figure, Shape, SocketKind, Vec3 } from '../types';
 // the sculpted (lofted) four-legged and fish builders from animals-a, for the big hoofed animals, big cats and
 // sharks here, so they match their kin there (same joint names as the beast and fish kits)
-import { QK, QHORSE, limbsQ, hornsQ, maneQ, chest as chestQ, blazeQ, socksQ, onHead, FK, fSpots, fLine, sharkFace, type Q as QR, type QMark, type FIMark } from './animals-a';
+import { QK, QHORSE, limbsQ, hornsQ, maneQ, chest as chestQ, blazeQ, socksQ, onHead, spotsQ, faceQ, backQ, patch as patchQ, FK, fSpots, fLine, sharkFace, type Q as QR, type QD, type QMark, type FIMark } from './animals-a';
 
 /* ----- local helpers: extra solids on kit figures ----- */
 
